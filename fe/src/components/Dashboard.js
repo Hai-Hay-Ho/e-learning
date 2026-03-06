@@ -1,4 +1,18 @@
 import React, { useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+    faBookOpen, 
+    faGraduationCap, 
+    faBullseye, 
+    faClock,
+    faChartBar,
+    faLightbulb,
+    faPalette,
+    faFont,
+    faHome,
+    faImage,
+    faEllipsisH
+} from '@fortawesome/free-solid-svg-icons';
 
 const MainContent = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -50,22 +64,22 @@ const MainContent = () => {
                     </div>
                     <div className="overview-cards">
                         <div className="overview-card">
-                            <div className="overview-card-icon">📖</div>
+                            <div className="overview-card-icon"><FontAwesomeIcon icon={faBookOpen} /></div>
                             <h3>8</h3>
                             <p>Courses In Progress</p>
                         </div>
                         <div className="overview-card">
-                            <div className="overview-card-icon">🎓</div>
+                            <div className="overview-card-icon"><FontAwesomeIcon icon={faGraduationCap} /></div>
                             <h3>14</h3>
                             <p>Courses Completed</p>
                         </div>
                         <div className="overview-card">
-                            <div className="overview-card-icon">🎯</div>
+                            <div className="overview-card-icon"><FontAwesomeIcon icon={faBullseye} /></div>
                             <h3>96</h3>
                             <p>Average test results</p>
                         </div>
                         <div className="overview-card">
-                            <div className="overview-card-icon">🕒</div>
+                            <div className="overview-card-icon"><FontAwesomeIcon icon={faClock} /></div>
                             <h3>1.2K</h3>
                             <p>Hours in training</p>
                         </div>
@@ -78,7 +92,7 @@ const MainContent = () => {
                     </div>
                     <div className="courses-cards">
                         <div className="course-card blue">
-                            <div className="course-icon">📊</div>
+                            <div className="course-icon"><FontAwesomeIcon icon={faChartBar} /></div>
                             <h4>Data analysis</h4>
                             <span>▷ Machine learning</span>
                             <div className="course-progress">
@@ -89,7 +103,7 @@ const MainContent = () => {
                             </div>
                         </div>
                         <div className="course-card yellow">
-                            <div className="course-icon">💡</div>
+                            <div className="course-icon"><FontAwesomeIcon icon={faLightbulb} /></div>
                             <h4>Design thinking</h4>
                             <span>▷ Heuristics</span>
                             <div className="course-progress">
@@ -100,7 +114,7 @@ const MainContent = () => {
                             </div>
                         </div>
                         <div className="course-card green">
-                            <div className="course-icon">🎨</div>
+                            <div className="course-icon"><FontAwesomeIcon icon={faPalette} /></div>
                             <h4>UI fundamentals</h4>
                             <span>▷ Visual hierarchy</span>
                             <div className="course-progress">
@@ -120,7 +134,7 @@ const MainContent = () => {
                     <div className="assignments-list">
                         <div className="assignment-item">
                             <div className="assignment-info">
-                                <div className="assignment-icon">T</div>
+                                <div className="assignment-icon"><FontAwesomeIcon icon={faFont} /></div>
                                 <div className="assignment-text">
                                     <h5>Typography test</h5>
                                     <p>Today, 2:30 PM</p>
@@ -131,7 +145,7 @@ const MainContent = () => {
                         </div>
                         <div className="assignment-item">
                             <div className="assignment-info">
-                                <div className="assignment-icon">🏠</div>
+                                <div className="assignment-icon"><FontAwesomeIcon icon={faHome} /></div>
                                 <div className="assignment-text">
                                     <h5>3D house model</h5>
                                     <p>Today, 3:15 PM</p>
@@ -142,7 +156,7 @@ const MainContent = () => {
                         </div>
                         <div className="assignment-item">
                             <div className="assignment-info">
-                                <div className="assignment-icon">🖼️</div>
+                                <div className="assignment-icon"><FontAwesomeIcon icon={faImage} /></div>
                                 <div className="assignment-text">
                                     <h5>Visual hierarchy</h5>
                                     <p>Today, 4:30 PM</p>
@@ -172,15 +186,24 @@ const MainContent = () => {
                 <div className="schedule-container">
                     <h4>Schedule</h4>
                     <div className="schedule-item blue">
-                        <h5>User pain points</h5>
+                        <div className="schedule-header">
+                            <h5>User pain points</h5>
+                            <FontAwesomeIcon icon={faEllipsisH} className="more-options" />
+                        </div>
                         <p>9:00 - 10:00 AM</p>
                     </div>
                     <div className="schedule-item purple">
-                        <h5>Bias theory</h5>
+                        <div className="schedule-header">
+                            <h5>Bias theory</h5>
+                            <FontAwesomeIcon icon={faEllipsisH} className="more-options" />
+                        </div>
                         <p>10:30 - 11:30 AM</p>
                     </div>
                     <div className="schedule-item yellow">
-                        <h5>Typography</h5>
+                        <div className="schedule-header">
+                            <h5>Typography</h5>
+                            <FontAwesomeIcon icon={faEllipsisH} className="more-options" />
+                        </div>
                         <p>12:30 - 2:30 PM</p>
                     </div>
                 </div>
