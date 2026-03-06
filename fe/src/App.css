@@ -255,6 +255,21 @@ body {
     margin-bottom: 20px;
 }
 
+.calendar-header button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--accent-color);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.calendar-header button:hover {
+    background-color: #f0f0f0;
+}
+
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);

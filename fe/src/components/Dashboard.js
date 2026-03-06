@@ -1,6 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const MainContent = () => {
+    const [currentDate, setCurrentDate] = useState(new Date());
+
+    const daysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();//hàm trả về số ngày trong tháng 
+    const firstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();//trả về ngày đầu tiên của tháng
+
+    const handlePrevMonth = () => {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    };
+
+    const handleNextMonth = () => {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    };
+
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const today = new Date();
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+    const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+    const startDay = (firstDayOfMonth(year, month) + 6) % 7;
+    // getDay() mặc định bắt đầu từ Sunday = 0
+    // nhưng lịch muốn bắt đầu từ Monday +6 rồi mod 7 để chuyển hệ thống ngày
+
+    const days = [];
+    for (let i = 0; i < startDay; i++) {
+        days.push(<span key={`empty-${i}`} className="day-cell empty"></span>);
+    }
+    for (let i = 1; i <= daysInMonth(year, month); i++) {
+        const isActive = isCurrentMonth && today.getDate() === i;
+        days.push(
+            <span key={i} className={`day-cell ${isActive ? 'active' : ''}`}>
+                {i}
+            </span>
+        );
+    }
+
     return (
         <main className="main-content-area">
             {/* CENTER: Phần nội dung trung tâm */}
@@ -120,15 +159,13 @@ const MainContent = () => {
             <aside className="right-panel-in-main">
                 <div className="calendar-container">
                     <div className="calendar-header">
-                        <span>February 2026</span>
+                        <button onClick={handlePrevMonth}>&lt;</button>
+                        <span>{monthNames[month]} {year}</span>
+                        <button onClick={handleNextMonth}>&gt;</button>
                     </div>
                     <div className="calendar-grid">
                         <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-                        {[...Array(28)].map((_, i) => (
-                            <span key={i} className={`day-cell ${i + 1 === 5 ? 'active' : ''}`}>
-                                {i + 1}
-                            </span>
-                        ))}
+                        {days}
                     </div>
                 </div>
 
