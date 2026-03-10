@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.6.0">
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.6.1">
   <diagram name="Trang-1" id="Zun1NxARBDqp80kNLrL9">
-    <mxGraphModel dx="1303" dy="659" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1603" dy="811" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -19,7 +19,7 @@
         <mxCell id="GnP_nYBeGOAO2luoY8bn-9" parent="1" style="text;align=center;fontStyle=1;verticalAlign=middle;spacingLeft=3;spacingRight=3;strokeColor=none;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;" value="E-learning System" vertex="1">
           <mxGeometry height="36" width="80" x="414" y="60" as="geometry" />
         </mxCell>
-        <mxCell id="GnP_nYBeGOAO2luoY8bn-10" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Login/Register" vertex="1">
+        <mxCell id="GnP_nYBeGOAO2luoY8bn-10" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="login with google" vertex="1">
           <mxGeometry height="50" width="100" x="314" y="96" as="geometry" />
         </mxCell>
         <mxCell id="GnP_nYBeGOAO2luoY8bn-11" edge="1" parent="1" source="GnP_nYBeGOAO2luoY8bn-7" style="html=1;verticalAlign=bottom;endArrow=none;curved=0;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;endFill=0;" target="GnP_nYBeGOAO2luoY8bn-10" value="">
