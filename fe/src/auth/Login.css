@@ -69,13 +69,12 @@
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    
 }
 
 .google-login-btn:hover {
     background: #f8f9fa;
     border-color: #ccc;
-    transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 

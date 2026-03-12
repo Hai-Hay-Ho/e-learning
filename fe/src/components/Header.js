@@ -3,7 +3,7 @@ import userAvatar from '../assets/img/user.jpg';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faBell } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../supabaseClient';
-import Login from './Login';
+import Login from '../auth/Login';
 
 const Header = ({ session, onLoginClick }) => {
     const userDefaultAvatar = session?.user?.user_metadata?.avatar_url || userAvatar;
@@ -15,7 +15,7 @@ const Header = ({ session, onLoginClick }) => {
 
     return (
         <header className="header">
-            <h1>{session ? `Chào, ${userName}!` : 'Chào mừng bạn!'}</h1>
+            <h1>{session ? `Chào, ${userName}!` : ''}</h1>
             <div className="header-right">
                 <span className="header-icon"><FontAwesomeIcon icon={faSearch} /></span>
                 <span className="header-icon"><FontAwesomeIcon icon={faBell} /></span>
@@ -34,8 +34,8 @@ const Header = ({ session, onLoginClick }) => {
                     <button 
                         onClick={onLoginClick}
                         style={{ 
-                            background: '#4e73df', 
-                            color: 'white', 
+                            background: '#dee2e6', 
+                            color: '#343a40', 
                             border: 'none', 
                             padding: '8px 16px', 
                             borderRadius: '5px', 
