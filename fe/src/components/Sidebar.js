@@ -1,4 +1,5 @@
 import React from 'react';
+import logoImg from '../assets/img/logo.jpg';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faThLarge, 
@@ -13,8 +14,12 @@ import {
 const Sidebar = () => {
     return (
         <aside className="sidebar">
-            <div className="logo">
-                <FontAwesomeIcon icon={faLayerGroup} style={{ color: '#000', marginRight: '8px' }} />
+            <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <img 
+                    src={logoImg} 
+                    alt="Logo" 
+                    style={{ width: '30px', height: '30px', borderRadius: '4px' }} 
+                />
                 Learnbox
             </div>
             

@@ -1,12 +1,27 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import { supabase } from '../supabaseClient';
 import './Login.css';
 
 const Login = ({ onClose }) => {
-    const handleGoogleLogin = () => {
-        // Logic login google sẽ được thêm vào đây
-        console.log("Login with Google clicked");
+    const handleGoogleLogin = async () => {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                    },
+                    redirectTo: window.location.origin
+                }
+            });
+            if (error) throw error;
+        } catch (error) {
+            console.error("Error logging in with Google:", error.message);
+            alert("Đăng nhập thất bại: " + error.message);
+        }
     };
 
     return (
