@@ -17,9 +17,39 @@ function App() {
     });
 
     // Lắng nghe thay đổi trạng thái đăng nhập
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
-      if (session) setShowLogin(false);
+      if (session) {
+        setShowLogin(false);
+        
+        // Gửi thông tin sang Backend để cập nhật role
+        const { user } = session;
+        console.log("User logged in:", user);
+        
+        try {
+          const response = await fetch('http://localhost:8080/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: user.id,
+              email: user.email,
+              fullName: user.user_metadata.full_name || user.user_metadata.name,
+              avatarUrl: user.user_metadata.avatar_url,
+            }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log("Backend response (User role sync):", data);
+          } else {
+            console.error("Failed to sync user role with backend");
+          }
+        } catch (error) {
+          console.error("Error syncing user with backend:", error);
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
