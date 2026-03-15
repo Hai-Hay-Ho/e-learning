@@ -21,13 +21,18 @@ const Header = ({ session, onLoginClick }) => {
                 <span className="header-icon"><FontAwesomeIcon icon={faBell} /></span>
                 
                 {session ? (
-                    <div className="user-profile" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="user-avatar" onClick={handleLogout} title="Đăng xuất">
+                    <div className="header-user-wrapper">
+                        <div className="user-avatar-container">
                             <img 
                                 src={userDefaultAvatar}
                                 alt="User Avatar"
-                                style={{ width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', objectFit: 'cover' }}
+                                className="nav-avatar"
                             />
+                            <div className="avatar-dropdown">
+                                <button onClick={handleLogout} className="logout-btn">
+                                    Đăng xuất
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ) : (

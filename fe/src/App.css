@@ -99,6 +99,80 @@ body {
 
 .header-icon {
   font-size: 18px;
+  color: #333;
+}
+
+/* User Avatar Dropdown on Header */
+.user-avatar-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.nav-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  cursor: pointer;
+  object-fit: cover;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.user-avatar-container:hover .nav-avatar {
+  border-color: #eee;
+}
+
+.avatar-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  min-width: 120px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  border-radius: 10px;
+  padding: 8px;
+  margin-top: 10px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  z-index: 1000;
+}
+
+.user-avatar-container:hover .avatar-dropdown {
+  opacity: 1;
+  visibility: visible;
+}
+
+.avatar-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 15px;
+  width: 12px;
+  height: 12px;
+  background: white;
+  transform: rotate(45deg);
+  border-top: 1px solid rgba(0,0,0,0.05);
+  border-left: 1px solid rgba(0,0,0,0.05);
+}
+
+.logout-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  text-align: left;
+  color: #ff4d4f;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.logout-btn:hover {
+  background: #fff1f0;
   cursor: pointer;
 }
 
