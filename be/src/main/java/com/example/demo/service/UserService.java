@@ -18,7 +18,11 @@ public class UserService {
         Optional<User> existingUser = userRepository.findByEmail(email);
 
         if (existingUser.isPresent()) {
-            return existingUser.get();
+            User user = existingUser.get();
+            // Cập nhật thông tin nếu có thay đổi
+            user.setFullName(fullName);
+            user.setAvatarUrl(avatarUrl);
+            return userRepository.save(user);
         }
 
         // Logic phân quyền theo email

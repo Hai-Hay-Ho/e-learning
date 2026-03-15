@@ -30,6 +30,9 @@ public class User {
     @Column(nullable = false)
     private String role; // 0 hoặc 1
 
+    @Column(name = "school")
+    private String school;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 }

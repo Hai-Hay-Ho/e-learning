@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faBookOpen, 
@@ -16,6 +17,124 @@ import {
 
 const MainContent = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [selectedSchool, setSelectedSchool] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [universities, setUniversities] = useState([]);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editData, setEditData] = useState({
+        full_name: '',
+        school: ''
+    });
+
+    useEffect(() => {
+        fetchUserProfile();
+        fetchUniversities();
+    }, []);
+
+    const fetchUniversities = async () => {
+        try {
+            //gọi cả hai để lấy đầy đủ danh sách nhất
+            const [res1, res2] = await Promise.all([
+                fetch('http://universities.hipolabs.com/search?country=Vietnam'),
+                fetch('http://universities.hipolabs.com/search?country=Viet+Nam')
+            ]);
+            
+            const data1 = await res1.json();
+            const data2 = await res2.json();
+            
+            //dịch 
+            const translationMap = {
+                "Ho Chi Minh City University of Agriculture and Forestry": "Đại học Nông Lâm TP.HCM",
+                "Ho Chi Minh City University of Technology": "Đại học Bách khoa TP.HCM",
+                "Ho Chi Minh City University of Science": "Đại học Khoa học Tự nhiên TP.HCM",
+                "Ho Chi Minh City University of Education": "Đại học Sư phạm TP.HCM",
+                "Ho Chi Minh City University of Foreign Languages and Information Technology": "Đại học Ngoại ngữ - Tin học TP.HCM",
+                "Vietnam National University, Ho Chi Minh City": "Đại học Quốc gia TP.HCM",
+                "Vietnam National University, Hanoi": "Đại học Quốc gia Hà Nội",
+                "Hanoi University of Science and Technology": "Đại học Bách khoa Hà Nội",
+                "Foreign Trade University": "Đại học Ngoại thương",
+                "National Economics University": "Đại học Kinh tế Quốc dân",
+                "Bank University of Ho Chi Minh City": "Đại học Ngân hàng TP.HCM",
+                "Can Tho University": "Đại học Cần Thơ",
+                "Da Nang University": "Đại học Đà Nẵng",
+                "Hue University": "Đại học Huế",
+                "FPT University": "Đại học FPT",
+                "Ton Duc Thang University": "Đại học Tôn Đức Thắng",
+                "Ho Chi Minh City University of Social Sciences and Humanities": "Đại học Khoa học Xã hội và Nhân văn TP.HCM",
+                "Ho Chi Minh City University of Economics and Law": "Đại học Kinh tế - Luật TP.HCM",
+                "VNU University of Economics and Business": "Đại học Kinh tế (ĐHQGHN)",
+                "Duy Tan University": "Đại học Duy Tân",
+                "Lac Hong University": "Đại học Lạc Hồng",
+                "Nguyen Tat Thanh University": "Đại học Nguyễn Tất Thành",
+                "Industrial University of Ho Chi Minh City": "Đại học Công nghiệp TP.HCM"
+            };
+
+            const allData = [...data1, ...data2];
+            const uniqueNames = [...new Set(allData.map(uni => {
+                return translationMap[uni.name] || uni.name;
+            }))].sort();
+            
+            setUniversities(uniqueNames);
+        } catch (error) {
+            console.error('Error fetching universities:', error);
+            setUniversities([
+                "Không crawl được"
+            ]);
+        }
+    };
+
+    const fetchUserProfile = async () => {
+        try {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser) {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', authUser.id)
+                    .single();
+
+                if (data) {
+                    setUser(data);
+                    setSelectedSchool(data.school || '');
+                    setEditData({
+                        full_name: data.full_name || '',
+                        school: data.school || ''
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSaveProfile = async () => {
+        if (!user) return;
+        setIsSaving(true);
+        try {
+            const { error } = await supabase
+                .from('users')
+                .update({ 
+                    full_name: editData.full_name,
+                    school: editData.school 
+                })
+                .eq('id', user.id);
+
+            if (error) throw error;
+            alert('Cập nhật thông tin thành công!');
+            setIsEditing(false);
+            fetchUserProfile();
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            fetchUserProfile();
+        } 
+        finally {
+            setIsSaving(false);
+        }
+    };
 
     const daysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();//hàm trả về số ngày trong tháng 
     const firstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();//trả về ngày đầu tiên của tháng
@@ -208,10 +327,74 @@ const MainContent = () => {
                     </div>
                 </div>
 
-                <div className="premium-card">
-                    <h4>Go premium</h4>
-                    <p>Unlock all features</p>
-                    <button>Get access</button>
+                <div className="user-profile-card">
+                    <img 
+                        src={user?.avatar_url || 'https://via.placeholder.com/80'} 
+                        alt="Avatar" 
+                        className="profile-avatar" 
+                    />
+                        
+                    <div className="profile-info-item">
+                        <span className="info-label">Tên:</span>
+                        {isEditing ? (
+                            <input 
+                                className="edit-input"
+                                value={editData.full_name}
+                                onChange={(e) => setEditData({...editData, full_name: e.target.value})}
+                            />
+                        ) : (
+                            <p>{user?.full_name || 'User Name'}</p>
+                        )}
+                    </div>
+
+                    <div className="profile-info-item">
+                        <span className="info-label">Email:</span>
+                        <p className="profile-email">{user?.email}</p>
+                    </div>
+
+                        <div className="profile-info-item">
+                            <span className="info-label">Chức vụ:</span>
+                            <span className="profile-role">
+                                {String(user?.role) === "1" ? 'Giảng viên' : 'Sinh viên'}
+                            </span>
+                        </div>
+
+                    <div className="profile-info-item">
+                        <span className="info-label">Trường đại học:</span>
+                        {isEditing ? (
+                            <select 
+                                className="edit-input"
+                                value={editData.school}
+                                onChange={(e) => setEditData({...editData, school: e.target.value})}
+                            >
+                                <option value="">Chọn trường đại học</option>
+                                {universities.map((uni, index) => (
+                                    <option key={index} value={uni}>{uni}</option>
+                                ))}
+                            </select>
+                        ) : (
+                            <p className="profile-school">{user?.school || 'Chưa cập nhật'}</p>
+                        )}
+                    </div>
+                
+                    <button 
+                        onClick={() => {
+                            if (isEditing) handleSaveProfile();
+                            else setIsEditing(true);
+                        }}
+                        disabled={isSaving}
+                        className="save-profile-btn"
+                    >
+                        {isSaving ? 'Đang lưu...' : (isEditing ? 'Lưu thông tin' : 'Chỉnh sửa')}
+                    </button>
+                    {isEditing && (
+                        <button 
+                            onClick={() => setIsEditing(false)}
+                            className="cancel-edit-btn"
+                        >
+                            Hủy
+                        </button>
+                    )}
                 </div>
             </aside>
         </main>
@@ -219,3 +402,4 @@ const MainContent = () => {
 }
 
 export default MainContent;
+
