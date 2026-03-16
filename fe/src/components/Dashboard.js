@@ -12,7 +12,8 @@ import {
     faFont,
     faHome,
     faImage,
-    faEllipsisH
+    faEllipsisH,
+    faCamera
 } from '@fortawesome/free-solid-svg-icons';
 
 const MainContent = () => {
@@ -23,6 +24,7 @@ const MainContent = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [universities, setUniversities] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [editData, setEditData] = useState({
         full_name: '',
         school: ''
@@ -32,6 +34,55 @@ const MainContent = () => {
         fetchUserProfile();
         fetchUniversities();
     }, []);
+
+    const handleAvatarUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', 'E-Learning');
+
+            const res = await fetch(`https://api.cloudinary.com/v1_1/dye7dfp5s/image/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await res.json();
+            
+            if (!res.ok) {
+                console.error('Cloudinary Error Data:', data);
+                throw new Error(data.error?.message || 'Upload failed');
+            }
+            
+            const imageUrl = data.secure_url;
+
+            //update xuống supabase
+            const { error: tableError } = await supabase
+                .from('users')
+                .update({ avatar_url: imageUrl })
+                .eq('id', user.id);
+
+            if (tableError) throw tableError;
+
+            //update auth Metadata (để đồng bộ avatar_url trong auth)
+            const { error: authError } = await supabase.auth.updateUser({
+                data: { avatar_url: imageUrl }
+            });
+
+            if (authError) throw authError;
+
+            setUser({ ...user, avatar_url: imageUrl });
+            alert('Cập nhật ảnh đại diện thành công!');
+        } catch (error) {
+            console.error('Error uploading avatar:', error);
+            alert('Có lỗi xảy ra khi upload ảnh');
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const fetchUniversities = async () => {
         try {
@@ -328,11 +379,25 @@ const MainContent = () => {
                 </div>
 
                 <div className="user-profile-card">
-                    <img 
-                        src={user?.avatar_url || 'https://via.placeholder.com/80'} 
-                        alt="Avatar" 
-                        className="profile-avatar" 
-                    />
+                    <div className="avatar-wrapper">
+                        <img 
+                            src={user?.avatar_url || 'https://via.placeholder.com/80'} 
+                            alt="Avatar" 
+                            className={`profile-avatar ${uploading ? 'uploading' : ''}`} 
+                        />
+                        <label htmlFor="avatar-upload" className="avatar-hover-overlay">
+                            <FontAwesomeIcon icon={faCamera} />
+                        </label>
+                        <input 
+                            type="file" 
+                            id="avatar-upload" 
+                            accept="image/*" 
+                            onChange={handleAvatarUpload} 
+                            style={{ display: 'none' }} 
+                            disabled={uploading}
+                        />
+                        {uploading && <div className="avatar-spinner"></div>}
+                    </div>
                         
                     <div className="profile-info-item">
                         <span className="info-label">Tên:</span>
