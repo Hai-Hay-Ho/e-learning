@@ -8,10 +8,14 @@ import {
     faClipboardList, 
     faEnvelope, 
     faCog,
-    faLayerGroup
+    faLayerGroup,
+    faTasks
 } from '@fortawesome/free-solid-svg-icons';
 
-const Sidebar = () => {
+const Sidebar = ({ userRole }) => {
+    // role "0" là Student, "1" là Teacher (dựa trên backend model User.java)
+    const isTeacher = userRole === "1";
+
     return (
         <aside className="sidebar">
             <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -28,14 +32,19 @@ const Sidebar = () => {
                     <span className="icon"><FontAwesomeIcon icon={faThLarge} /></span> Dashboard
                 </div>
                 <div className="menu-item">
-                    <span className="icon"><FontAwesomeIcon icon={faChartLine} /></span> Activity
+                    <span className="icon"><FontAwesomeIcon icon={faLayerGroup} /></span> Classes
                 </div>
                 <div className="menu-item">
-                    <span className="icon"><FontAwesomeIcon icon={faBook} /></span> Courses
+                    <span className="icon"><FontAwesomeIcon icon={faTasks} /></span> Assignments
                 </div>
                 <div className="menu-item">
-                    <span className="icon"><FontAwesomeIcon icon={faClipboardList} /></span> Assignments
+                    <span className="icon"><FontAwesomeIcon icon={faChartLine} /></span> Quizzes
                 </div>
+                {isTeacher && (
+                    <div className="menu-item">
+                        <span className="icon"><FontAwesomeIcon icon={faBook} /></span> Analytics
+                    </div>
+                )}
                 <div className="menu-item">
                     <span className="icon"><FontAwesomeIcon icon={faEnvelope} /></span> Messages
                 </div>

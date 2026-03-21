@@ -9,6 +9,7 @@ import { supabase } from './supabaseClient';
 function App() {
   const [session, setSession] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
     // Kiểm tra session hiện tại
@@ -43,12 +44,15 @@ function App() {
           if (response.ok) {
             const data = await response.json();
             console.log("Backend response (User role sync):", data);
+            setUserRole(data.role); // Save role from backend response
           } else {
             console.error("Failed to sync user role with backend");
           }
         } catch (error) {
           console.error("Error syncing user with backend:", error);
         }
+      } else {
+        setUserRole(null);
       }
     });
 
@@ -64,8 +68,8 @@ function App() {
     <div className="dashboard-container">
       {!session && showLogin && <Login onClose={() => setShowLogin(false)} />}
       
-      {}
-      <Sidebar />
+      {/* Sidebar based on role */}
+      <Sidebar userRole={userRole} />
 
       <div className="main-wrapper">
         {}
