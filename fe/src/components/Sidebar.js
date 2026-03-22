@@ -12,7 +12,7 @@ import {
     faTasks
 } from '@fortawesome/free-solid-svg-icons';
 
-const Sidebar = ({ userRole }) => {
+const Sidebar = ({ userRole, activeTab, setActiveTab }) => {
     // role "0" là Student, "1" là Teacher (dựa trên backend model User.java)
     const isTeacher = userRole === "1";
 
@@ -28,10 +28,18 @@ const Sidebar = ({ userRole }) => {
             </div>
             
             <nav className="menu">
-                <div className="menu-item active">
+                <div 
+                    className={`menu-item ${activeTab === 'Dashboard' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('Dashboard')}
+                    style={{ cursor: 'pointer' }}
+                >
                     <span className="icon"><FontAwesomeIcon icon={faThLarge} /></span> Dashboard
                 </div>
-                <div className="menu-item">
+                <div 
+                    className={`menu-item ${activeTab === 'Classes' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('Classes')}
+                    style={{ cursor: 'pointer' }}
+                >
                     <span className="icon"><FontAwesomeIcon icon={faLayerGroup} /></span> Classes
                 </div>
                 <div className="menu-item">

@@ -3,6 +3,7 @@ import './App.css';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import MainContent from './components/Dashboard';
+import ClassPage from './components/Class';
 import Login from './auth/Login';
 import { supabase } from './supabaseClient';
 
@@ -10,6 +11,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const [activeTab, setActiveTab] = useState('Dashboard');
 
   useEffect(() => {
     // Kiểm tra session hiện tại
@@ -69,14 +71,22 @@ function App() {
       {!session && showLogin && <Login onClose={() => setShowLogin(false)} />}
       
       {/* Sidebar based on role */}
-      <Sidebar userRole={userRole} />
+      <Sidebar userRole={userRole} activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <div className="main-wrapper">
         {}
         <Header session={session} onLoginClick={() => setShowLogin(true)} />
 
         {}
-        {session ? <MainContent session={session} /> : (
+        {session ? (
+          activeTab === 'Dashboard' ? (
+            <MainContent session={session} />
+          ) : activeTab === 'Classes' ? (
+            <ClassPage session={session} userRole={userRole} />
+          ) : (
+            <MainContent session={session} />
+          )
+        ) : (
           <div style={{ padding: '20px', textAlign: 'center' }}>
             <h1>Chào mừng bạn!</h1>
             <p>Vui lòng đăng nhập để sử dụng hệ thống.</p>
