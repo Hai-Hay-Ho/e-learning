@@ -31,7 +31,8 @@ const Class = ({ session, userRole }) => {
     const fetchClasses = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:8080/api/classes/user/${session.user.id}`);
+            const roleParam = userRole ? `?role=${userRole}` : '';
+            const response = await fetch(`http://localhost:8080/api/classes/user/${session.user.id}${roleParam}`);
             if (response.ok) {
                 const data = await response.json();
                 setClasses(data);

@@ -31,23 +31,37 @@ public class ClassController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<ClassDTO>> getClasses(@PathVariable UUID userId) {
-        // Hiện tại chỉ fetch class theo teacher_id, sau này thêm tham gia sẽ khác
-        List<ClassDTO> classes = classService.getClassesByTeacher(userId);
+    public ResponseEntity<List<ClassDTO>> getClasses(@PathVariable UUID userId, @RequestParam(required = false) String role) {
+        List<ClassDTO> classes;
+        if ("1".equals(role)) {
+            classes = classService.getClassesByTeacher(userId);
+        } else {
+            classes = classService.getClassesByStudent(userId);
+        }
         return ResponseEntity.ok(classes);
     }
 
     @PostMapping("/join")
     public ResponseEntity<?> joinClass(@RequestBody Map<String, String> payload) {
         String joinCode = payload.get("join_code");
-        // String studentId = payload.get("student_id");
+        String studentIdStr = payload.get("student_id");
         
-        Optional<ClassEntity> classOpt = classService.findByJoinCode(joinCode);
-        if (classOpt.isPresent()) {
-            // Logic lưu student vào bảng class_members sẽ thêm sau
-            return ResponseEntity.ok(Map.of("message", "Tham gia thành công lớp " + classOpt.get().getName()));
-        } else {
-            return ResponseEntity.badRequest().body(Map.of("message", "Mã join code không tồn tại."));
+        if (joinCode == null || studentIdStr == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Thiếu mã join code hoặc ID sinh viên."));
+        }
+
+        try {
+            UUID studentId = UUID.fromString(studentIdStr);
+            Optional<ClassEntity> classOpt = classService.findByJoinCode(joinCode);
+            
+            if (classOpt.isPresent()) {
+                classService.joinClass(studentId, classOpt.get().getId());
+                return ResponseEntity.ok(Map.of("message", "Tham gia thành công lớp " + classOpt.get().getName()));
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("message", "Mã join code không tồn tại."));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 }
