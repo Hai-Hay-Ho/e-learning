@@ -15,18 +15,18 @@ public class UserService {
     private UserRepository userRepository;
 
     public User processUserLogin(UUID id, String email, String fullName, String avatarUrl) {
-        Optional<User> existingUser = userRepository.findByEmail(email);
+        Optional<User> existingUser = userRepository.findById(id);
 
         if (existingUser.isPresent()) {
             User user = existingUser.get();
-            // Cập nhật thông tin nếu có thay đổi
+            // update xuống table users
             user.setFullName(fullName);
             user.setAvatarUrl(avatarUrl);
+            user.setEmail(email);
             return userRepository.save(user);
         }
 
-        // Logic phân quyền theo email
-        // Nếu đuôi email sau @ là st.hcmuaf.edu.vn thì role = "1", ngược lại role = "0"
+        // đuôi email sau @ là st.hcmuaf.edu.vn thì role = "1", ngược lại role = "0"
         String role = "0";
         if (email != null && email.contains("@")) {
             String domain = email.substring(email.indexOf("@") + 1);

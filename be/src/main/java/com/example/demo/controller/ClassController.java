@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.ClassDTO;
 import com.example.demo.model.ClassEntity;
 import com.example.demo.service.ClassService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,9 +31,9 @@ public class ClassController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<ClassEntity>> getClasses(@PathVariable UUID userId) {
+    public ResponseEntity<List<ClassDTO>> getClasses(@PathVariable UUID userId) {
         // Hiện tại chỉ fetch class theo teacher_id, sau này thêm tham gia sẽ khác
-        List<ClassEntity> classes = classService.getClassesByTeacher(userId);
+        List<ClassDTO> classes = classService.getClassesByTeacher(userId);
         return ResponseEntity.ok(classes);
     }
 

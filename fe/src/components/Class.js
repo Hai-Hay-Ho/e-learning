@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import './Class.css';
 import { 
     faPlus, 
     faSignInAlt, 
@@ -8,7 +9,8 @@ import {
     faIdBadge, 
     faCalendarAlt,
     faEllipsisH,
-    faCopy
+    faCopy,
+    faShareAlt
 } from '@fortawesome/free-solid-svg-icons';
 
 const Class = ({ session, userRole }) => {
@@ -144,26 +146,54 @@ const Class = ({ session, userRole }) => {
                     </div>
                 ) : (
                     classes.map((cls) => (
-                        <div key={cls.id} className="course-card">
-                            <div className="course-header">
-                                <div className="course-icon" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8' }}>
-                                    <FontAwesomeIcon icon={faUsers} />
+                        <div key={cls.id} className="course-card-custom">
+                            <div className="course-header-custom" style={{ 
+                                backgroundImage: `url('https://www.gstatic.com/classroom/themes/img_read.jpg')`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                height: '100px',
+                                padding: '16px',
+                                borderTopLeftRadius: '8px',
+                                borderTopRightRadius: '8px',
+                                position: 'relative',
+                                color: 'white'
+                            }}>
+                                <div className="course-header-content">
+                                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '500' }}>{cls.name}</h3>
+                                    <p style={{ margin: '4px 0', fontSize: '14px' }}>{cls.teacherName || "Giáo viên"}</p>
                                 </div>
-                                <button className="more-btn"><FontAwesomeIcon icon={faEllipsisH} /></button>
+                                <div className="teacher-avatar-wrapper">
+                                    <div className="teacher-avatar">
+                                        {cls.teacherAvatar ? (
+                                            <img src={cls.teacherAvatar} alt={cls.teacherName} />
+                                        ) : (
+                                            <div className="avatar-placeholder">
+                                                {cls.teacherName ? cls.teacherName.charAt(0).toUpperCase() : 'L'}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <button className="more-btn-custom"><FontAwesomeIcon icon={faEllipsisH} /></button>
                             </div>
-                            <div className="course-info">
-                                <h3>{cls.name}</h3>
-                                <p><FontAwesomeIcon icon={faIdBadge} style={{ marginRight: '5px' }} /> Mã lớp: 
-                                    <span style={{ fontWeight: 'bold', marginLeft: '5px', color: '#1a73e8' }}>{cls.joinCode}</span>
-                                    <button 
-                                        onClick={() => copyToClipboard(cls.joinCode)}
-                                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#777', marginLeft: '5px' }}
-                                    >
-                                        <FontAwesomeIcon icon={faCopy} />
-                                    </button>
-                                </p>
-                                <div className="course-footer">
-                                    <span><FontAwesomeIcon icon={faCalendarAlt} /> {new Date(cls.createdAt).toLocaleDateString()}</span>
+                            
+                            <div className="course-body-custom" style={{ height: '100px', padding: '16px' }}>
+                            </div>
+
+                            <div className="course-footer-custom" style={{ 
+                                borderTop: '1px solid #e0e0e0', 
+                                padding: '8px 16px', 
+                                display: 'flex', 
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}>
+                                <div className="class-info-icons" style={{ display: 'flex', gap: '15px' }}>
+                                    <span>
+                                        <FontAwesomeIcon icon={faIdBadge} style={{ color: '#5f6368', marginRight: '5px' }} />
+                                        <span style={{ fontSize: '13px', color: '#5f6368' }}>{cls.joinCode}</span>
+                                    </span>
+                                </div>
+                                <div className="course-actions-btns">
+                                    <button className="footer-icon-btn"><FontAwesomeIcon icon={faShareAlt} /></button>
                                 </div>
                             </div>
                         </div>
@@ -171,7 +201,6 @@ const Class = ({ session, userRole }) => {
                 )}
             </div>
 
-            {/* Create Class Modal */}
             {showCreateModal && (
                 <div className="modal-overlay">
                     <div className="modal-content-custom">
@@ -196,7 +225,6 @@ const Class = ({ session, userRole }) => {
                 </div>
             )}
 
-            {/* Join Class Modal */}
             {showJoinModal && (
                 <div className="modal-overlay">
                     <div className="modal-content-custom">
@@ -221,67 +249,6 @@ const Class = ({ session, userRole }) => {
                     </div>
                 </div>
             )}
-
-            <style jsx>{`
-                .modal-overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0,0,0,0.5);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 1000;
-                }
-                .modal-content-custom {
-                    background: white;
-                    padding: 24px;
-                    border-radius: 8px;
-                    width: 400px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                }
-                .form-group {
-                    margin: 20px 0;
-                }
-                .form-group label {
-                    display: block;
-                    margin-bottom: 8px;
-                    font-weight: 500;
-                }
-                .form-group input {
-                    width: 100%;
-                    padding: 10px;
-                    border: 1px solid #ddd;
-                    border-radius: 4px;
-                }
-                .modal-actions {
-                    display: flex;
-                    justify-content: flex-end;
-                    gap: 12px;
-                }
-                .confirm-btn {
-                    background: #1a73e8;
-                    color: white;
-                    border: none;
-                    padding: 8px 16px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                }
-                .create-btn {
-                    background: #1a73e8;
-                    color: white;
-                    border: none;
-                    padding: 10px 20px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-weight: 500;
-                }
-                .create-btn:hover {
-                    background: #1557b0;
-                }
-            `}</style>
         </div>
     );
 };

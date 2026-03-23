@@ -27,7 +27,6 @@ function App() {
         
         // Gửi thông tin sang Backend để cập nhật role
         const { user } = session;
-        console.log("User logged in:", user);
         
         try {
           const response = await fetch('http://localhost:8080/api/auth/login', {
@@ -45,8 +44,7 @@ function App() {
           
           if (response.ok) {
             const data = await response.json();
-            console.log("Backend response (User role sync):", data);
-            setUserRole(data.role); // Save role from backend response
+            setUserRole(data.role); 
           } else {
             console.error("Failed to sync user role with backend");
           }
