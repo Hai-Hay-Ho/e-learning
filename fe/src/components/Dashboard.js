@@ -75,10 +75,8 @@ const MainContent = () => {
             if (authError) throw authError;
 
             setUser({ ...user, avatar_url: imageUrl });
-            alert('Cập nhật ảnh đại diện thành công!');
         } catch (error) {
             console.error('Error uploading avatar:', error);
-            alert('Có lỗi xảy ra khi upload ảnh');
         } finally {
             setUploading(false);
         }
@@ -175,7 +173,6 @@ const MainContent = () => {
                 .eq('id', user.id);
 
             if (error) throw error;
-            alert('Cập nhật thông tin thành công!');
             setIsEditing(false);
             fetchUserProfile();
         } catch (error) {

@@ -11,53 +11,58 @@ function App() {
   const [session, setSession] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
 
   useEffect(() => {
     // Kiểm tra session hiện tại
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session) {
+        fetchUserData(session.user);
+      }
     });
 
-    // Lắng nghe thay đổi trạng thái đăng nhập
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       if (session) {
         setShowLogin(false);
-        
-        // Gửi thông tin sang Backend để cập nhật role
-        const { user } = session;
-        
-        try {
-          const response = await fetch('http://localhost:8080/api/auth/login', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              id: user.id,
-              email: user.email,
-              fullName: user.user_metadata.full_name || user.user_metadata.name,
-              avatarUrl: user.user_metadata.avatar_url,
-            }),
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            setUserRole(data.role); 
-          } else {
-            console.error("Failed to sync user role with backend");
-          }
-        } catch (error) {
-          console.error("Error syncing user with backend:", error);
-        }
+        fetchUserData(session.user);
       } else {
         setUserRole(null);
+        setUserData(null);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserData = async (user) => {
+    try {
+      const response = await fetch('http://localhost:8080/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: user.id,
+          email: user.email,
+          fullName: user.user_metadata.full_name || user.user_metadata.name,
+          avatarUrl: user.user_metadata.avatar_url,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUserRole(data.role); 
+        setUserData(data); // Lưu thông tin trả về từ supabase
+      } else {
+        console.error("Failed to sync user role with backend");
+      }
+    } catch (error) {
+      console.error("Error syncing user with backend:", error);
+    }
+  };
 
   if (!session && !showLogin) {
     // Nếu chưa đăng nhập, mặc định hiển thị trang chủ hoặc buộc login tùy bạn
@@ -73,7 +78,7 @@ function App() {
 
       <div className="main-wrapper">
         {}
-        <Header session={session} onLoginClick={() => setShowLogin(true)} />
+        <Header session={session} userData={userData} onLoginClick={() => setShowLogin(true)} />
 
         {}
         {session ? (

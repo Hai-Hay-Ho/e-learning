@@ -19,10 +19,14 @@ public class UserService {
 
         if (existingUser.isPresent()) {
             User user = existingUser.get();
-            // update xuống table users
             user.setFullName(fullName);
-            user.setAvatarUrl(avatarUrl);
             user.setEmail(email);
+            
+            // Chỉ cập nhật avatar từ Google nếu trong DB hiện đang trống hoặc chưa có avatar
+            if (user.getAvatarUrl() == null || user.getAvatarUrl().isEmpty()) {
+                user.setAvatarUrl(avatarUrl);
+            }
+            
             return userRepository.save(user);
         }
 

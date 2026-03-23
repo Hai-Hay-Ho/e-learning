@@ -5,9 +5,9 @@ import { faSearch, faBell } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../supabaseClient';
 import Login from '../auth/Login';
 
-const Header = ({ session, onLoginClick }) => {
-    const userDefaultAvatar = session?.user?.user_metadata?.avatar_url || userAvatar;
-    const userName = session?.user?.user_metadata?.full_name || 'Bạn';
+const Header = ({ session, userData, onLoginClick }) => {
+    const userDefaultAvatar = userData?.avatarUrl || session?.user?.user_metadata?.avatar_url || userAvatar;
+    const userName = userData?.fullName || session?.user?.user_metadata?.full_name || 'Bạn';
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
