@@ -10,7 +10,11 @@ import {
     faCalendarAlt,
     faEllipsisH,
     faCopy,
-    faShareAlt
+    faShareAlt,
+    faBullhorn,
+    faFileAlt,
+    faTasks,
+    faArrowLeft
 } from '@fortawesome/free-solid-svg-icons';
 
 const Class = ({ session, userRole }) => {
@@ -22,11 +26,25 @@ const Class = ({ session, userRole }) => {
     const [joinCode, setJoinCode] = useState('');
     const [error, setError] = useState(null);
 
+    // New states for Posts
+    const [selectedClass, setSelectedClass] = useState(null);
+    const [posts, setPosts] = useState([]);
+    const [showPostModal, setShowPostModal] = useState(false);
+    const [postType, setPostType] = useState('announcement');
+    const [postTitle, setPostTitle] = useState('');
+    const [postContent, setPostContent] = useState('');
+
     const isTeacher = userRole === "1";
 
     useEffect(() => {
         fetchClasses();
     }, [userRole]);
+
+    useEffect(() => {
+        if (selectedClass) {
+            fetchPosts(selectedClass.id);
+        }
+    }, [selectedClass]);
 
     const fetchClasses = async () => {
         setLoading(true);
@@ -43,6 +61,53 @@ const Class = ({ session, userRole }) => {
             console.error("Error fetching classes:", err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchPosts = async (classId) => {
+        try {
+            const response = await fetch(`http://localhost:8080/api/posts/class/${classId}`);
+            if (response.ok) {
+                const data = await response.json();
+                setPosts(data);
+            }
+        } catch (err) {
+            console.error("Error fetching posts:", err);
+        }
+    };
+
+    const handleCreatePost = async (e) => {
+        e.preventDefault();
+        if (!postTitle.trim() || !postContent.trim()) return;
+
+        const newPost = {
+            classId: selectedClass.id,
+            authorId: session.user.id,
+            type: postType,
+            title: postTitle,
+            content: postContent,
+            attachments: [] // Future improvement: handle file uploads
+        };
+
+        try {
+            const response = await fetch('http://localhost:8080/api/posts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newPost),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setPosts([data, ...posts]);
+                setShowPostModal(false);
+                setPostTitle('');
+                setPostContent('');
+                setPostType('announcement');
+            }
+        } catch (err) {
+            console.error("Error creating post:", err);
         }
     };
 
@@ -111,96 +176,223 @@ const Class = ({ session, userRole }) => {
                 alert(errorData.message || "Mã code không hợp lệ hoặc bạn đã tham gia lớp này.");
             }
         } catch (err) {
-            alert("Lỗi kết nối server");
             console.error(err);
         }
     };
 
     const copyToClipboard = (code) => {
         navigator.clipboard.writeText(code);
-        alert("Đã sao chép mã code!");
     };
 
     return (
         <div className="main-content">
-            <div className="content-header">
-                <div>
-                    {isTeacher ? (
-                        <button className="create-btn" onClick={() => setShowCreateModal(true)}>
-                            <FontAwesomeIcon icon={faPlus} style={{ marginRight: '8px' }} />
-                            Tạo lớp học
-                        </button>
-                    ) : (
-                        <button className="create-btn" onClick={() => setShowJoinModal(true)}>
-                            <FontAwesomeIcon icon={faSignInAlt} style={{ marginRight: '8px' }} />
-                            Tham gia lớp học
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            <div className="dashboard-grid">
-                {classes.length === 0 ? (
-                    <div style={{ textAlign: 'center', gridColumn: '1/-1', padding: '50px' }}>
-                        <FontAwesomeIcon icon={faUsers} size="3x" style={{ color: '#ccc', marginBottom: '20px' }} />
-                        <p>{isTeacher ? "Bạn chưa tạo lớp học nào." : "Bạn chưa tham gia lớp học nào."}</p>
+            {selectedClass ? (
+                // --- Updated Detailed Class View ---
+                <div className="class-detail-container">
+                    <div className="class-banner">
+                        <div className="banner-header">
+                            <button className="back-link-btn" onClick={() => setSelectedClass(null)}>
+                                <FontAwesomeIcon icon={faArrowLeft} />
+                            </button>
+                        </div>
+                        <h1>{selectedClass.name}</h1>
+                        <p>{selectedClass.teacherName || "Giáo viên"}</p>
                     </div>
-                ) : (
-                    classes.map((cls) => (
-                        <div key={cls.id} className="course-card-custom">
-                            <div className="course-header-custom" style={{ 
-                                backgroundImage: `url('https://www.gstatic.com/classroom/themes/img_read.jpg')`,
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center',
-                                height: '100px',
-                                padding: '16px',
-                                borderTopLeftRadius: '8px',
-                                borderTopRightRadius: '8px',
-                                position: 'relative',
-                                color: 'white'
-                            }}>
-                                <div className="course-header-content">
-                                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '500' }}>{cls.name}</h3>
-                                    <p style={{ margin: '4px 0', fontSize: '14px' }}>{cls.teacherName || "Giáo viên"}</p>
-                                </div>
-                                <div className="teacher-avatar-wrapper">
-                                    <div className="teacher-avatar">
-                                        {cls.teacherAvatar ? (
-                                            <img src={cls.teacherAvatar} alt={cls.teacherName} />
-                                        ) : (
-                                            <div className="avatar-placeholder">
-                                                {cls.teacherName ? cls.teacherName.charAt(0).toUpperCase() : 'L'}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                                <button className="more-btn-custom"><FontAwesomeIcon icon={faEllipsisH} /></button>
-                            </div>
-                            
-                            <div className="course-body-custom" style={{ height: '100px', padding: '16px' }}>
-                            </div>
 
-                            <div className="course-footer-custom" style={{ 
-                                borderTop: '1px solid #e0e0e0', 
-                                padding: '8px 16px', 
-                                display: 'flex', 
-                                justifyContent: 'space-between',
-                                alignItems: 'center'
-                            }}>
-                                <div className="class-info-icons" style={{ display: 'flex', gap: '15px' }}>
-                                    <span>
-                                        <FontAwesomeIcon icon={faIdBadge} style={{ color: '#5f6368', marginRight: '5px' }} />
-                                        <span style={{ fontSize: '13px', color: '#5f6368' }}>{cls.joinCode}</span>
-                                    </span>
+                    <div className="class-content-layout">
+                        <div className="class-sidebar-info">
+                            <div className="info-card">
+                                <h4>Mã lớp học</h4>
+                                <div className="join-code-display" 
+                                     style={{ cursor: 'pointer' }} 
+                                     onClick={() => copyToClipboard(selectedClass.joinCode)}>
+                                    {selectedClass.joinCode} <FontAwesomeIcon icon={faCopy} size="xs" style={{ opacity: 0.6 }} />
                                 </div>
-                                <div className="course-actions-btns">
-                                    <button className="footer-icon-btn"><FontAwesomeIcon icon={faShareAlt} /></button>
-                                </div>
+                            </div>
+                            <div className="info-card">
+                                <h4>Sắp đến hạn</h4>
+                                <p style={{ fontSize: '12px', color: '#70757a', margin: 0 }}>
+                                    Tuyệt vời! Không có bài tập nào sắp đến hạn.
+                                </p>
                             </div>
                         </div>
-                    ))
-                )}
-            </div>
+
+                        <div className="posts-feed-section">
+                            {isTeacher && (
+                                <div className="post-composer" onClick={() => setShowPostModal(true)}>
+                                    <span className="composer-placeholder">Thông báo mới</span>
+                                </div>
+                            )}
+
+                            <div className="posts-feed">
+                                {posts.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '40px', color: '#5f6368', background: 'white', border: '1px solid #dadce0', borderRadius: '8px' }}>
+                                        <FontAwesomeIcon icon={faBullhorn} size="2x" style={{ opacity: 0.2, marginBottom: '16px' }} />
+                                        <p>Chưa có bài đăng nào.</p>
+                                    </div>
+                                ) : (
+                                    posts.map((post) => (
+                                        <div key={post.id} className="post-item">
+                                            <div className="post-header-info">
+                                                <div className="author-block">
+                                                    <div className="user-avatar-small">
+                                                        {post.authorAvatar ? (
+                                                            <img src={post.authorAvatar} alt={post.authorName} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                                                        ) : (
+                                                            post.authorName.charAt(0).toUpperCase()
+                                                        )}
+                                                    </div>
+                                                    <div className="author-details">
+                                                        <h5>{post.authorName}</h5>
+                                                        <span>{new Date(post.createdAt).toLocaleString('vi-VN')}</span>
+                                                    </div>
+                                                </div>
+                                                <div className={`post-type-tag tag-${post.type}`}>
+                                                    <FontAwesomeIcon icon={post.type === 'assignment' ? faTasks : (post.type === 'material' ? faFileAlt : faBullhorn)} style={{ marginRight: '6px' }} />
+                                                    {post.type === 'assignment' ? 'Bài tập' : (post.type === 'material' ? 'Tài liệu' : 'Thông báo')}
+                                                </div>
+                                            </div>
+                                            <div className="post-body">
+                                                {post.title && <h4>{post.title}</h4>}
+                                                <p>{post.content}</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {showPostModal && (
+                        <div className="modal-overlay">
+                            <div className="modal-content-custom" style={{ width: '500px' }}>
+                                <h2>Tạo bài đăng mới</h2>
+                                <form onSubmit={handleCreatePost}>
+                                    <div className="form-group">
+                                        <label>Loại bài đăng</label>
+                                        <select 
+                                            value={postType} 
+                                            onChange={(e) => setPostType(e.target.value)}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', marginBottom: '15px' }}
+                                        >
+                                            <option value="announcement">Thông báo</option>
+                                            <option value="material">Tài liệu</option>
+                                            <option value="assignment">Bài tập</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Tiêu đề</label>
+                                        <input 
+                                            type="text" 
+                                            value={postTitle} 
+                                            onChange={(e) => setPostTitle(e.target.value)}
+                                            placeholder="Nhập tiêu đề"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Nội dung</label>
+                                        <textarea 
+                                            value={postContent} 
+                                            onChange={(e) => setPostContent(e.target.value)}
+                                            placeholder="Nội dung bài đăng"
+                                            rows="5"
+                                            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', minHeight: '100px' }}
+                                            required
+                                        ></textarea>
+                                    </div>
+                                    <div className="modal-actions">
+                                        <button type="button" onClick={() => setShowPostModal(false)}>Hủy</button>
+                                        <button type="submit" className="confirm-btn">Đăng</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                // --- Class Grid View ---
+                <>
+                    <div className="content-header">
+                        <div>
+                            {isTeacher ? (
+                                <button className="create-btn" onClick={() => setShowCreateModal(true)}>
+                                    <FontAwesomeIcon icon={faPlus} style={{ marginRight: '8px' }} />
+                                    Tạo lớp học
+                                </button>
+                            ) : (
+                                <button className="create-btn" onClick={() => setShowJoinModal(true)}>
+                                    <FontAwesomeIcon icon={faSignInAlt} style={{ marginRight: '8px' }} />
+                                    Tham gia lớp học
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="dashboard-grid">
+                        {classes.length === 0 ? (
+                            <div style={{ textAlign: 'center', gridColumn: '1/-1', padding: '50px' }}>
+                                <FontAwesomeIcon icon={faUsers} size="3x" style={{ color: '#ccc', marginBottom: '20px' }} />
+                                <p>{isTeacher ? "Bạn chưa tạo lớp học nào." : "Bạn chưa tham gia lớp học nào."}</p>
+                            </div>
+                        ) : (
+                            classes.map((cls) => (
+                                <div key={cls.id} className="course-card-custom" onClick={() => setSelectedClass(cls)} style={{ cursor: 'pointer' }}>
+                                    <div className="course-header-custom" style={{ 
+                                        backgroundImage: `url('https://www.gstatic.com/classroom/themes/img_read.jpg')`,
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center',
+                                        height: '100px',
+                                        padding: '16px',
+                                        borderTopLeftRadius: '8px',
+                                        borderTopRightRadius: '8px',
+                                        position: 'relative',
+                                        color: 'white'
+                                    }}>
+                                        <div className="course-header-content">
+                                            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '500' }}>{cls.name}</h3>
+                                            <p style={{ margin: '4px 0', fontSize: '14px' }}>{cls.teacherName || "Giáo viên"}</p>
+                                        </div>
+                                        <div className="teacher-avatar-wrapper">
+                                            <div className="teacher-avatar">
+                                                {cls.teacherAvatar ? (
+                                                    <img src={cls.teacherAvatar} alt={cls.teacherName} />
+                                                ) : (
+                                                    <div className="avatar-placeholder">
+                                                        {cls.teacherName ? cls.teacherName.charAt(0).toUpperCase() : 'L'}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button className="more-btn-custom" onClick={(e) => { e.stopPropagation(); }}><FontAwesomeIcon icon={faEllipsisH} /></button>
+                                    </div>
+                                    
+                                    <div className="course-body-custom" style={{ height: '100px', padding: '16px' }}>
+                                    </div>
+
+                                    <div className="course-footer-custom" style={{ 
+                                        borderTop: '1px solid #e0e0e0', 
+                                        padding: '8px 16px', 
+                                        display: 'flex', 
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}>
+                                        <div className="class-info-icons" style={{ display: 'flex', gap: '15px' }}>
+                                            <span onClick={(e) => { e.stopPropagation(); copyToClipboard(cls.joinCode); }}>
+                                                <FontAwesomeIcon icon={faIdBadge} style={{ color: '#5f6368', marginRight: '5px' }} />
+                                                <span style={{ fontSize: '13px', color: '#5f6368' }}>{cls.joinCode}</span>
+                                            </span>
+                                        </div>
+                                        <div className="course-actions-btns">
+                                            <button className="footer-icon-btn" onClick={(e) => e.stopPropagation()}><FontAwesomeIcon icon={faShareAlt} /></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </>
+            )}
 
             {showCreateModal && (
                 <div className="modal-overlay">
