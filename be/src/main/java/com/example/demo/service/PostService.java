@@ -30,6 +30,7 @@ public class PostService {
                 .type(postDTO.getType())
                 .title(postDTO.getTitle())
                 .content(postDTO.getContent())
+                .createdAt(java.time.LocalDateTime.now())
                 .build();
 
         PostEntity savedPost = postRepository.save(post);

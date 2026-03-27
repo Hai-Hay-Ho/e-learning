@@ -41,9 +41,37 @@ const Class = ({ session, userRole }) => {
     }, [userRole]);
 
     useEffect(() => {
+        let subscription;
         if (selectedClass) {
             fetchPosts(selectedClass.id);
+
+            // realtime bằng supabase
+            const channelName = `class-posts-${selectedClass.id}`;
+            subscription = supabase
+                .channel(channelName)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'class_posts',
+                        filter: `class_id=eq.${selectedClass.id}`
+                    },
+                    (payload) => {
+                        console.log('New post received via Realtime:', payload.new);
+                        fetchPosts(selectedClass.id);
+                    }
+                )
+                .subscribe((status) => {
+                    console.log(`Realtime status for ${channelName}:`, status);
+                });
         }
+        return () => {
+            if (subscription) {
+                console.log('Leaving realtime channel');
+                supabase.removeChannel(subscription);
+            }
+        };
     }, [selectedClass]);
 
     const fetchClasses = async () => {
@@ -86,7 +114,7 @@ const Class = ({ session, userRole }) => {
             type: postType,
             title: postTitle,
             content: postContent,
-            attachments: [] // Future improvement: handle file uploads
+            attachments: [] // chức năng upload file phát triển sau
         };
 
         try {
@@ -100,7 +128,8 @@ const Class = ({ session, userRole }) => {
 
             if (response.ok) {
                 const data = await response.json();
-                setPosts([data, ...posts]);
+                console.log("Post created:", data);
+                setPosts(prevPosts => [data, ...prevPosts]); 
                 setShowPostModal(false);
                 setPostTitle('');
                 setPostContent('');
