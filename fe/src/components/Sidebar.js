@@ -24,7 +24,7 @@ const Sidebar = ({ userRole, activeTab, setActiveTab }) => {
                     alt="Logo" 
                     style={{ width: '30px', height: '30px', borderRadius: '4px' }} 
                 />
-                Learnbox
+                E-Learning
             </div>
             
             <nav className="menu">

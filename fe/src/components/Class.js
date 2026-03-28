@@ -14,7 +14,9 @@ import {
     faBullhorn,
     faFileAlt,
     faTasks,
-    faArrowLeft
+    faArrowLeft,
+    faPaperclip,
+    faTimes
 } from '@fortawesome/free-solid-svg-icons';
 
 const Class = ({ session, userRole }) => {
@@ -33,6 +35,8 @@ const Class = ({ session, userRole }) => {
     const [postType, setPostType] = useState('announcement');
     const [postTitle, setPostTitle] = useState('');
     const [postContent, setPostContent] = useState('');
+    const [attachments, setAttachments] = useState([]);
+    const [uploading, setUploading] = useState(false);
 
     const isTeacher = userRole === "1";
 
@@ -104,6 +108,51 @@ const Class = ({ session, userRole }) => {
         }
     };
 
+    const handleFileChange = async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        setUploading(true);
+        const newAttachments = [...attachments];
+
+        for (const file of files) {
+            try {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Math.random()}.${fileExt}`;
+                const filePath = `${selectedClass.id}/${fileName}`;
+
+                // Upload to Supabase Storage (Assumes 'post-attachments' bucket exists)
+                const { data, error } = await supabase.storage
+                    .from('post-attachments')
+                    .upload(filePath, file);
+
+                if (error) throw error;
+
+                // Get Public URL
+                const { data: { publicUrl } } = supabase.storage
+                    .from('post-attachments')
+                    .getPublicUrl(filePath);
+
+                newAttachments.push({
+                    fileUrl: publicUrl,
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileSize: file.size
+                });
+            } catch (err) {
+                console.error("Error uploading file:", err);
+                alert(`Lỗi khi tải lên file ${file.name}`);
+            }
+        }
+
+        setAttachments(newAttachments);
+        setUploading(false);
+    };
+
+    const removeAttachment = (index) => {
+        setAttachments(attachments.filter((_, i) => i !== index));
+    };
+
     const handleCreatePost = async (e) => {
         e.preventDefault();
         if (!postTitle.trim() || !postContent.trim()) return;
@@ -114,7 +163,7 @@ const Class = ({ session, userRole }) => {
             type: postType,
             title: postTitle,
             content: postContent,
-            attachments: [] // chức năng upload file phát triển sau
+            attachments: attachments
         };
 
         try {
@@ -134,6 +183,7 @@ const Class = ({ session, userRole }) => {
                 setPostTitle('');
                 setPostContent('');
                 setPostType('announcement');
+                setAttachments([]);
             }
         } catch (err) {
             console.error("Error creating post:", err);
@@ -216,7 +266,6 @@ const Class = ({ session, userRole }) => {
     return (
         <div className="main-content">
             {selectedClass ? (
-                // --- Updated Detailed Class View ---
                 <div className="class-detail-container">
                     <div className="class-banner">
                         <div className="banner-header">
@@ -284,6 +333,37 @@ const Class = ({ session, userRole }) => {
                                             <div className="post-body">
                                                 {post.title && <h4>{post.title}</h4>}
                                                 <p>{post.content}</p>
+                                                
+                                                {post.attachments && post.attachments.length > 0 && (
+                                                    <div className="post-attachments" style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                        {post.attachments.map((att) => (
+                                                            <a 
+                                                                key={att.id} 
+                                                                href={att.fileUrl} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                style={{ 
+                                                                    display: 'flex', 
+                                                                    alignItems: 'center', 
+                                                                    padding: '10px', 
+                                                                    border: '1px solid #dadce0', 
+                                                                    borderRadius: '8px', 
+                                                                    textDecoration: 'none',
+                                                                    color: '#3c4043',
+                                                                    background: '#f8f9fa'
+                                                                }}
+                                                            >
+                                                                <FontAwesomeIcon icon={faFileAlt} style={{ marginRight: '12px', color: '#1967d2' }} />
+                                                                <div style={{ flex: 1 }}>
+                                                                    <div style={{ fontSize: '14px', fontWeight: '500' }}>{att.fileName}</div>
+                                                                    <div style={{ fontSize: '12px', color: '#70757a' }}>
+                                                                        {att.fileSize ? `${(att.fileSize / 1024 / 1024).toFixed(2)} MB` : ''} {att.fileType}
+                                                                    </div>
+                                                                </div>
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ))
@@ -330,6 +410,45 @@ const Class = ({ session, userRole }) => {
                                             required
                                         ></textarea>
                                     </div>
+                                    
+                                    <div className="form-group">
+                                        <label>Tệp đính kèm ({attachments.length})</label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {attachments.map((att, index) => (
+                                                <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '8px', border: '1px solid #dadce0', borderRadius: '4px', background: '#f8f9fa' }}>
+                                                    <FontAwesomeIcon icon={faFileAlt} style={{ marginRight: '8px', color: '#1967d2' }} />
+                                                    <span style={{ flex: 1, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{att.fileName}</span>
+                                                    <button type="button" onClick={() => removeAttachment(index)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#5f6368' }}>
+                                                        <FontAwesomeIcon icon={faTimes} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            
+                                            <label style={{ 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'center', 
+                                                padding: '10px', 
+                                                border: '2px dashed #dadce0', 
+                                                borderRadius: '4px', 
+                                                cursor: 'pointer', 
+                                                color: '#1967d2',
+                                                gap: '8px',
+                                                marginTop: '8px'
+                                            }}>
+                                                <input 
+                                                    type="file" 
+                                                    multiple 
+                                                    onChange={handleFileChange} 
+                                                    style={{ display: 'none' }} 
+                                                    disabled={uploading}
+                                                />
+                                                <FontAwesomeIcon icon={uploading ? faPlus : faPaperclip} spin={uploading} />
+                                                {uploading ? 'Đang tải lên...' : 'Thêm tệp đính kèm'}
+                                            </label>
+                                        </div>
+                                    </div>
+
                                     <div className="modal-actions">
                                         <button type="button" onClick={() => setShowPostModal(false)}>Hủy</button>
                                         <button type="submit" className="confirm-btn">Đăng</button>
@@ -340,7 +459,6 @@ const Class = ({ session, userRole }) => {
                     )}
                 </div>
             ) : (
-                // --- Class Grid View ---
                 <>
                     <div className="content-header">
                         <div>
