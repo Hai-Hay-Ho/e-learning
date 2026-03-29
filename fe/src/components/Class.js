@@ -118,19 +118,24 @@ const Class = ({ session, userRole }) => {
         for (const file of files) {
             try {
                 const fileExt = file.name.split('.').pop();
-                const fileName = `${Math.random()}.${fileExt}`;
+                const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
                 const filePath = `${selectedClass.id}/${fileName}`;
 
-                // Upload to Supabase Storage (Assumes 'post-attachments' bucket exists)
+                // Upload to Supabase Storage
                 const { data, error } = await supabase.storage
-                    .from('post-attachments')
-                    .upload(filePath, file);
+                    .from('post_attachments')
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
 
-                if (error) throw error;
+                if (error) {
+                    throw error;
+                }
 
                 // Get Public URL
                 const { data: { publicUrl } } = supabase.storage
-                    .from('post-attachments')
+                    .from('post_attachments')
                     .getPublicUrl(filePath);
 
                 newAttachments.push({
@@ -140,7 +145,6 @@ const Class = ({ session, userRole }) => {
                     fileSize: file.size
                 });
             } catch (err) {
-                console.error("Error uploading file:", err);
                 alert(`Lỗi khi tải lên file ${file.name}`);
             }
         }
@@ -218,7 +222,6 @@ const Class = ({ session, userRole }) => {
                 setClasses([...classes, data]);
                 setShowCreateModal(false);
                 setClassName('');
-                alert(`Lớp đã được tạo!`);
             } else {
                 const errorData = await response.json();
                 setError(errorData.message || "Không thể tạo lớp học");
