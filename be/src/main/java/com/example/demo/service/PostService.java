@@ -57,6 +57,41 @@ public class PostService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public PostDTO updatePost(UUID postId, PostDTO postDTO) {
+        PostEntity post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+
+        post.setType(postDTO.getType());
+        post.setTitle(postDTO.getTitle());
+        post.setContent(postDTO.getContent());
+        
+        postRepository.save(post);
+
+        // Update attachments: simpler way is to delete and recreate
+        attachmentRepository.deleteByPostId(postId);
+        if (postDTO.getAttachments() != null) {
+            List<PostAttachment> attachments = postDTO.getAttachments().stream()
+                    .map(att -> PostAttachment.builder()
+                            .postId(post.getId())
+                            .fileUrl(att.getFileUrl())
+                            .fileName(att.getFileName())
+                            .fileType(att.getFileType())
+                            .fileSize(att.getFileSize())
+                            .build())
+                    .collect(Collectors.toList());
+            attachmentRepository.saveAll(attachments);
+        }
+
+        return getPostDTO(post);
+    }
+
+    @Transactional
+    public void deletePost(UUID postId) {
+        attachmentRepository.deleteByPostId(postId);
+        postRepository.deleteById(postId);
+    }
+
     private PostDTO getPostDTO(PostEntity post) {
         User author = userRepository.findById(post.getAuthorId()).orElse(null);
         List<PostAttachment> attachments = attachmentRepository.findByPostId(post.getId());

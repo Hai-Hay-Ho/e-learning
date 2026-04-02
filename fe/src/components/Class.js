@@ -37,6 +37,11 @@ const Class = ({ session, userRole }) => {
     const [postContent, setPostContent] = useState('');
     const [attachments, setAttachments] = useState([]);
     const [uploading, setUploading] = useState(false);
+    
+    // States for Editing Post
+    const [editingPost, setEditingPost] = useState(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [activeMenu, setActiveMenu] = useState(null);
 
     const isTeacher = userRole === "1";
 
@@ -46,35 +51,53 @@ const Class = ({ session, userRole }) => {
 
     useEffect(() => {
         let subscription;
+        let attachmentSubscription;
+        
         if (selectedClass) {
             fetchPosts(selectedClass.id);
 
-            // realtime bằng supabase
-            const channelName = `class-posts-${selectedClass.id}`;
+            // Realtime cho bảng bài đăng
+            const postChannelName = `class-posts-${selectedClass.id}`;
             subscription = supabase
-                .channel(channelName)
+                .channel(postChannelName)
                 .on(
                     'postgres_changes',
                     {
-                        event: 'INSERT',
+                        event: '*',
                         schema: 'public',
                         table: 'class_posts',
                         filter: `class_id=eq.${selectedClass.id}`
                     },
                     (payload) => {
-                        console.log('New post received via Realtime:', payload.new);
+                        console.log('Post change received via Realtime:', payload.eventType);
                         fetchPosts(selectedClass.id);
                     }
                 )
-                .subscribe((status) => {
-                    console.log(`Realtime status for ${channelName}:`, status);
-                });
+                .subscribe();
+
+            // Realtime cho bảng tệp đính kèm (Để cập nhật khi upload/xóa file)
+            const attachmentChannelName = `class-attachments-${selectedClass.id}`;
+            attachmentSubscription = supabase
+                .channel(attachmentChannelName)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'post_attachments'
+                        // Lưu ý: post_attachments có thể không có class_id, 
+                        // nhưng khi có bất kỳ file nào thay đổi, ta fetch lại posts là an toàn nhất
+                    },
+                    () => {
+                        console.log('Attachment change received via Realtime');
+                        fetchPosts(selectedClass.id);
+                    }
+                )
+                .subscribe();
         }
         return () => {
-            if (subscription) {
-                console.log('Leaving realtime channel');
-                supabase.removeChannel(subscription);
-            }
+            if (subscription) supabase.removeChannel(subscription);
+            if (attachmentSubscription) supabase.removeChannel(attachmentSubscription);
         };
     }, [selectedClass]);
 
@@ -145,7 +168,7 @@ const Class = ({ session, userRole }) => {
                     fileSize: file.size
                 });
             } catch (err) {
-                alert(`Lỗi khi tải lên file ${file.name}`);
+                alert(`L?i khi t?i l�n file ${file.name}`);
             }
         }
 
@@ -182,7 +205,7 @@ const Class = ({ session, userRole }) => {
             if (response.ok) {
                 const data = await response.json();
                 console.log("Post created:", data);
-                setPosts(prevPosts => [data, ...prevPosts]); 
+                // Realtime will handle fetching
                 setShowPostModal(false);
                 setPostTitle('');
                 setPostContent('');
@@ -191,6 +214,67 @@ const Class = ({ session, userRole }) => {
             }
         } catch (err) {
             console.error("Error creating post:", err);
+        }
+    };
+
+    const handleEditPost = (post) => {
+        setEditingPost(post);
+        setPostType(post.type);
+        setPostTitle(post.title || '');
+        setPostContent(post.content || '');
+        setAttachments(post.attachments || []);
+        setShowEditModal(true);
+        setActiveMenu(null);
+    };
+
+    const handleUpdatePost = async (e) => {
+        e.preventDefault();
+        if (!postTitle.trim() || !postContent.trim()) return;
+
+        const updatedPost = {
+            ...editingPost,
+            type: postType,
+            title: postTitle,
+            content: postContent,
+            attachments: attachments
+        };
+
+        try {
+            const response = await fetch(`http://localhost:8080/api/posts/${editingPost.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedPost),
+            });
+
+            if (response.ok) {
+                setShowEditModal(false);
+                setEditingPost(null);
+                setPostTitle('');
+                setPostContent('');
+                setAttachments([]);
+                // Realtime will refresh the list
+            }
+        } catch (err) {
+            console.error("Error updating post:", err);
+        }
+    };
+
+    const handleDeletePost = async (postId) => {
+        if (!window.confirm("Bạn có chắc chắn muốn xóa bài đăng này không?")) return;
+
+        try {
+            const response = await fetch(`http://localhost:8080/api/posts/${postId}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                // Realtime will refresh the list
+                setActiveMenu(null);
+            }
+        } catch (err) {
+            console.error("Error deleting post:", err);
         }
     };
 
@@ -224,10 +308,10 @@ const Class = ({ session, userRole }) => {
                 setClassName('');
             } else {
                 const errorData = await response.json();
-                setError(errorData.message || "Không thể tạo lớp học");
+                setError(errorData.message || "Kh�ng th? t?o l?p h?c");
             }
         } catch (err) {
-            setError("Lỗi kết nối server");
+            setError("L?i k?t n?i server");
             console.error(err);
         }
     };
@@ -277,7 +361,7 @@ const Class = ({ session, userRole }) => {
                             </button>
                         </div>
                         <h1>{selectedClass.name}</h1>
-                        <p>{selectedClass.teacherName || "Giáo viên"}</p>
+                        <p>{selectedClass.teacherName || "Gi�o vi�n"}</p>
                     </div>
 
                     <div className="class-content-layout">
@@ -313,7 +397,7 @@ const Class = ({ session, userRole }) => {
                                     </div>
                                 ) : (
                                     posts.map((post) => (
-                                        <div key={post.id} className="post-item">
+                                        <div key={post.id} className="post-item" onMouseLeave={() => setActiveMenu(null)}>
                                             <div className="post-header-info">
                                                 <div className="author-block">
                                                     <div className="user-avatar-small">
@@ -328,9 +412,44 @@ const Class = ({ session, userRole }) => {
                                                         <span>{new Date(post.createdAt).toLocaleString('vi-VN')}</span>
                                                     </div>
                                                 </div>
-                                                <div className={`post-type-tag tag-${post.type}`}>
-                                                    <FontAwesomeIcon icon={post.type === 'assignment' ? faTasks : (post.type === 'material' ? faFileAlt : faBullhorn)} style={{ marginRight: '6px' }} />
-                                                    {post.type === 'assignment' ? 'Bài tập' : (post.type === 'material' ? 'Tài liệu' : 'Thông báo')}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <div className={`post-type-tag tag-${post.type}`}>
+                                                        <FontAwesomeIcon icon={post.type === 'assignment' ? faTasks : (post.type === 'material' ? faFileAlt : faBullhorn)} style={{ marginRight: '6px' }} />
+                                                        {post.type === 'assignment' ? 'Bài tập' : (post.type === 'material' ? 'Tài liệu' : 'Thông báo')}
+                                                    </div>
+                                                    
+                                                    {isTeacher && (
+                                                        <div className="post-options-container" style={{ position: 'relative' }}>
+                                                            <button 
+                                                                className="post-options-btn" 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setActiveMenu(activeMenu === post.id ? null : post.id);
+                                                                }}
+                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: '#5f6368' }}
+                                                            >
+                                                                <FontAwesomeIcon icon={faEllipsisH} />
+                                                            </button>
+                                                            
+                                                            {activeMenu === post.id && (
+                                                                <div className="post-dropdown-menu" style={{ 
+                                                                    position: 'absolute', 
+                                                                    right: 0, 
+                                                                    top: '100%', 
+                                                                    backgroundColor: 'white', 
+                                                                    boxShadow: '0 2px 10px rgba(0,0,0,0.1)', 
+                                                                    borderRadius: '4px', 
+                                                                    zIndex: 10,
+                                                                    width: '120px',
+                                                                    padding: '4px 0',
+                                                                    border: '1px solid #e0e0e0'
+                                                                }}>
+                                                                    <button onClick={() => handleEditPost(post)} style={{ width: '100%', padding: '8px 16px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px' }}>Chỉnh sửa</button>
+                                                                    <button onClick={() => handleDeletePost(post.id)} style={{ width: '100%', padding: '8px 16px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#d93025' }}>Xóa</button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="post-body">
@@ -407,6 +526,92 @@ const Class = ({ session, userRole }) => {
                                         <textarea 
                                             value={postContent} 
                                             onChange={(e) => setPostContent(e.target.value)}
+                                            placeholder="Nhập nội dung bài đăng"
+                                            rows="5"
+                                            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', minHeight: '100px' }}
+                                            required
+                                        ></textarea>
+                                    </div>
+                                    
+                                    <div className="form-group">
+                                        <label>Tập tin đính kèm ({attachments.length})</label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {attachments.map((att, index) => (
+                                                <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '8px', border: '1px solid #dadce0', borderRadius: '4px', background: '#f8f9fa' }}>
+                                                    <FontAwesomeIcon icon={faFileAlt} style={{ marginRight: '8px', color: '#1967d2' }} />
+                                                    <span style={{ flex: 1, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{att.fileName}</span>
+                                                    <button type="button" onClick={() => removeAttachment(index)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#5f6368' }}>
+                                                        <FontAwesomeIcon icon={faTimes} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            
+                                            <label style={{ 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'center', 
+                                                padding: '10px', 
+                                                border: '2px dashed #dadce0', 
+                                                borderRadius: '4px', 
+                                                cursor: 'pointer', 
+                                                color: '#1967d2',
+                                                gap: '8px',
+                                                marginTop: '8px'
+                                            }}>
+                                                <input 
+                                                    type="file" 
+                                                    multiple 
+                                                    onChange={handleFileChange} 
+                                                    style={{ display: 'none' }} 
+                                                    disabled={uploading}
+                                                />
+                                                <FontAwesomeIcon icon={uploading ? faPlus : faPaperclip} spin={uploading} />
+                                                {uploading ? 'Đang tải lên...' : 'Thêm tập tin đính kèm'}
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div className="modal-actions">
+                                        <button type="button" onClick={() => setShowPostModal(false)}>Hủy</button>
+                                        <button type="submit" className="confirm-btn">Đăng</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {showEditModal && (
+                        <div className="modal-overlay">
+                            <div className="modal-content-custom" style={{ width: '500px' }}>
+                                <h2>Chỉnh sửa bài đăng</h2>
+                                <form onSubmit={handleUpdatePost}>
+                                    <div className="form-group">
+                                        <label>Loại bài đăng</label>
+                                        <select 
+                                            value={postType} 
+                                            onChange={(e) => setPostType(e.target.value)}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', marginBottom: '15px' }}
+                                        >
+                                            <option value="announcement">Thông báo</option>
+                                            <option value="material">Tài liệu</option>
+                                            <option value="assignment">Bài tập</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Tiêu đề</label>
+                                        <input 
+                                            type="text" 
+                                            value={postTitle} 
+                                            onChange={(e) => setPostTitle(e.target.value)}
+                                            placeholder="Nhập tiêu đề"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Nội dung</label>
+                                        <textarea 
+                                            value={postContent} 
+                                            onChange={(e) => setPostContent(e.target.value)}
                                             placeholder="Nội dung bài đăng"
                                             rows="5"
                                             style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', minHeight: '100px' }}
@@ -415,7 +620,7 @@ const Class = ({ session, userRole }) => {
                                     </div>
                                     
                                     <div className="form-group">
-                                        <label>Tệp đính kèm ({attachments.length})</label>
+                                        <label>Tập tin đính kèm ({attachments.length})</label>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                             {attachments.map((att, index) => (
                                                 <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '8px', border: '1px solid #dadce0', borderRadius: '4px', background: '#f8f9fa' }}>
@@ -453,8 +658,14 @@ const Class = ({ session, userRole }) => {
                                     </div>
 
                                     <div className="modal-actions">
-                                        <button type="button" onClick={() => setShowPostModal(false)}>Hủy</button>
-                                        <button type="submit" className="confirm-btn">Đăng</button>
+                                        <button type="button" onClick={() => {
+                                            setShowEditModal(false);
+                                            setEditingPost(null);
+                                            setPostTitle('');
+                                            setPostContent('');
+                                            setAttachments([]);
+                                        }}>Hủy</button>
+                                        <button type="submit" className="confirm-btn">Lưu thay đổi</button>
                                     </div>
                                 </form>
                             </div>
@@ -550,7 +761,7 @@ const Class = ({ session, userRole }) => {
                         <h2>Tạo lớp học mới</h2>
                         <form onSubmit={handleCreateClass}>
                             <div className="form-group">
-                                <label>Tên lớp học</label>
+                                <label>Tạo lớp học</label>
                                 <input 
                                     type="text" 
                                     value={className} 
@@ -579,7 +790,7 @@ const Class = ({ session, userRole }) => {
                                     type="text" 
                                     value={joinCode} 
                                     onChange={(e) => setJoinCode(e.target.value)}
-                                    placeholder="Nhập mã code 6 số"
+                                    placeholder="Nhập mã code 6 ký tự"
                                     maxLength="6"
                                     required
                                 />

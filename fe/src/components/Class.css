@@ -265,7 +265,26 @@
     color: #70757a;
 }
 
+.post-options-btn {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.post-item:hover .post-options-btn {
+    opacity: 1;
+}
+
+.post-dropdown-menu button:hover {
+    background-color: #f1f3f4 !important;
+}
+
+.post-item {
+    position: relative;
+}
+
 .post-type-tag {
+    display: flex;
+    align-items: center;
     padding: 4px 12px;
     border-radius: 16px;
     font-size: 12px;

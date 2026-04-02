@@ -25,4 +25,15 @@ public class PostController {
     public ResponseEntity<List<PostDTO>> getPostsByClass(@PathVariable UUID classId) {
         return ResponseEntity.ok(postService.getPostsByClassId(classId));
     }
+
+    @PutMapping("/{postId}")
+    public ResponseEntity<PostDTO> updatePost(@PathVariable UUID postId, @RequestBody PostDTO postDTO) {
+        return ResponseEntity.ok(postService.updatePost(postId, postDTO));
+    }
+
+    @DeleteMapping("/{postId}")
+    public ResponseEntity<Void> deletePost(@PathVariable UUID postId) {
+        postService.deletePost(postId);
+        return ResponseEntity.ok().build();
+    }
 }
