@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import './Class.css';
+import AssignmentDetail from './AssignmentDetail';
 import { 
     faPlus, 
     faSignInAlt, 
@@ -37,11 +38,15 @@ const Class = ({ session, userRole }) => {
     const [postContent, setPostContent] = useState('');
     const [attachments, setAttachments] = useState([]);
     const [uploading, setUploading] = useState(false);
+    const [postDeadline, setPostDeadline] = useState('');
     
     // States for Editing Post
     const [editingPost, setEditingPost] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
     const [activeMenu, setActiveMenu] = useState(null);
+
+    // Assignment Detail view
+    const [selectedAssignment, setSelectedAssignment] = useState(null);
 
     const isTeacher = userRole === "1";
 
@@ -190,7 +195,8 @@ const Class = ({ session, userRole }) => {
             type: postType,
             title: postTitle,
             content: postContent,
-            attachments: attachments
+            attachments: attachments,
+            deadline: postType === 'assignment' && postDeadline ? postDeadline : null
         };
 
         try {
@@ -211,6 +217,7 @@ const Class = ({ session, userRole }) => {
                 setPostContent('');
                 setPostType('announcement');
                 setAttachments([]);
+                setPostDeadline('');
             }
         } catch (err) {
             console.error("Error creating post:", err);
@@ -223,6 +230,7 @@ const Class = ({ session, userRole }) => {
         setPostTitle(post.title || '');
         setPostContent(post.content || '');
         setAttachments(post.attachments || []);
+        setPostDeadline(post.deadline ? post.deadline.slice(0, 16) : '');
         setShowEditModal(true);
         setActiveMenu(null);
     };
@@ -236,7 +244,8 @@ const Class = ({ session, userRole }) => {
             type: postType,
             title: postTitle,
             content: postContent,
-            attachments: attachments
+            attachments: attachments,
+            deadline: postType === 'assignment' && postDeadline ? postDeadline : null
         };
 
         try {
@@ -254,6 +263,7 @@ const Class = ({ session, userRole }) => {
                 setPostTitle('');
                 setPostContent('');
                 setAttachments([]);
+                setPostDeadline('');
                 // Realtime will refresh the list
             }
         } catch (err) {
@@ -352,7 +362,15 @@ const Class = ({ session, userRole }) => {
 
     return (
         <div className="main-content">
-            {selectedClass ? (
+            {selectedAssignment ? (
+                <AssignmentDetail
+                    post={selectedAssignment}
+                    session={session}
+                    userRole={userRole}
+                    selectedClass={selectedClass}
+                    onBack={() => setSelectedAssignment(null)}
+                />
+            ) : selectedClass ? (
                 <div className="class-detail-container">
                     <div className="class-banner">
                         <div className="banner-header">
@@ -397,7 +415,15 @@ const Class = ({ session, userRole }) => {
                                     </div>
                                 ) : (
                                     posts.map((post) => (
-                                        <div key={post.id} className="post-item" onMouseLeave={() => setActiveMenu(null)}>
+                                        <div 
+                                            key={post.id} 
+                                            className={`post-item ${post.type === 'assignment' ? 'post-item-assignment' : ''}`} 
+                                            onMouseLeave={() => setActiveMenu(null)}
+                                            onClick={() => {
+                                                if (post.type === 'assignment') setSelectedAssignment(post);
+                                            }}
+                                            style={{ cursor: post.type === 'assignment' ? 'pointer' : 'default' }}
+                                        >
                                             <div className="post-header-info">
                                                 <div className="author-block">
                                                     <div className="user-avatar-small">
@@ -444,8 +470,8 @@ const Class = ({ session, userRole }) => {
                                                                     padding: '4px 0',
                                                                     border: '1px solid #e0e0e0'
                                                                 }}>
-                                                                    <button onClick={() => handleEditPost(post)} style={{ width: '100%', padding: '8px 16px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px' }}>Chỉnh sửa</button>
-                                                                    <button onClick={() => handleDeletePost(post.id)} style={{ width: '100%', padding: '8px 16px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#d93025' }}>Xóa</button>
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleEditPost(post); }} style={{ width: '100%', padding: '8px 16px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px' }}>Chỉnh sửa</button>
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleDeletePost(post.id); }} style={{ width: '100%', padding: '8px 16px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#d93025' }}>Xóa</button>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -455,8 +481,26 @@ const Class = ({ session, userRole }) => {
                                             <div className="post-body">
                                                 {post.title && <h4>{post.title}</h4>}
                                                 <p>{post.content}</p>
+
+                                                {/* Deadline tag for assignment */}
+                                                {post.type === 'assignment' && post.deadline && (
+                                                    <div className="post-deadline-tag">
+                                                        <FontAwesomeIcon icon={faCalendarAlt} style={{ marginRight: '6px' }} />
+                                                        Hạn nộp: {new Date(post.deadline).toLocaleString('vi-VN', {
+                                                            weekday: 'short', month: 'long', day: 'numeric',
+                                                            hour: '2-digit', minute: '2-digit'
+                                                        })}
+                                                    </div>
+                                                )}
+
+                                                {post.type === 'assignment' && (
+                                                    <div className="post-assignment-cta">
+                                                        <FontAwesomeIcon icon={faTasks} style={{ marginRight: '6px' }} />
+                                                        Xem chi tiết bài tập
+                                                    </div>
+                                                )}
                                                 
-                                                {post.attachments && post.attachments.length > 0 && (
+                                                {post.attachments && post.attachments.length > 0 && post.type !== 'assignment' && (
                                                     <div className="post-attachments" style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                         {post.attachments.map((att) => (
                                                             <a 
@@ -532,6 +576,30 @@ const Class = ({ session, userRole }) => {
                                             required
                                         ></textarea>
                                     </div>
+
+                                    {postType === 'assignment' && (
+                                        <div className="form-group deadline-picker-group">
+                                            <label>
+                                                <FontAwesomeIcon icon={faCalendarAlt} style={{ marginRight: '8px', color: '#d93025' }} />
+                                                Hạn nộp bài (Deadline)
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                value={postDeadline}
+                                                onChange={(e) => setPostDeadline(e.target.value)}
+                                                className="deadline-input"
+                                                min={new Date().toISOString().slice(0, 16)}
+                                            />
+                                            {postDeadline && (
+                                                <p className="deadline-preview">
+                                                    📅 Hạn nộp: {new Date(postDeadline).toLocaleString('vi-VN', {
+                                                        weekday: 'long', year: 'numeric', month: 'long',
+                                                        day: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                    })}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                     
                                     <div className="form-group">
                                         <label>Tập tin đính kèm ({attachments.length})</label>
@@ -618,6 +686,30 @@ const Class = ({ session, userRole }) => {
                                             required
                                         ></textarea>
                                     </div>
+
+                                    {postType === 'assignment' && (
+                                        <div className="form-group deadline-picker-group">
+                                            <label>
+                                                <FontAwesomeIcon icon={faCalendarAlt} style={{ marginRight: '8px', color: '#d93025' }} />
+                                                Hạn nộp bài (Deadline)
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                value={postDeadline}
+                                                onChange={(e) => setPostDeadline(e.target.value)}
+                                                className="deadline-input"
+                                                min={new Date().toISOString().slice(0, 16)}
+                                            />
+                                            {postDeadline && (
+                                                <p className="deadline-preview">
+                                                    📅 Hạn nộp: {new Date(postDeadline).toLocaleString('vi-VN', {
+                                                        weekday: 'long', year: 'numeric', month: 'long',
+                                                        day: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                    })}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                     
                                     <div className="form-group">
                                         <label>Tập tin đính kèm ({attachments.length})</label>
@@ -672,6 +764,9 @@ const Class = ({ session, userRole }) => {
                         </div>
                     )}
                 </div>
+            ) : selectedClass ? (
+                // This closing paren balances the selectedAssignment ternary above
+                <></>
             ) : (
                 <>
                     <div className="content-header">
