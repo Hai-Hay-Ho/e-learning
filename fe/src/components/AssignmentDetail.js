@@ -163,10 +163,13 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass }) =>
 
     const formatDeadline = (date) => {
         if (!date) return '';
-        return date.toLocaleString('vi-VN', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const day = date.getDate();
+        const month = date.getMonth() + 1;
+        const year = date.getFullYear();
+        
+        return `Đến hạn ${hours}:${minutes} ${day} thg ${month}, ${year}`;
     };
 
     return (
@@ -194,23 +197,21 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass }) =>
                         <h1 className="assignment-title">{post.title}</h1>
 
                         <div className="assignment-meta-row">
-                            <div className="assignment-meta-item">
-                                <FontAwesomeIcon icon={faUsers} className="meta-icon" />
-                                <span>{post.authorName}</span>
-                            </div>
-                            {deadline && (
-                                <div className={`assignment-meta-item ${isOverdue ? 'overdue' : ''}`}>
-                                    <FontAwesomeIcon icon={faCalendarAlt} className="meta-icon" />
-                                    <span>
-                                        {isOverdue ? 'Đã hết hạn: ' : 'Hạn nộp: '}
-                                        {formatDeadline(deadline)}
-                                    </span>
+                            <div className="assignment-meta-item author-row">
+                                <div className="author-info">
+                                    <FontAwesomeIcon icon={faUsers} className="meta-icon" />
+                                    <span>{post.authorName}</span>
                                 </div>
-                            )}
-                            {!isOverdue && timeLeft && (
+                                {post.dueAt && (
+                                    <div className={`deadline-info ${isOverdue ? 'overdue' : ''}`}>
+                                        <span>{formatDeadline(new Date(post.dueAt))}</span>
+                                    </div>
+                                )}
+                            </div>
+                            {deadline && !isOverdue && timeLeft && (
                                 <div className="assignment-meta-item time-left">
                                     <FontAwesomeIcon icon={faClock} className="meta-icon" />
-                                    <span>Còn lại: <strong>{timeLeft}</strong></span>
+                                    <span>Còn lại: {timeLeft}</span>
                                 </div>
                             )}
                         </div>
@@ -532,9 +533,8 @@ const StudentPanel = ({
                         <div className="upload-zone-inner">
                             <FontAwesomeIcon icon={uploading ? faClock : faUpload} className={`upload-icon ${uploading ? 'spin' : ''}`} />
                             <p className="upload-zone-text">
-                                {uploading ? 'Đang tải lên...' : 'Nhấn để thêm file bài làm'}
+                                {uploading ? 'Đang tải lên...' : 'Thêm file'}
                             </p>
-                            <p className="upload-zone-sub">hoặc kéo thả file vào đây</p>
                         </div>
                     </label>
                 </div>

@@ -196,7 +196,7 @@ const Class = ({ session, userRole }) => {
             title: postTitle,
             content: postContent,
             attachments: attachments,
-            deadline: postType === 'assignment' && postDeadline ? postDeadline : null
+            dueAt: postType === 'assignment' && postDeadline ? postDeadline : null
         };
 
         try {
@@ -230,7 +230,7 @@ const Class = ({ session, userRole }) => {
         setPostTitle(post.title || '');
         setPostContent(post.content || '');
         setAttachments(post.attachments || []);
-        setPostDeadline(post.deadline ? post.deadline.slice(0, 16) : '');
+        setPostDeadline(post.dueAt ? post.dueAt.slice(0, 16) : '');
         setShowEditModal(true);
         setActiveMenu(null);
     };
@@ -245,7 +245,7 @@ const Class = ({ session, userRole }) => {
             title: postTitle,
             content: postContent,
             attachments: attachments,
-            deadline: postType === 'assignment' && postDeadline ? postDeadline : null
+            dueAt: postType === 'assignment' && postDeadline ? postDeadline : null
         };
 
         try {

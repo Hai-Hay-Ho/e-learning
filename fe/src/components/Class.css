@@ -555,6 +555,29 @@
     margin-bottom: 20px;
 }
 
+.assignment-meta-item.author-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.author-info, .deadline-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #5f6368;
+}
+
+.deadline-info {
+    font-weight: 500;
+}
+
+.deadline-info.overdue {
+    color: #d93025;
+}
+
 .assignment-meta-item {
     display: flex;
     align-items: center;

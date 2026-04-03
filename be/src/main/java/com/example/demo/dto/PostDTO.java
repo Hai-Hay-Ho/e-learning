@@ -23,6 +23,7 @@ public class PostDTO {
     private String title;
     private String content;
     private LocalDateTime createdAt;
+    private LocalDateTime dueAt;
     private List<AttachmentDTO> attachments;
 
     @Data

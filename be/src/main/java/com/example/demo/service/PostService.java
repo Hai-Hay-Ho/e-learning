@@ -1,9 +1,11 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.PostDTO;
+import com.example.demo.model.AssignmentDeadline;
 import com.example.demo.model.PostAttachment;
 import com.example.demo.model.PostEntity;
 import com.example.demo.model.User;
+import com.example.demo.repository.AssignmentDeadlineRepository;
 import com.example.demo.repository.PostAttachmentRepository;
 import com.example.demo.repository.PostRepository;
 import com.example.demo.repository.UserRepository;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -21,6 +24,7 @@ public class PostService {
     private final PostRepository postRepository;
     private final PostAttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
+    private final AssignmentDeadlineRepository assignmentDeadlineRepository;
 
     @Transactional
     public PostDTO createPost(PostDTO postDTO) {
@@ -34,6 +38,14 @@ public class PostService {
                 .build();
 
         PostEntity savedPost = postRepository.save(post);
+
+        if ("assignment".equals(postDTO.getType()) && postDTO.getDueAt() != null) {
+            AssignmentDeadline deadline = AssignmentDeadline.builder()
+                    .postId(savedPost.getId())
+                    .dueAt(postDTO.getDueAt())
+                    .build();
+            assignmentDeadlineRepository.save(deadline);
+        }
 
         if (postDTO.getAttachments() != null) {
             List<PostAttachment> attachments = postDTO.getAttachments().stream()
@@ -68,6 +80,19 @@ public class PostService {
         
         postRepository.save(post);
 
+        // Update deadline if assignment
+        if ("assignment".equals(post.getType())) {
+            Optional<AssignmentDeadline> deadlineOpt = assignmentDeadlineRepository.findByPostId(postId);
+            if (postDTO.getDueAt() != null) {
+                AssignmentDeadline deadline = deadlineOpt.orElseGet(() -> 
+                    AssignmentDeadline.builder().postId(postId).build());
+                deadline.setDueAt(postDTO.getDueAt());
+                assignmentDeadlineRepository.save(deadline);
+            } else {
+                deadlineOpt.ifPresent(assignmentDeadlineRepository::delete);
+            }
+        }
+
         // Update attachments: simpler way is to delete and recreate
         attachmentRepository.deleteByPostId(postId);
         if (postDTO.getAttachments() != null) {
@@ -89,12 +114,14 @@ public class PostService {
     @Transactional
     public void deletePost(UUID postId) {
         attachmentRepository.deleteByPostId(postId);
+        assignmentDeadlineRepository.deleteByPostId(postId);
         postRepository.deleteById(postId);
     }
 
     private PostDTO getPostDTO(PostEntity post) {
         User author = userRepository.findById(post.getAuthorId()).orElse(null);
         List<PostAttachment> attachments = attachmentRepository.findByPostId(post.getId());
+        Optional<AssignmentDeadline> deadline = assignmentDeadlineRepository.findByPostId(post.getId());
 
         List<PostDTO.AttachmentDTO> attachmentDTOs = attachments.stream()
                 .map(att -> PostDTO.AttachmentDTO.builder()
@@ -116,6 +143,7 @@ public class PostService {
                 .title(post.getTitle())
                 .content(post.getContent())
                 .createdAt(post.getCreatedAt())
+                .dueAt(deadline.map(AssignmentDeadline::getDueAt).orElse(null))
                 .attachments(attachmentDTOs)
                 .build();
     }
