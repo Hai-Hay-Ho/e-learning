@@ -147,6 +147,184 @@
     gap: 12px;
 }
 
+/* Student Panel Updates */
+.student-actions-row {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.btn-submit-work {
+    width: 100%;
+    padding: 10px;
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.btn-submit-work:hover:not(:disabled) {
+    background-color: #1765cc;
+}
+
+.btn-submit-work:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.btn-unsubmit-simple {
+    width: 100%;
+    padding: 8px;
+    background: white;
+    color: #5f6368;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.submitted-files-section {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.submitted-files-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: #3c4043;
+}
+
+.submitted-files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.sdp-file-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #1a73e8;
+    font-size: 13px;
+    transition: background 0.2s;
+}
+
+.sdp-file-link:hover {
+    background: #f1f3f4;
+}
+
+.submitted-at-text {
+    font-size: 12px;
+    color: #5f6368;
+    margin: 0;
+    font-style: italic;
+}
+
+.student-grade-card {
+    display: flex;
+}
+
+/* Style for files in upload zone */
+.uploaded-file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: #f8f9fa;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.uploaded-file-item.submitted {
+    background: #fff;
+    border: 1px dashed #1a73e8;
+}
+
+.file-link-name-submitted {
+    flex: 1;
+    font-size: 14px;
+    color: #1a73e8;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-link-name-submitted:hover {
+    text-decoration: underline;
+}
+
+.remove-file-btn {
+    background: none;
+    border: none;
+    color: #5f6368;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+
+.grade-circle-container {
+    flex-shrink: 0;
+}
+
+.grade-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #1a73e8;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.grade-circle span {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.grade-info-container {
+    flex: 1;
+}
+
+.grade-label {
+    font-weight: 600;
+    color: #1a73e8;
+    margin: 0 0 4px 0;
+}
+
+.grade-comment-text {
+    font-size: 14px;
+    color: #3c4043;
+    margin: 0;
+    font-style: italic;
+}
+
 .add-comment-detail {
     display: flex;
     gap: 12px;

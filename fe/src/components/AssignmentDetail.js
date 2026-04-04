@@ -151,11 +151,11 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                 const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
                 const filePath = `submissions/${post.id}/${session.user.id}/${fileName}`;
                 const { error } = await supabase.storage
-                    .from('post_attachments')
+                    .from('submission_files')
                     .upload(filePath, file, { cacheControl: '3600', upsert: false });
                 if (error) throw error;
                 const { data: { publicUrl } } = supabase.storage
-                    .from('post_attachments')
+                    .from('submission_files')
                     .getPublicUrl(filePath);
                 newFiles.push({ fileUrl: publicUrl, fileName: file.name, fileType: file.type, fileSize: file.size });
             } catch (err) {
@@ -172,21 +172,31 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
         if (!uploadedFiles.length) return;
         setSubmitting(true);
         try {
+            const submissionData = {
+                postId: post.id,
+                studentId: session.user.id,
+                files: uploadedFiles.map(f => ({
+                    fileUrl: f.fileUrl,
+                    fileName: f.fileName
+                }))
+            };
+
             const response = await fetch('http://localhost:8080/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    postId: post.id,
-                    studentId: session.user.id,
-                    attachments: uploadedFiles,
-                }),
+                body: JSON.stringify(submissionData),
             });
+            
             if (response.ok) {
-                await fetchSubmissions();
+                const updatedSub = await response.json();
+                setMySubmission(updatedSub);
                 setUploadedFiles([]);
+                fetchSubmissions(); // Update teacher's list if teacher is viewing or for state sync
+                alert('Nộp bài thành công!');
             }
         } catch (err) {
             console.error('Error submitting:', err);
+            alert('Có lỗi xảy ra khi nộp bài');
         } finally {
             setSubmitting(false);
         }
@@ -222,6 +232,32 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
             await fetchSubmissions();
         } catch (err) {
             console.error('Error grading:', err);
+        }
+    };
+
+    const handleDeleteFile = async (file) => {
+        if (!window.confirm(`Bạn có chắc muốn xóa file "${file.fileName}"?`)) return;
+        
+        try {
+            // Delete from Supabase Storage
+            const pathParts = file.fileUrl.split('/public/submission_files/');
+            if (pathParts.length > 1) {
+                const filePath = pathParts[1];
+                const { error } = await supabase.storage.from('submission_files').remove([filePath]);
+                if (error) console.error('Supabase delete error:', error);
+            }
+
+            // Delete from Database
+            const response = await fetch(`http://localhost:8080/api/submissions/files/${file.id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                await fetchSubmissions();
+            }
+        } catch (err) {
+            console.error('Error deleting file:', err);
+            alert('Có lỗi xảy ra khi xóa file');
         }
     };
 
@@ -430,6 +466,7 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                 removeFile={removeFile}
                                 handleSubmit={handleSubmit}
                                 handleUnsubmit={handleUnsubmit}
+                                handleDeleteFile={handleDeleteFile}
                             />
                         )}
                     </div>
@@ -596,7 +633,7 @@ const TeacherPanel = ({
 /* ==================== STUDENT PANEL ==================== */
 const StudentPanel = ({
     mySubmission, uploadedFiles, uploading, submitting, isOverdue,
-    handleFileChange, removeFile, handleSubmit, handleUnsubmit
+    handleFileChange, removeFile, handleSubmit, handleUnsubmit, handleDeleteFile
 }) => (
     <div className="student-work-panel">
         <div className="panel-header">
@@ -614,11 +651,15 @@ const StudentPanel = ({
             )}
         </div>
 
-        {/* Grade display if graded */}
+        {/* Show graded info if available */}
         {mySubmission?.grade !== null && mySubmission?.grade !== undefined && (
             <div className="student-grade-card">
-                <div className="grade-circle">{mySubmission.grade}<span>/10</span></div>
-                <div>
+                <div className="grade-circle-container">
+                    <div className="grade-circle">
+                        {mySubmission.grade}<span>/10</span>
+                    </div>
+                </div>
+                <div className="grade-info-container">
                     <p className="grade-label">Điểm của bạn</p>
                     {mySubmission.gradeComment && (
                         <p className="grade-comment-text">"{mySubmission.gradeComment}"</p>
@@ -627,77 +668,80 @@ const StudentPanel = ({
             </div>
         )}
 
-        {/* Already submitted */}
-        {mySubmission ? (
-            <div className="submitted-files-section">
-                <h4>File đã nộp</h4>
-                {(mySubmission.attachments || []).map((att, i) => (
-                    <a key={i} href={att.fileUrl} target="_blank" rel="noopener noreferrer" className="sdp-file-link">
+        <div className="upload-work-section">
+            {/* File upload area for new or additional files */}
+            <div className="upload-zone-container">
+                {/* Show previously submitted files at the TOP of the upload zone list */}
+                {mySubmission && (mySubmission.files || []).map((file, i) => (
+                    <div key={`submitted-${i}`} className="uploaded-file-item submitted">
                         <div className="file-link-icon">
                             <FontAwesomeIcon icon={faFileAlt} />
                         </div>
-                        <span className="file-link-name">{att.fileName}</span>
-                        <FontAwesomeIcon icon={faDownload} />
-                    </a>
-                ))}
-                <p className="submitted-at-text">
-                    Đã nộp lúc {new Date(mySubmission.submittedAt).toLocaleString('vi-VN')}
-                </p>
-                <button className="btn-unsubmit" onClick={handleUnsubmit}>
-                    <FontAwesomeIcon icon={faUndo} /> Hủy nộp bài
-                </button>
-            </div>
-        ) : (
-            /* Not yet submitted */
-            <div className="upload-work-section">
-                {isOverdue && (
-                    <div className="overdue-warning">
-                        <FontAwesomeIcon icon={faExclamationTriangle} />
-                        <span>Bài tập đã hết hạn nộp</span>
-                    </div>
-                )}
-
-                {/* File upload area */}
-                <div className="upload-zone-container">
-                    {uploadedFiles.map((f, i) => (
-                        <div key={i} className="uploaded-file-item">
-                            <div className="file-link-icon">
-                                <FontAwesomeIcon icon={faFileAlt} />
-                            </div>
-                            <span className="file-link-name">{f.fileName}</span>
-                            <button className="remove-file-btn" onClick={() => removeFile(i)}>
+                        <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className="file-link-name-submitted">
+                            {file.fileName}
+                        </a>
+                        {!isOverdue && (
+                            <button className="remove-file-btn" onClick={() => handleDeleteFile(file)}>
                                 <FontAwesomeIcon icon={faTimes} />
                             </button>
-                        </div>
-                    ))}
+                        )}
+                    </div>
+                ))}
 
-                    <label className="upload-zone" style={{ opacity: isOverdue ? 0.5 : 1 }}>
-                        <input
-                            type="file"
-                            multiple
-                            onChange={handleFileChange}
-                            style={{ display: 'none' }}
-                            disabled={uploading || isOverdue}
-                        />
-                        <div className="upload-zone-inner">
-                            <FontAwesomeIcon icon={uploading ? faClock : faUpload} className={`upload-icon ${uploading ? 'spin' : ''}`} />
-                            <p className="upload-zone-text">
-                                {uploading ? 'Đang tải lên...' : 'Thêm file'}
-                            </p>
+                {/* Show newly uploaded but NOT YET SAVED files */}
+                {uploadedFiles.map((f, i) => (
+                    <div key={`new-${i}`} className="uploaded-file-item">
+                        <div className="file-link-icon">
+                            <FontAwesomeIcon icon={faFileAlt} />
                         </div>
-                    </label>
+                        <span className="file-link-name">{f.fileName}</span>
+                        <button className="remove-file-btn" onClick={() => removeFile(i)}>
+                            <FontAwesomeIcon icon={faTimes} />
+                        </button>
+                    </div>
+                ))}
+
+                <label className="upload-zone" style={{ opacity: isOverdue ? 0.5 : 1 }}>
+                    <input
+                        type="file"
+                        multiple
+                        onChange={handleFileChange}
+                        style={{ display: 'none' }}
+                        disabled={uploading || isOverdue}
+                    />
+                    <div className="upload-zone-inner">
+                        <FontAwesomeIcon icon={uploading ? faClock : faUpload} className={`upload-icon ${uploading ? 'spin' : ''}`} />
+                        <p className="upload-zone-text">
+                            {uploading ? 'Đang tải lên...' : 'Thêm file bài làm'}
+                        </p>
+                    </div>
+                </label>
+            </div>
+
+            {mySubmission && (
+                <p className="submitted-at-text" style={{ marginTop: '8px' }}>
+                    Đã nộp lúc {new Date(mySubmission.submittedAt).toLocaleString('vi-VN')}
+                </p>
+            )}
+
+            {isOverdue && !mySubmission && (
+                <div className="overdue-warning">
+                    <FontAwesomeIcon icon={faExclamationTriangle} />
+                    <span>Bài tập đã hết hạn nộp</span>
                 </div>
+            )}
 
+            <div className="student-actions-row">
                 <button
                     className="btn-submit-work"
                     disabled={!uploadedFiles.length || submitting || uploading || isOverdue}
                     onClick={handleSubmit}
                 >
                     <FontAwesomeIcon icon={faPaperPlane} />
-                    {submitting ? 'Đang nộp...' : 'Nộp bài'}
+                    {submitting ? 'Đang xử lý...' : (mySubmission ? 'Nộp bổ sung' : 'Nộp bài')}
                 </button>
             </div>
-        )}
+        </div>
     </div>
 );
 
