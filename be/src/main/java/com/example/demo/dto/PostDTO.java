@@ -25,6 +25,8 @@ public class PostDTO {
     private LocalDateTime createdAt;
     private LocalDateTime dueAt;
     private List<AttachmentDTO> attachments;
+    private List<CommentDTO> comments;
+    private Long commentCount;
 
     @Data
     @NoArgsConstructor

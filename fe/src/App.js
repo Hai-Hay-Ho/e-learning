@@ -85,7 +85,7 @@ function App() {
           activeTab === 'Dashboard' ? (
             <MainContent session={session} />
           ) : activeTab === 'Classes' ? (
-            <ClassPage session={session} userRole={userRole} />
+            <ClassPage session={session} userRole={userRole} userData={userData} />
           ) : (
             <MainContent session={session} />
           )

@@ -17,10 +17,11 @@ import {
     faTasks,
     faArrowLeft,
     faPaperclip,
-    faTimes
+    faTimes,
+    faPaperPlane
 } from '@fortawesome/free-solid-svg-icons';
 
-const Class = ({ session, userRole }) => {
+const Class = ({ session, userRole, userData }) => {
     const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -39,6 +40,7 @@ const Class = ({ session, userRole }) => {
     const [attachments, setAttachments] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [postDeadline, setPostDeadline] = useState('');
+    const [commentTexts, setCommentTexts] = useState({});
     
     // States for Editing Post
     const [editingPost, setEditingPost] = useState(null);
@@ -57,6 +59,7 @@ const Class = ({ session, userRole }) => {
     useEffect(() => {
         let subscription;
         let attachmentSubscription;
+        let commentSubscription;
         
         if (selectedClass) {
             fetchPosts(selectedClass.id);
@@ -76,6 +79,24 @@ const Class = ({ session, userRole }) => {
                     (payload) => {
                         console.log('Post change received via Realtime:', payload.eventType);
                         fetchPosts(selectedClass.id);
+                    }
+                )
+                .subscribe();
+
+            // Realtime cho bảng bình luận (để cập nhật feed bình luận nhanh)
+            const commentChannelName = `class-comments-${selectedClass.id}`;
+            commentSubscription = supabase
+                .channel(commentChannelName)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'comments'
+                    },
+                    (payload) => {
+                        console.log('Comment change received via Realtime:', payload.eventType);
+                        fetchPosts(selectedClass.id); // Tải lại posts để lấy recentComments mới nhất
                     }
                 )
                 .subscribe();
@@ -103,6 +124,7 @@ const Class = ({ session, userRole }) => {
         return () => {
             if (subscription) supabase.removeChannel(subscription);
             if (attachmentSubscription) supabase.removeChannel(attachmentSubscription);
+            if (commentSubscription) supabase.removeChannel(commentSubscription);
         };
     }, [selectedClass]);
 
@@ -133,6 +155,36 @@ const Class = ({ session, userRole }) => {
             }
         } catch (err) {
             console.error("Error fetching posts:", err);
+        }
+    };
+
+    const handleCommentChange = (postId, text) => {
+        setCommentTexts(prev => ({ ...prev, [postId]: text }));
+    };
+
+    const submitComment = async (postId) => {
+        const content = commentTexts[postId];
+        if (!content?.trim()) return;
+
+        try {
+            const response = await fetch('http://localhost:8080/api/comments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    postId: postId,
+                    userId: session.user.id,
+                    content: content
+                })
+            });
+
+            if (response.ok) {
+                setCommentTexts(prev => ({ ...prev, [postId]: '' }));
+                if (selectedClass) {
+                    fetchPosts(selectedClass.id);
+                }
+            }
+        } catch (err) {
+            console.error("Error submitting comment:", err);
         }
     };
 
@@ -367,6 +419,7 @@ const Class = ({ session, userRole }) => {
                     post={selectedAssignment}
                     session={session}
                     userRole={userRole}
+                    userData={userData}
                     selectedClass={selectedClass}
                     onBack={() => setSelectedAssignment(null)}
                 />
@@ -420,9 +473,9 @@ const Class = ({ session, userRole }) => {
                                             className={`post-item ${post.type === 'assignment' ? 'post-item-assignment' : ''}`} 
                                             onMouseLeave={() => setActiveMenu(null)}
                                             onClick={() => {
-                                                if (post.type === 'assignment') setSelectedAssignment(post);
+                                                setSelectedAssignment(post);
                                             }}
-                                            style={{ cursor: post.type === 'assignment' ? 'pointer' : 'default' }}
+                                            style={{ cursor: 'pointer' }}
                                         >
                                             <div className="post-header-info">
                                                 <div className="author-block">
@@ -530,6 +583,80 @@ const Class = ({ session, userRole }) => {
                                                         ))}
                                                     </div>
                                                 )}
+
+                                                {/* Comments Section */}
+                                                <div className="post-footer-comments" style={{ borderTop: '1px solid #e0e0e0', marginTop: '16px', paddingTop: '12px' }}>
+                                                    {post.recentComments && post.recentComments.length > 0 && (
+                                                        <div className="recent-comments-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                                                            {post.recentComments.map(comment => (
+                                                                <div key={comment.id} className="comment-item-sm" style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                                                                    <div className="user-avatar-xs" style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', flexShrink: 0 }}>
+                                                                        {comment.userAvatar ? (
+                                                                            <img src={comment.userAvatar} alt={comment.userName} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                                                                        ) : comment.userName.charAt(0).toUpperCase()}
+                                                                    </div>
+                                                                    <div className="comment-content-sm" style={{ flex: 1 }}>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                            <span style={{ fontWeight: '600', fontSize: '12px' }}>{comment.userName}</span>
+                                                                            <span style={{ color: '#5f6368', fontSize: '11px' }}>{new Date(comment.createdAt).toLocaleDateString('vi-VN')}</span>
+                                                                        </div>
+                                                                        <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#3c4043' }}>{comment.content}</p>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    <div className="comment-input-area" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                        <div className="user-avatar-xs" style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#1967d2', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', flexShrink: 0, overflow: 'hidden' }}>
+                                                            {userData?.avatarUrl ? (
+                                                                <img src={userData.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            ) : (
+                                                                (userData?.fullName || session.user.email || 'U').charAt(0).toUpperCase()
+                                                            )}
+                                                        </div>
+                                                        <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                                            <input 
+                                                                type="text"
+                                                                placeholder="Thêm nhận xét cho lớp học..."
+                                                                value={commentTexts[post.id] || ''}
+                                                                onChange={(e) => handleCommentChange(post.id, e.target.value)}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                onKeyPress={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        submitComment(post.id);
+                                                                    }
+                                                                }}
+                                                                style={{ 
+                                                                    width: '100%', 
+                                                                    padding: '8px 40px 8px 12px', 
+                                                                    borderRadius: '20px', 
+                                                                    border: '1px solid #dadce0', 
+                                                                    fontSize: '13px',
+                                                                    outline: 'none'
+                                                                }}
+                                                            />
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    submitComment(post.id);
+                                                                }}
+                                                                disabled={!commentTexts[post.id]?.trim()}
+                                                                style={{ 
+                                                                    position: 'absolute', 
+                                                                    right: '8px', 
+                                                                    background: 'none', 
+                                                                    border: 'none', 
+                                                                    color: commentTexts[post.id]?.trim() ? '#1967d2' : '#dadce0',
+                                                                    cursor: 'pointer',
+                                                                    padding: '4px'
+                                                                }}
+                                                            >
+                                                                <FontAwesomeIcon icon={faPaperPlane} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     ))

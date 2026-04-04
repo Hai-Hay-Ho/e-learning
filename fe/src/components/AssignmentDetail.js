@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import './AssignmentDetail.css';
 import {
     faArrowLeft,
     faCalendarAlt,
@@ -18,9 +19,11 @@ import {
     faChevronRight,
     faUndo,
     faStar,
+    faTasks,
+    faBullhorn,
 } from '@fortawesome/free-solid-svg-icons';
 
-const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass }) => {
+const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, userData }) => {
     const isTeacher = userRole === '1';
     const [submissions, setSubmissions] = useState([]);
     const [mySubmission, setMySubmission] = useState(null);
@@ -33,6 +36,9 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass }) =>
     const [gradeInput, setGradeInput] = useState('');
     const [gradingSubmissionId, setGradingSubmissionId] = useState(null);
     const [gradeComment, setGradeComment] = useState('');
+    const [comments, setComments] = useState([]);
+    const [newComment, setNewComment] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const deadline = post.deadline ? new Date(post.deadline) : null;
     const now = new Date();
@@ -51,8 +57,69 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass }) =>
     }
 
     useEffect(() => {
-        fetchSubmissions();
+        if (post.type === 'assignment') {
+            fetchSubmissions();
+        }
+        fetchComments();
+
+        // Realtime comments
+        const channel = supabase
+            .channel(`comments-view-${post.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'comments',
+                    filter: `post_id=eq.${post.id}`
+                },
+                (payload) => {
+                    console.log('Realtime comment change:', payload);
+                    fetchComments(); // Reload comments when any change occurs
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [post.id]);
+
+    const fetchComments = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/api/comments/post/${post.id}`);
+            if (response.ok) {
+                const data = await response.json();
+                setComments(data);
+            }
+        } catch (err) {
+            console.error('Error fetching comments:', err);
+        }
+    };
+
+    const submitComment = async () => {
+        if (!newComment.trim()) return;
+        setLoading(true);
+        try {
+            const response = await fetch('http://localhost:8080/api/comments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    postId: post.id,
+                    userId: session.user.id,
+                    content: newComment
+                })
+            });
+            if (response.ok) {
+                setNewComment('');
+                // fetchComments(); // No need to call manually if realtime is active, but keeping for safety
+            }
+        } catch (err) {
+            console.error('Error submitting comment:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const fetchSubmissions = async () => {
         setLoadingSubmissions(true);
@@ -191,10 +258,10 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass }) =>
                 <div className="assignment-left-panel">
                     <div className="assignment-info-card">
                         <div className="assignment-type-indicator">
-                            <FontAwesomeIcon icon={faStar} />
-                            <span>Bài tập</span>
+                            <FontAwesomeIcon icon={post.type === 'assignment' ? faTasks : (post.type === 'material' ? faFileAlt : faBullhorn)} />
+                            <span>{post.type === 'assignment' ? 'Bài tập' : (post.type === 'material' ? 'Tài liệu' : 'Thông báo')}</span>
                         </div>
-                        <h1 className="assignment-title">{post.title}</h1>
+                        <h1 className="assignment-title">{post.title || (post.type === 'announcement' ? 'Thông báo' : '')}</h1>
 
                         <div className="assignment-meta-row">
                             <div className="assignment-meta-item author-row">
@@ -250,41 +317,133 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass }) =>
                                 ))}
                             </div>
                         )}
+
+                        {/* Comments Section */}
+                        <div className="assignment-divider" />
+                        <div className="assignment-comments-section" style={{ marginTop: '24px' }}>
+                            <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#3c4043' }}>
+                                <FontAwesomeIcon icon={faUsers} />
+                                Nhận xét của lớp học ({comments.length})
+                            </h4>
+                            
+                            <div className="comments-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                                {comments.map(comment => (
+                                    <div key={comment.id} className="comment-item-full" style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                                        <div className="user-avatar-md" style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            {comment.userAvatar ? (
+                                                <img src={comment.userAvatar} alt={comment.userName} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                                            ) : comment.userName.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="comment-content-full" style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span style={{ fontWeight: '600', fontSize: '14px' }}>{comment.userName}</span>
+                                                <span style={{ color: '#5f6368', fontSize: '12px' }}>{new Date(comment.createdAt).toLocaleString('vi-VN')}</span>
+                                            </div>
+                                            <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#3c4043', lineHeight: '1.5' }}>{comment.content}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div class="add-comment-detail" style={{ 
+                                display: 'flex', 
+                                gap: '12px', 
+                                alignItems: 'flex-start', 
+                                background: '#fff', 
+                                padding: '16px', 
+                                borderRadius: '12px', 
+                                border: '1px solid #e0e0e0',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                marginTop: '20px'
+                            }}>
+                                <div className="user-avatar-md" style={{ 
+                                    width: '40px', 
+                                    height: '40px', 
+                                    borderRadius: '50%', 
+                                    background: '#1967d2', 
+                                    color: 'white', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    flexShrink: 0, 
+                                    overflow: 'hidden',
+                                    fontWeight: 'bold',
+                                    fontSize: '16px'
+                                }}>
+                                    {userData?.avatarUrl ? (
+                                        <img src={userData.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        (userData?.fullName || session.user.email || 'U').charAt(0).toUpperCase()
+                                    )}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <textarea 
+                                        placeholder="Thêm nhận xét cho lớp học..."
+                                        className="comment-textarea"
+                                        value={newComment}
+                                        onChange={(e) => setNewComment(e.target.value)}
+                                        rows="1"
+                                        onInput={(e) => {
+                                            e.target.style.height = 'auto';
+                                            e.target.style.height = (e.target.scrollHeight) + 'px';
+                                        }}
+                                    />
+                                    <div style={{ 
+                                        display: 'flex', 
+                                        justifyContent: 'flex-end',
+                                        marginTop: '12px',
+                                        opacity: newComment.trim() ? 1 : 0.6,
+                                        transition: 'opacity 0.2s'
+                                    }}>
+                                        <button 
+                                            onClick={submitComment}
+                                            disabled={!newComment.trim() || loading}
+                                            className={`comment-submit-btn ${newComment.trim() ? 'active' : 'disabled'}`}
+                                        >
+                                            <FontAwesomeIcon icon={faPaperPlane} size="sm" />
+                                            Đăng
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* RIGHT: Teacher = Submissions list | Student = My Work */}
-                <div className="assignment-right-panel">
-                    {isTeacher ? (
-                        <TeacherPanel
-                            submissions={submissions}
-                            submittedCount={submittedCount}
-                            gradedCount={gradedCount}
-                            loadingSubmissions={loadingSubmissions}
-                            selectedSubmission={selectedSubmission}
-                            setSelectedSubmission={setSelectedSubmission}
-                            gradingSubmissionId={gradingSubmissionId}
-                            setGradingSubmissionId={setGradingSubmissionId}
-                            gradeInput={gradeInput}
-                            setGradeInput={setGradeInput}
-                            gradeComment={gradeComment}
-                            setGradeComment={setGradeComment}
-                            handleGrade={handleGrade}
-                        />
-                    ) : (
-                        <StudentPanel
-                            mySubmission={mySubmission}
-                            uploadedFiles={uploadedFiles}
-                            uploading={uploading}
-                            submitting={submitting}
-                            isOverdue={isOverdue}
-                            handleFileChange={handleFileChange}
-                            removeFile={removeFile}
-                            handleSubmit={handleSubmit}
-                            handleUnsubmit={handleUnsubmit}
-                        />
-                    )}
-                </div>
+                {post.type === 'assignment' && (
+                    <div className="assignment-right-panel">
+                        {isTeacher ? (
+                            <TeacherPanel
+                                submissions={submissions}
+                                submittedCount={submittedCount}
+                                gradedCount={gradedCount}
+                                loadingSubmissions={loadingSubmissions}
+                                selectedSubmission={selectedSubmission}
+                                setSelectedSubmission={setSelectedSubmission}
+                                gradingSubmissionId={gradingSubmissionId}
+                                setGradingSubmissionId={setGradingSubmissionId}
+                                gradeInput={gradeInput}
+                                setGradeInput={setGradeInput}
+                                gradeComment={gradeComment}
+                                setGradeComment={setGradeComment}
+                                handleGrade={handleGrade}
+                            />
+                        ) : (
+                            <StudentPanel
+                                mySubmission={mySubmission}
+                                uploadedFiles={uploadedFiles}
+                                uploading={uploading}
+                                submitting={submitting}
+                                isOverdue={isOverdue}
+                                handleFileChange={handleFileChange}
+                                removeFile={removeFile}
+                                handleSubmit={handleSubmit}
+                                handleUnsubmit={handleUnsubmit}
+                            />
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

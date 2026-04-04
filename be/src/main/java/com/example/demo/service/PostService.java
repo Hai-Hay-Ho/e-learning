@@ -1,15 +1,11 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.CommentDTO;
 import com.example.demo.dto.PostDTO;
-import com.example.demo.model.AssignmentDeadline;
-import com.example.demo.model.PostAttachment;
-import com.example.demo.model.PostEntity;
-import com.example.demo.model.User;
-import com.example.demo.repository.AssignmentDeadlineRepository;
-import com.example.demo.repository.PostAttachmentRepository;
-import com.example.demo.repository.PostRepository;
-import com.example.demo.repository.UserRepository;
+import com.example.demo.model.*;
+import com.example.demo.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +21,7 @@ public class PostService {
     private final PostAttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
     private final AssignmentDeadlineRepository assignmentDeadlineRepository;
+    private final CommentRepository commentRepository;
 
     @Transactional
     public PostDTO createPost(PostDTO postDTO) {
@@ -122,6 +119,10 @@ public class PostService {
         User author = userRepository.findById(post.getAuthorId()).orElse(null);
         List<PostAttachment> attachments = attachmentRepository.findByPostId(post.getId());
         Optional<AssignmentDeadline> deadline = assignmentDeadlineRepository.findByPostId(post.getId());
+        
+        // Fetch last 2 comments for feed view
+        List<Comment> recentComments = commentRepository.findByPostIdOrderByCreatedAtAsc(post.getId(), PageRequest.of(0, 2));
+        long commentCount = commentRepository.countByPostId(post.getId());
 
         List<PostDTO.AttachmentDTO> attachmentDTOs = attachments.stream()
                 .map(att -> PostDTO.AttachmentDTO.builder()
@@ -130,6 +131,18 @@ public class PostService {
                         .fileName(att.getFileName())
                         .fileType(att.getFileType())
                         .fileSize(att.getFileSize())
+                        .build())
+                .collect(Collectors.toList());
+
+        List<CommentDTO> commentDTOs = recentComments.stream()
+                .map(comment -> CommentDTO.builder()
+                        .id(comment.getId())
+                        .postId(post.getId())
+                        .userId(comment.getUser().getId())
+                        .userName(comment.getUser().getFullName())
+                        .userAvatar(comment.getUser().getAvatarUrl())
+                        .content(comment.getContent())
+                        .createdAt(comment.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
 
@@ -145,6 +158,8 @@ public class PostService {
                 .createdAt(post.getCreatedAt())
                 .dueAt(deadline.map(AssignmentDeadline::getDueAt).orElse(null))
                 .attachments(attachmentDTOs)
+                .comments(commentDTOs)
+                .commentCount(commentCount)
                 .build();
     }
 }
