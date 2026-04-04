@@ -345,17 +345,7 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                 ))}
                             </div>
 
-                            <div class="add-comment-detail" style={{ 
-                                display: 'flex', 
-                                gap: '12px', 
-                                alignItems: 'flex-start', 
-                                background: '#fff', 
-                                padding: '16px', 
-                                borderRadius: '12px', 
-                                border: '1px solid #e0e0e0',
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                                marginTop: '20px'
-                            }}>
+                            <div class="add-comment-detail" >
                                 <div className="user-avatar-md" style={{ 
                                     width: '40px', 
                                     height: '40px', 
