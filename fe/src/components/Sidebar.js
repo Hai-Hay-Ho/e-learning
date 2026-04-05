@@ -53,7 +53,11 @@ const Sidebar = ({ userRole, activeTab, setActiveTab }) => {
                         <span className="icon"><FontAwesomeIcon icon={faBook} /></span> Analytics
                     </div>
                 )}
-                <div className="menu-item">
+                <div 
+                    className={`menu-item ${activeTab === 'Messages' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('Messages')}
+                    style={{ cursor: 'pointer' }}
+                >
                     <span className="icon"><FontAwesomeIcon icon={faEnvelope} /></span> Messages
                 </div>
             </nav>

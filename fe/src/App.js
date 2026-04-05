@@ -5,6 +5,7 @@ import Header from './components/Header';
 import MainContent from './components/Dashboard';
 import ClassPage from './components/Class';
 import Login from './auth/Login';
+import Chat from './components/Chat';
 import { supabase } from './supabaseClient';
 
 function App() {
@@ -76,16 +77,18 @@ function App() {
       {/* Sidebar based on role */}
       <Sidebar userRole={userRole} activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <div className="main-wrapper">
-        {}
-        <Header session={session} userData={userData} onLoginClick={() => setShowLogin(true)} />
+      <div className={`main-wrapper ${activeTab === 'Messages' ? 'no-padding' : ''}`}>
+        {activeTab !== 'Messages' && (
+          <Header session={session} userData={userData} onLoginClick={() => setShowLogin(true)} />
+        )}
 
-        {}
         {session ? (
           activeTab === 'Dashboard' ? (
             <MainContent session={session} />
           ) : activeTab === 'Classes' ? (
             <ClassPage session={session} userRole={userRole} userData={userData} />
+          ) : activeTab === 'Messages' ? (
+            <Chat session={session} userData={userData} />
           ) : (
             <MainContent session={session} />
           )
