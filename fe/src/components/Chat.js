@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Chat.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -11,35 +11,194 @@ import {
     faPaperclip, 
     faMicrophone, 
     faPaperPlane,
-    faCheckDouble
+    faCheckDouble,
+    faChevronLeft
 } from '@fortawesome/free-solid-svg-icons';
+import { supabase } from '../supabaseClient';
 
 const Chat = ({ session, userData }) => {
-    const [selectedChat, setSelectedChat] = useState(3); // Default to Grace Miller based on image
-    const [message, setMessage] = useState('');
+    const [selectedConversation, setSelectedConversation] = useState(null);
+    const [messages, setMessages] = useState([]);
+    const [conversations, setConversations] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const messagesEndRef = useRef(null);
 
-    const chats = [
-        { id: 1, name: 'Liam Anderson', avatar: 'https://i.pravatar.cc/150?u=liam', lastMsg: 'Typing...', time: '04:50 PM', status: 'typing', pinned: true },
-        { id: 2, name: 'Lucas Williams', avatar: 'https://i.pravatar.cc/150?u=lucas', lastMsg: 'Hey, how\'s it going?', time: '10:30 AM', unread: 2, pinned: true },
-        { id: 3, name: 'Grace Miller', avatar: 'https://i.pravatar.cc/150?u=grace', lastMsg: 'Can\'t wait for the weekend!', time: '10:25 AM', online: true, pinned: true },
-        { id: 4, name: 'Sophia Chen', avatar: 'https://i.pravatar.cc/150?u=sophia', lastMsg: 'Remember that concert last y...', time: '07:23 PM' },
-        { id: 5, name: 'Benjamin Knight', avatar: 'https://i.pravatar.cc/150?u=ben', lastMsg: 'Just got back from a hiking trip!', time: '08:45 PM', unread: 1 },
-        { id: 6, name: 'Olivia Foster', avatar: 'https://i.pravatar.cc/150?u=olivia', lastMsg: 'Excited for the upcoming vac...', time: 'Yesterday' },
-        { id: 7, name: 'Jackson Adams', avatar: 'https://i.pravatar.cc/150?u=jackson', lastMsg: 'Looking forward to the weekend...', time: 'Yesterday' },
-        { id: 8, name: 'Ethan Sullivan', avatar: 'https://i.pravatar.cc/150?u=ethan', lastMsg: 'Finished reading a captivating no...', time: 'Yesterday' },
-    ];
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
 
-    const messages = [
-        { id: 1, text: "Hey Grace, how's it going?", time: "10:30 AM", sender: 'me' },
-        { id: 2, text: "Hi Jack! I'm doing well, thanks. Can't wait for the weekend!", time: "10:31 AM", sender: 'them' },
-        { id: 3, text: "I know, right? Weekend plans are the best. Any exciting plans on your end?", time: "10:32 AM", sender: 'me' },
-        { id: 4, text: "Absolutely! I'm thinking of going for a hike on Saturday. How about you?", time: "10:33 AM", sender: 'them' },
-        { id: 5, text: "Hiking sounds amazing! I might catch up on some reading and also meet up with a few friends on Sunday.", time: "10:34 AM", sender: 'me' },
-        { id: 6, text: "That sounds like a great plan! Excited 😄", time: "10:35 AM", sender: 'them' },
-        { id: 7, text: "Can't wait for the weekend!", time: "10:36 AM", sender: 'me' },
-    ];
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
 
-    const activeChat = chats.find(c => c.id === selectedChat);
+    // Fetch conversations on mount
+    useEffect(() => {
+        if (session?.user?.id) {
+            fetchConversations();
+            
+            // Subscribe to new conversations
+            const convSubscription = supabase
+                .channel('public:conversations')
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'conversations',
+                    filter: `user1_id=eq.${session.user.id}`
+                }, () => fetchConversations())
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'conversations',
+                    filter: `user2_id=eq.${session.user.id}`
+                }, () => fetchConversations())
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(convSubscription);
+            };
+        }
+    }, [session?.user?.id]);
+
+    // Subscribe to messages when conversation changes
+    useEffect(() => {
+        if (selectedConversation) {
+            fetchMessages(selectedConversation.id);
+
+            const msgSubscription = supabase
+                .channel(`public:messages:conversation_id=eq.${selectedConversation.id}`)
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'messages',
+                    filter: `conversation_id=eq.${selectedConversation.id}`
+                }, (payload) => {
+                    setMessages(prev => [...prev, payload.new]);
+                })
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(msgSubscription);
+            };
+        } else {
+            setMessages([]);
+        }
+    }, [selectedConversation]);
+
+    const fetchConversations = async () => {
+        const { data, error } = await supabase
+            .from('conversations')
+            .select(`
+                *,
+                user1:user1_id (id, full_name, avatar_url, email),
+                user2:user2_id (id, full_name, avatar_url, email)
+            `)
+            .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
+            .order('created_at', { ascending: false });
+
+        if (error) console.error('Error fetching conversations:', error);
+        else setConversations(data);
+    };
+
+    const fetchMessages = async (conversationId) => {
+        const { data, error } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', conversationId)
+            .order('created_at', { ascending: true });
+
+        if (error) console.error('Error fetching messages:', error);
+        else setMessages(data);
+    };
+
+    const handleSearch = async (e) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+        if (value.length > 1) {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('users')
+                .select('id, full_name, avatar_url, email')
+                .neq('id', session.user.id)
+                .ilike('full_name', `%${value}%`)
+                .limit(5);
+            
+            if (error) console.error('Error searching users:', error);
+            else setSearchResults(data);
+            setLoading(false);
+        } else {
+            setSearchResults([]);
+        }
+    };
+
+    const startConversation = async (otherUser) => {
+        // IDs must be deterministic (least id first, greatest id second) to match the unique index
+        const user1_id = session.user.id < otherUser.id ? session.user.id : otherUser.id;
+        const user2_id = session.user.id < otherUser.id ? otherUser.id : session.user.id;
+
+        // Check if conversation already exists
+        let { data: existingConv, error: checkError } = await supabase
+            .from('conversations')
+            .select('*')
+            .or(`and(user1_id.eq.${user1_id},user2_id.eq.${user2_id})`)
+            .maybeSingle();
+
+        if (existingConv) {
+            setSelectedConversation({
+                ...existingConv,
+                otherUser: otherUser
+            });
+            setSearchTerm('');
+            setSearchResults([]);
+            return;
+        }
+
+        // Create new conversation
+        const { data: newConv, error: createError } = await supabase
+            .from('conversations')
+            .insert([
+                { user1_id, user2_id }
+            ])
+            .select()
+            .single();
+
+        if (createError) {
+            console.error('Error creating conversation:', createError);
+            alert('Lỗi tạo cuộc trò chuyện. Vui lòng kiểm tra RLS Policy trên Supabase.');
+        } else {
+            setSelectedConversation({
+                ...newConv,
+                otherUser: otherUser
+            });
+            fetchConversations();
+        }
+        setSearchTerm('');
+        setSearchResults([]);
+    };
+
+    const sendMessage = async (e) => {
+        e.preventDefault();
+        if (!newMessage.trim() || !selectedConversation) return;
+
+        const { error } = await supabase
+            .from('messages')
+            .insert([
+                { 
+                    conversation_id: selectedConversation.id, 
+                    sender_id: session.user.id, 
+                    content: newMessage 
+                }
+            ]);
+
+        if (error) console.error('Error sending message:', error);
+        else setNewMessage('');
+    };
+
+    const getOtherUser = (conv) => {
+        return conv.user1_id === session.user.id ? conv.user2 : conv.user1;
+    };
 
     return (
         <div className="chat-container">
@@ -52,7 +211,28 @@ const Chat = ({ session, userData }) => {
                     </div>
                     <div className="chat-search-container">
                         <FontAwesomeIcon icon={faSearch} className="search-icon" />
-                        <input type="text" placeholder="Search messages, people" />
+                        <input 
+                            type="text" 
+                            placeholder="Search people..." 
+                            value={searchTerm}
+                            onChange={handleSearch}
+                        />
+                        {searchTerm && (
+                            <div className="search-results-dropdown">
+                                {loading ? (
+                                    <div className="search-item">Searching...</div>
+                                ) : searchResults.length > 0 ? (
+                                    searchResults.map(user => (
+                                        <div key={user.id} className="search-item" onClick={() => startConversation(user)}>
+                                            <img src={user.avatar_url || 'https://i.pravatar.cc/150'} alt={user.full_name} />
+                                            <span>{user.full_name}</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="search-item">No users found</div>
+                                )}
+                            </div>
+                        )}
                         <button className="add-chat-btn">
                             <FontAwesomeIcon icon={faPlus} />
                         </button>
@@ -60,122 +240,114 @@ const Chat = ({ session, userData }) => {
                 </div>
 
                 <div className="chat-list-section">
-                    <div className="chat-list-label">📌 PINNED CHATS</div>
-                    {chats.filter(c => c.pinned).map(chat => (
-                        <div 
-                            key={chat.id} 
-                            className={`chat-list-item ${selectedChat === chat.id ? 'active' : ''}`}
-                            onClick={() => setSelectedChat(chat.id)}
-                        >
-                            <div className="chat-avatar">
-                                <img src={chat.avatar} alt={chat.name} />
-                                {chat.online && <div className="status-dot online"></div>}
-                            </div>
-                            <div className="chat-info">
-                                <div className="chat-name-row">
-                                    <span className="chat-name">{chat.name}</span>
-                                    <span className="chat-time">{chat.time}</span>
-                                </div>
-                                <div className="chat-msg-row">
-                                    <span className={`chat-last-msg ${chat.status === 'typing' ? 'typing' : ''}`}>
-                                        {chat.status === 'typing' ? 'Typing...' : chat.lastMsg}
-                                    </span>
-                                    {chat.unread > 0 && <span className="unread-badge">{chat.unread}</span>}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-
                     <div className="chat-list-label">📁 ALL MESSAGES</div>
-                    {chats.filter(c => !c.pinned).map(chat => (
-                        <div 
-                            key={chat.id} 
-                            className={`chat-list-item ${selectedChat === chat.id ? 'active' : ''}`}
-                            onClick={() => setSelectedChat(chat.id)}
-                        >
-                            <div className="chat-avatar">
-                                <img src={chat.avatar} alt={chat.name} />
-                                {chat.online && <div className="status-dot online"></div>}
-                            </div>
-                            <div className="chat-info">
-                                <div className="chat-name-row">
-                                    <span className="chat-name">{chat.name}</span>
-                                    <span className="chat-time">{chat.time}</span>
+                    {conversations.map(conv => {
+                        const otherUser = getOtherUser(conv);
+                        return (
+                            <div 
+                                key={conv.id} 
+                                className={`chat-list-item ${selectedConversation?.id === conv.id ? 'active' : ''}`}
+                                onClick={() => setSelectedConversation({...conv, otherUser})}
+                            >
+                                <div className="chat-avatar">
+                                    <img src={otherUser?.avatar_url || 'https://i.pravatar.cc/150'} alt={otherUser?.full_name} />
                                 </div>
-                                <div className="chat-msg-row">
-                                    <span className="chat-last-msg">{chat.lastMsg}</span>
-                                    {chat.unread > 0 && <span className="unread-badge">{chat.unread}</span>}
+                                <div className="chat-info">
+                                    <div className="chat-name-row">
+                                        <span className="chat-name">{otherUser?.full_name}</span>
+                                        <span className="chat-time">
+                                            {new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                    <div className="chat-msg-row">
+                                        <span className="chat-last-msg">Start chatting...</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 
             {/* Chat Window */}
             <div className="chat-window">
-                <div className="chat-window-header">
-                    <div className="header-user-info">
-                        <div className="header-avatar">
-                            <img src={activeChat?.avatar} alt={activeChat?.name} />
-                            {activeChat?.online && <div className="status-dot online"></div>}
-                        </div>
-                        <div className="header-text">
-                            <div className="header-name">{activeChat?.name}</div>
-                            <div className="header-status">{activeChat?.online ? 'Online' : 'Offline'}</div>
-                        </div>
-                    </div>
-                    <div className="header-actions">
-                        <button className="action-btn"><FontAwesomeIcon icon={faPhone} /></button>
-                        <button className="action-btn"><FontAwesomeIcon icon={faVideo} /></button>
-                        <button className="action-btn"><FontAwesomeIcon icon={faEllipsisV} /></button>
-                    </div>
-                </div>
-
-                <div className="chat-messages">
-                    {messages.map(msg => (
-                        <div key={msg.id} className={`message-row ${msg.sender}`}>
-                            {msg.sender === 'them' && (
-                                <div className="msg-avatar">
-                                    <img src={activeChat?.avatar} alt={activeChat?.name} />
+                {selectedConversation ? (
+                    <>
+                        <div className="chat-window-header">
+                            <div className="header-user-info">
+                                <div className="header-avatar">
+                                    <img src={selectedConversation.otherUser?.avatar_url || 'https://i.pravatar.cc/150'} alt={selectedConversation.otherUser?.full_name} />
                                 </div>
-                            )}
-                            <div className="message-bubble">
-                                {msg.sender === 'them' && <div className="sender-name">{activeChat?.name} <span className="time">{msg.time}</span></div>}
-                                <div className="message-text">{msg.text}</div>
-                                {msg.sender === 'me' && (
-                                    <div className="me-meta">
-                                        <span className="time">{msg.time}</span>
-                                        <span className="name">Jack Raymonds</span>
-                                    </div>
-                                )}
+                                <div className="header-text">
+                                    <div className="header-name">{selectedConversation.otherUser?.full_name}</div>
+                                    <div className="header-status">Online</div>
+                                </div>
                             </div>
-                            {msg.sender === 'me' && (
-                                <div className="msg-avatar">
-                                    <img src="https://i.pravatar.cc/150?u=jack" alt="me" />
-                                </div>
-                            )}
+                            <div className="header-actions">
+                                <button className="action-btn"><FontAwesomeIcon icon={faPhone} /></button>
+                                <button className="action-btn"><FontAwesomeIcon icon={faVideo} /></button>
+                                <button className="action-btn"><FontAwesomeIcon icon={faEllipsisV} /></button>
+                            </div>
                         </div>
-                    ))}
-                </div>
 
-                <div className="chat-input-area">
-                    <div className="input-container">
-                        <button className="input-aux-btn"><FontAwesomeIcon icon={faSmile} /></button>
-                        <input 
-                            type="text" 
-                            placeholder="Type message..." 
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                        />
-                        <button className="input-aux-btn"><FontAwesomeIcon icon={faMicrophone} /></button>
-                        <button className="input-aux-btn"><FontAwesomeIcon icon={faPaperclip} /></button>
+                        <div className="chat-messages">
+                            {messages.map(msg => {
+                                const isMe = msg.sender_id === session.user.id;
+                                return (
+                                    <div key={msg.id} className={`message-row ${isMe ? 'me' : 'them'}`}>
+                                        {!isMe && (
+                                            <div className="msg-avatar">
+                                                <img src={selectedConversation.otherUser?.avatar_url || 'https://i.pravatar.cc/150'} alt={selectedConversation.otherUser?.full_name} />
+                                            </div>
+                                        )}
+                                        <div className="message-bubble">
+                                            {!isMe && <div className="sender-name">{selectedConversation.otherUser?.full_name} <span className="time">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>}
+                                            <div className="message-text">{msg.content}</div>
+                                            {isMe && (
+                                                <div className="me-meta">
+                                                    <span className="time">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    <span className="name">Me</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {isMe && (
+                                            <div className="msg-avatar">
+                                                <img src={session.user.user_metadata.avatar_url || 'https://i.pravatar.cc/150'} alt="me" />
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        <form className="chat-input-area" onSubmit={sendMessage}>
+                            <div className="input-container">
+                                <button type="button" className="input-aux-btn"><FontAwesomeIcon icon={faSmile} /></button>
+                                <input 
+                                    type="text" 
+                                    placeholder="Type message..." 
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                />
+                                <button type="button" className="input-aux-btn"><FontAwesomeIcon icon={faMicrophone} /></button>
+                                <button type="button" className="input-aux-btn"><FontAwesomeIcon icon={faPaperclip} /></button>
+                            </div>
+                            <button type="submit" className="send-btn">
+                                <span>Send</span>
+                                <FontAwesomeIcon icon={faPaperPlane} />
+                            </button>
+                        </form>
+                    </>
+                ) : (
+                    <div className="no-chat-selected">
+                        <div className="no-chat-content">
+                            <div className="no-chat-icon">💬</div>
+                            <h3>Select a conversation to start chatting</h3>
+                            <p>Search for people to start a new chat</p>
+                        </div>
                     </div>
-                    <button className="send-btn">
-                        <span>Send</span>
-                        <FontAwesomeIcon icon={faPaperPlane} />
-                    </button>
-                </div>
+                )}
             </div>
         </div>
     );
