@@ -22,6 +22,7 @@ const Chat = ({ session, userData }) => {
     const [conversations, setConversations] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const userDefaultAvatar = userData?.avatarUrl || session?.user?.user_metadata?.avatar_url;
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
@@ -188,7 +189,8 @@ const Chat = ({ session, userData }) => {
                 { 
                     conversation_id: selectedConversation.id, 
                     sender_id: session.user.id, 
-                    content: newMessage 
+                    content: newMessage,
+                    created_at: new Date().toISOString()
                 }
             ]);
 
@@ -200,14 +202,21 @@ const Chat = ({ session, userData }) => {
         return conv.user1_id === session.user.id ? conv.user2 : conv.user1;
     };
 
+    const formatTime = (dateString) => {
+        if (!dateString) return '';
+        const utcDate = new Date(dateString);
+        // Cộng thêm 7 tiếng (7 * 60 * 60 * 1000 miliseconds) để chuyển từ UTC sang UTC+7
+        const vnDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
+        return vnDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
     return (
         <div className="chat-container">
             {/* Sidebar List */}
             <div className="chat-sidebar">
                 <div className="chat-sidebar-header">
                     <div className="chat-app-logo">
-                        <div className="chat-logo-icon">💬</div>
-                        Chat Buddies
+                        E-Chat
                     </div>
                     <div className="chat-search-container">
                         <FontAwesomeIcon icon={faSearch} className="search-icon" />
@@ -224,7 +233,7 @@ const Chat = ({ session, userData }) => {
                                 ) : searchResults.length > 0 ? (
                                     searchResults.map(user => (
                                         <div key={user.id} className="search-item" onClick={() => startConversation(user)}>
-                                            <img src={user.avatar_url || 'https://i.pravatar.cc/150'} alt={user.full_name} />
+                                            <img src={user.avatar_url} alt={user.full_name} />
                                             <span>{user.full_name}</span>
                                         </div>
                                     ))
@@ -233,14 +242,11 @@ const Chat = ({ session, userData }) => {
                                 )}
                             </div>
                         )}
-                        <button className="add-chat-btn">
-                            <FontAwesomeIcon icon={faPlus} />
-                        </button>
                     </div>
                 </div>
 
                 <div className="chat-list-section">
-                    <div className="chat-list-label">📁 ALL MESSAGES</div>
+                    <div className="chat-list-label">ALL MESSAGES</div>
                     {conversations.map(conv => {
                         const otherUser = getOtherUser(conv);
                         return (
@@ -250,13 +256,13 @@ const Chat = ({ session, userData }) => {
                                 onClick={() => setSelectedConversation({...conv, otherUser})}
                             >
                                 <div className="chat-avatar">
-                                    <img src={otherUser?.avatar_url || 'https://i.pravatar.cc/150'} alt={otherUser?.full_name} />
+                                    <img src={otherUser?.avatar_url} alt={otherUser?.full_name} />
                                 </div>
                                 <div className="chat-info">
                                     <div className="chat-name-row">
                                         <span className="chat-name">{otherUser?.full_name}</span>
                                         <span className="chat-time">
-                                            {new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {formatTime(conv.created_at)}
                                         </span>
                                     </div>
                                     <div className="chat-msg-row">
@@ -276,7 +282,7 @@ const Chat = ({ session, userData }) => {
                         <div className="chat-window-header">
                             <div className="header-user-info">
                                 <div className="header-avatar">
-                                    <img src={selectedConversation.otherUser?.avatar_url || 'https://i.pravatar.cc/150'} alt={selectedConversation.otherUser?.full_name} />
+                                    <img src={selectedConversation.otherUser?.avatar_url} alt={selectedConversation.otherUser?.full_name} />
                                 </div>
                                 <div className="header-text">
                                     <div className="header-name">{selectedConversation.otherUser?.full_name}</div>
@@ -297,22 +303,21 @@ const Chat = ({ session, userData }) => {
                                     <div key={msg.id} className={`message-row ${isMe ? 'me' : 'them'}`}>
                                         {!isMe && (
                                             <div className="msg-avatar">
-                                                <img src={selectedConversation.otherUser?.avatar_url || 'https://i.pravatar.cc/150'} alt={selectedConversation.otherUser?.full_name} />
+                                                <img src={selectedConversation.otherUser?.avatar_url} alt={selectedConversation.otherUser?.full_name} />
                                             </div>
                                         )}
                                         <div className="message-bubble">
-                                            {!isMe && <div className="sender-name">{selectedConversation.otherUser?.full_name} <span className="time">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>}
+                                            {!isMe && <div className="sender-name">{selectedConversation.otherUser?.full_name} <span className="time">{formatTime(msg.created_at)}</span></div>}
                                             <div className="message-text">{msg.content}</div>
                                             {isMe && (
                                                 <div className="me-meta">
-                                                    <span className="time">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                    <span className="name">Me</span>
+                                                    <span className="time">{formatTime(msg.created_at)}</span>
                                                 </div>
                                             )}
                                         </div>
                                         {isMe && (
                                             <div className="msg-avatar">
-                                                <img src={session.user.user_metadata.avatar_url || 'https://i.pravatar.cc/150'} alt="me" />
+                                                <img src={userDefaultAvatar}alt="User Avatar"/>
                                             </div>
                                         )}
                                     </div>
@@ -323,7 +328,6 @@ const Chat = ({ session, userData }) => {
 
                         <form className="chat-input-area" onSubmit={sendMessage}>
                             <div className="input-container">
-                                <button type="button" className="input-aux-btn"><FontAwesomeIcon icon={faSmile} /></button>
                                 <input 
                                     type="text" 
                                     placeholder="Type message..." 
@@ -342,7 +346,6 @@ const Chat = ({ session, userData }) => {
                 ) : (
                     <div className="no-chat-selected">
                         <div className="no-chat-content">
-                            <div className="no-chat-icon">💬</div>
                             <h3>Select a conversation to start chatting</h3>
                             <p>Search for people to start a new chat</p>
                         </div>
