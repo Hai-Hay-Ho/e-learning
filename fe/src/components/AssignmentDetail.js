@@ -23,7 +23,7 @@ import {
     faBullhorn,
 } from '@fortawesome/free-solid-svg-icons';
 
-const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, userData }) => {
+const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, userData, onStudentClick }) => {
     const isTeacher = userRole === '1';
     const [submissions, setSubmissions] = useState([]);
     const [mySubmission, setMySubmission] = useState(null);
@@ -39,8 +39,9 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(false);
+    const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'submitted', 'late', 'graded'
 
-    const deadline = post.deadline ? new Date(post.deadline) : null;
+    const deadline = post.dueAt ? new Date(post.dueAt) : null;
     const now = new Date();
     const isOverdue = deadline && now > deadline;
     const timeLeft = deadline ? getTimeLeft(deadline, now) : null;
@@ -454,6 +455,10 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                 gradeComment={gradeComment}
                                 setGradeComment={setGradeComment}
                                 handleGrade={handleGrade}
+                                deadline={deadline}
+                                filterStatus={filterStatus}
+                                setFilterStatus={setFilterStatus}
+                                onStudentClick={onStudentClick}
                             />
                         ) : (
                             <StudentPanel
@@ -482,153 +487,192 @@ const TeacherPanel = ({
     selectedSubmission, setSelectedSubmission,
     gradingSubmissionId, setGradingSubmissionId,
     gradeInput, setGradeInput, gradeComment, setGradeComment,
-    handleGrade
-}) => (
-    <div className="teacher-submission-panel">
-        <div className="panel-header">
-            <h3>Bài nộp của học sinh</h3>
-        </div>
+    handleGrade, deadline, filterStatus, setFilterStatus, onStudentClick
+}) => {
+    const filteredSubmissions = submissions.filter(sub => {
+        if (filterStatus === 'all') return true;
+        const subDate = new Date(sub.submittedAt);
+        const isGraded = sub.grade !== null && sub.grade !== undefined;
+        const isLate = deadline && subDate > deadline;
 
-        <div className="submission-stats-row">
-            <div className="stat-box submitted">
-                <div className="stat-number">{submittedCount}</div>
-                <div className="stat-label">Đã nộp</div>
-            </div>
-            <div className="stat-box graded">
-                <div className="stat-number">{gradedCount}</div>
-                <div className="stat-label">Đã chấm</div>
-            </div>
-            <div className="stat-box pending">
-                <div className="stat-number">{submittedCount - gradedCount}</div>
-                <div className="stat-label">Chờ chấm</div>
-            </div>
-        </div>
+        if (filterStatus === 'graded') return isGraded;
+        if (filterStatus === 'late') return !isGraded && isLate;
+        if (filterStatus === 'submitted') return !isGraded && !isLate;
+        return true;
+    });
 
-        <div className="submissions-list-container">
-            {loadingSubmissions ? (
-                <div className="loading-spinner-container">
-                    <div className="loading-spinner" />
-                    <p>Đang tải...</p>
+    return (
+        <div className="teacher-submission-panel">
+            <div className="panel-header">
+                <h3>Bài nộp của học sinh</h3>
+            </div>
+
+            <div className="submission-stats-row">
+                <div 
+                    className={`stat-box submitted ${filterStatus === 'submitted' ? 'active' : ''}`}
+                    onClick={() => setFilterStatus(filterStatus === 'submitted' ? 'all' : 'submitted')}
+                    style={{ cursor: 'pointer' }}
+                >
+                    <div className="stat-number">{submissions.filter(s => (s.grade === null || s.grade === undefined) && (!deadline || new Date(s.submittedAt) <= deadline)).length}</div>
+                    <div className="stat-label">Đúng hạn</div>
                 </div>
-            ) : submissions.length === 0 ? (
-                <div className="empty-submissions">
-                    <FontAwesomeIcon icon={faFileAlt} size="2x" />
-                    <p>Chưa có học sinh nộp bài</p>
+                <div 
+                    className={`stat-box overdue ${filterStatus === 'late' ? 'active' : ''}`}
+                    onClick={() => setFilterStatus(filterStatus === 'late' ? 'all' : 'late')}
+                    style={{ cursor: 'pointer' }}
+                >
+                    <div className="stat-number">{submissions.filter(s => (s.grade === null || s.grade === undefined) && deadline && new Date(s.submittedAt) > deadline).length}</div>
+                    <div className="stat-label">Nộp muộn</div>
                 </div>
-            ) : (
-                submissions.map(sub => (
-                    <div
-                        key={sub.id}
-                        className={`submission-row ${selectedSubmission?.id === sub.id ? 'selected' : ''}`}
-                        onClick={() => setSelectedSubmission(sub)}
-                    >
-                        <div className="submission-row-left">
-                            <div className="student-avatar-sm">
-                                {sub.studentAvatar
-                                    ? <img src={sub.studentAvatar} alt={sub.studentName} />
-                                    : (sub.studentName || 'S').charAt(0).toUpperCase()
-                                }
-                            </div>
-                            <div className="submission-row-info">
-                                <strong>{sub.studentName || 'Học sinh'}</strong>
-                                <span>{new Date(sub.submittedAt).toLocaleString('vi-VN')}</span>
-                            </div>
-                        </div>
-                        <div className="submission-row-right">
-                            {sub.grade !== null && sub.grade !== undefined ? (
-                                <span className="grade-badge">{sub.grade}/10</span>
-                            ) : (
-                                <span className="pending-badge">Chờ chấm</span>
-                            )}
-                            <FontAwesomeIcon icon={faChevronRight} className="chevron-icon" />
-                        </div>
+                <div 
+                    className={`stat-box graded ${filterStatus === 'graded' ? 'active' : ''}`}
+                    onClick={() => setFilterStatus(filterStatus === 'graded' ? 'all' : 'graded')}
+                    style={{ cursor: 'pointer' }}
+                >
+                    <div className="stat-number">{gradedCount}</div>
+                    <div className="stat-label">Đã chấm</div>
+                </div>
+            </div>
+
+            <div className="submissions-list-container">
+                {loadingSubmissions ? (
+                    <div className="loading-spinner-container">
+                        <div className="loading-spinner" />
+                        <p>Đang tải...</p>
                     </div>
-                ))
+                ) : filteredSubmissions.length === 0 ? (
+                    <div className="empty-submissions">
+                        <FontAwesomeIcon icon={faFileAlt} size="2x" />
+                        <p>{filterStatus === 'all' ? 'Chưa có học sinh nộp bài' : 'Không có bài nộp nào khớp với bộ lọc'}</p>
+                        {filterStatus !== 'all' && (
+                            <button className="btn-clear-filter" onClick={() => setFilterStatus('all')} style={{ marginTop: '10px', padding: '4px 12px', borderRadius: '4px', border: '1px solid #dadce0', background: 'white', cursor: 'pointer', fontSize: '12px' }}>
+                                Xóa bộ lọc
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    filteredSubmissions.map(sub => {
+                        const subDate = new Date(sub.submittedAt);
+                        const isLate = deadline && subDate > deadline;
+                        const isGraded = sub.grade !== null && sub.grade !== undefined;
+
+                        return (
+                            <div
+                                key={sub.id}
+                                className={`submission-row ${selectedSubmission?.id === sub.id ? 'selected' : ''}`}
+                                onClick={() => onStudentClick(sub)}
+                            >
+                                <div className="submission-row-left">
+                                    <div className="student-avatar-sm">
+                                        {sub.studentAvatar
+                                            ? <img src={sub.studentAvatar} alt={sub.studentName} />
+                                            : (sub.studentName || 'S').charAt(0).toUpperCase()
+                                        }
+                                    </div>
+                                    <div className="submission-row-info">
+                                        <strong>{sub.studentName || 'Học sinh'}</strong>
+                                        <span>{subDate.toLocaleString('vi-VN')}</span>
+                                    </div>
+                                </div>
+                                <div className="submission-row-right">
+                                    {isGraded ? (
+                                        <span className="grade-badge">{sub.grade}/10</span>
+                                    ) : isLate ? (
+                                        <span className="late-badge" style={{ color: '#d93025', backgroundColor: '#fce8e6', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '500' }}>Nộp muộn</span>
+                                    ) : (
+                                        <span className="submitted-badge" style={{ color: '#188038', backgroundColor: '#e6f4ea', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '500' }}>Đã nộp</span>
+                                    )}
+                                    <FontAwesomeIcon icon={faChevronRight} className="chevron-icon" />
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+
+            {/* Selected submission detail */}
+            {selectedSubmission && (
+                <div className="submission-detail-panel">
+                    <div className="sdp-header">
+                        <div className="student-avatar-sm">
+                            {selectedSubmission.studentAvatar
+                                ? <img src={selectedSubmission.studentAvatar} alt={selectedSubmission.studentName} />
+                                : (selectedSubmission.studentName || 'S').charAt(0).toUpperCase()
+                            }
+                        </div>
+                        <div>
+                            <strong>{selectedSubmission.studentName}</strong>
+                            <p>Nộp lúc: {new Date(selectedSubmission.submittedAt).toLocaleString('vi-VN')}</p>
+                        </div>
+                        <button className="sdp-close" onClick={() => setSelectedSubmission(null)}>
+                            <FontAwesomeIcon icon={faTimes} />
+                        </button>
+                    </div>
+
+                    <div className="sdp-files">
+                        <h5>File đã nộp</h5>
+                        {(selectedSubmission.attachments || []).map((att, i) => (
+                            <a key={i} href={att.fileUrl} target="_blank" rel="noopener noreferrer" className="sdp-file-link">
+                                <FontAwesomeIcon icon={faFileAlt} />
+                                <span>{att.fileName}</span>
+                                <FontAwesomeIcon icon={faDownload} className="ml-auto" />
+                            </a>
+                        ))}
+                    </div>
+
+                    <div className="sdp-grade-section">
+                        <h5>Chấm điểm</h5>
+                        {gradingSubmissionId === selectedSubmission.id ? (
+                            <div className="grade-input-form">
+                                <input
+                                    type="number"
+                                    min="0" max="10" step="0.5"
+                                    placeholder="Điểm (0–10)"
+                                    value={gradeInput}
+                                    onChange={e => setGradeInput(e.target.value)}
+                                    className="grade-input-field"
+                                />
+                                <textarea
+                                    placeholder="Nhận xét (tuỳ chọn)"
+                                    value={gradeComment}
+                                    onChange={e => setGradeComment(e.target.value)}
+                                    className="grade-comment-field"
+                                    rows={3}
+                                />
+                                <div className="grade-actions">
+                                    <button className="btn-cancel-grade" onClick={() => setGradingSubmissionId(null)}>Hủy</button>
+                                    <button className="btn-submit-grade" onClick={() => handleGrade(selectedSubmission.id)}>
+                                        <FontAwesomeIcon icon={faCheck} /> Lưu điểm
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="current-grade-display">
+                                {selectedSubmission.grade !== null && selectedSubmission.grade !== undefined ? (
+                                    <>
+                                        <div className="grade-circle">{selectedSubmission.grade}<span>/10</span></div>
+                                        {selectedSubmission.gradeComment && (
+                                            <p className="grade-comment-text">{selectedSubmission.gradeComment}</p>
+                                        )}
+                                        <button className="btn-edit-grade" onClick={() => {
+                                            setGradingSubmissionId(selectedSubmission.id);
+                                            setGradeInput(String(selectedSubmission.grade));
+                                            setGradeComment(selectedSubmission.gradeComment || '');
+                                        }}>Sửa điểm</button>
+                                    </>
+                                ) : (
+                                    <button className="btn-grade" onClick={() => setGradingSubmissionId(selectedSubmission.id)}>
+                                        <FontAwesomeIcon icon={faStar} /> Chấm điểm
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
         </div>
-
-        {/* Selected submission detail */}
-        {selectedSubmission && (
-            <div className="submission-detail-panel">
-                <div className="sdp-header">
-                    <div className="student-avatar-sm">
-                        {selectedSubmission.studentAvatar
-                            ? <img src={selectedSubmission.studentAvatar} alt={selectedSubmission.studentName} />
-                            : (selectedSubmission.studentName || 'S').charAt(0).toUpperCase()
-                        }
-                    </div>
-                    <div>
-                        <strong>{selectedSubmission.studentName}</strong>
-                        <p>Nộp lúc: {new Date(selectedSubmission.submittedAt).toLocaleString('vi-VN')}</p>
-                    </div>
-                    <button className="sdp-close" onClick={() => setSelectedSubmission(null)}>
-                        <FontAwesomeIcon icon={faTimes} />
-                    </button>
-                </div>
-
-                <div className="sdp-files">
-                    <h5>File đã nộp</h5>
-                    {(selectedSubmission.attachments || []).map((att, i) => (
-                        <a key={i} href={att.fileUrl} target="_blank" rel="noopener noreferrer" className="sdp-file-link">
-                            <FontAwesomeIcon icon={faFileAlt} />
-                            <span>{att.fileName}</span>
-                            <FontAwesomeIcon icon={faDownload} className="ml-auto" />
-                        </a>
-                    ))}
-                </div>
-
-                <div className="sdp-grade-section">
-                    <h5>Chấm điểm</h5>
-                    {gradingSubmissionId === selectedSubmission.id ? (
-                        <div className="grade-input-form">
-                            <input
-                                type="number"
-                                min="0" max="10" step="0.5"
-                                placeholder="Điểm (0–10)"
-                                value={gradeInput}
-                                onChange={e => setGradeInput(e.target.value)}
-                                className="grade-input-field"
-                            />
-                            <textarea
-                                placeholder="Nhận xét (tuỳ chọn)"
-                                value={gradeComment}
-                                onChange={e => setGradeComment(e.target.value)}
-                                className="grade-comment-field"
-                                rows={3}
-                            />
-                            <div className="grade-actions">
-                                <button className="btn-cancel-grade" onClick={() => setGradingSubmissionId(null)}>Hủy</button>
-                                <button className="btn-submit-grade" onClick={() => handleGrade(selectedSubmission.id)}>
-                                    <FontAwesomeIcon icon={faCheck} /> Lưu điểm
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="current-grade-display">
-                            {selectedSubmission.grade !== null && selectedSubmission.grade !== undefined ? (
-                                <>
-                                    <div className="grade-circle">{selectedSubmission.grade}<span>/10</span></div>
-                                    {selectedSubmission.gradeComment && (
-                                        <p className="grade-comment-text">{selectedSubmission.gradeComment}</p>
-                                    )}
-                                    <button className="btn-edit-grade" onClick={() => {
-                                        setGradingSubmissionId(selectedSubmission.id);
-                                        setGradeInput(String(selectedSubmission.grade));
-                                        setGradeComment(selectedSubmission.gradeComment || '');
-                                    }}>Sửa điểm</button>
-                                </>
-                            ) : (
-                                <button className="btn-grade" onClick={() => setGradingSubmissionId(selectedSubmission.id)}>
-                                    <FontAwesomeIcon icon={faStar} /> Chấm điểm
-                                </button>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-        )}
-    </div>
-);
+    );
+};
 
 /* ==================== STUDENT PANEL ==================== */
 const StudentPanel = ({

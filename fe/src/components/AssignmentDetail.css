@@ -400,3 +400,52 @@
 .status-assigned { color: #5f6368; font-weight: 500; }
 .status-turned-in { color: #1e8e3e; font-weight: 500; }
 .status-missing { color: #d93025; font-weight: 500; }
+
+/* Teacher Panel Status and Filter box */
+.stat-box {
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.stat-box:hover {
+    background-color: #f1f3f4 !important;
+    transform: translateY(-2px);
+}
+
+.stat-box.active {
+    box-shadow: 0 2px 6px rgba(26, 115, 232, 0.2);
+}
+
+.stat-box.submitted.active {
+    border-color: #188038 !important;
+    background-color: #e6f4ea !important;
+}
+
+.stat-box.overdue.active {
+    border-color: #d93025 !important;
+    background-color: #fce8e6 !important;
+}
+
+.stat-box.graded.active {
+    border-color: #1a73e8 !important;
+    background-color: #e8f0fe !important;
+}
+
+.submission-row {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.submission-row:hover {
+    background-color: #f1f3f4;
+}
+
+.submission-row.selected {
+    background-color: #e8f0fe !important;
+}
+
+.late-badge, .submitted-badge {
+    display: inline-block;
+    white-space: nowrap;
+}
+

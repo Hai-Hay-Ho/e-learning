@@ -6,6 +6,7 @@ import MainContent from './components/Dashboard';
 import ClassPage from './components/Class';
 import Login from './auth/Login';
 import Chat from './components/Chat';
+import SubmissionList from './components/SubmissionList';
 import { supabase } from './supabaseClient';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
   const [userRole, setUserRole] = useState(null);
   const [userData, setUserData] = useState(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   useEffect(() => {
     // Kiểm tra session hiện tại
@@ -77,8 +79,8 @@ function App() {
       {/* Sidebar based on role */}
       <Sidebar userRole={userRole} activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <div className={`main-wrapper ${activeTab === 'Messages' ? 'no-padding' : ''}`}>
-        {activeTab !== 'Messages' && (
+      <div className={`main-wrapper ${(activeTab === 'Messages' || activeTab === 'Assignments') ? 'no-padding' : ''}`}>
+        {activeTab !== 'Messages' && activeTab !== 'Assignments' && (
           <Header session={session} userData={userData} onLoginClick={() => setShowLogin(true)} />
         )}
 
@@ -86,9 +88,23 @@ function App() {
           activeTab === 'Dashboard' ? (
             <MainContent session={session} />
           ) : activeTab === 'Classes' ? (
-            <ClassPage session={session} userRole={userRole} userData={userData} />
+            <ClassPage 
+              session={session} 
+              userRole={userRole} 
+              userData={userData} 
+              onStudentClick={(sub) => {
+                setSelectedSubmission(sub);
+                setActiveTab('Assignments');
+              }}
+            />
           ) : activeTab === 'Messages' ? (
             <Chat session={session} userData={userData} />
+          ) : activeTab === 'Assignments' ? (
+            <SubmissionList 
+              session={session}
+              userRole={userRole}
+              onBack={() => setActiveTab('Dashboard')}
+            />
           ) : (
             <MainContent session={session} />
           )
