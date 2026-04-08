@@ -9,7 +9,9 @@ import {
     faChevronRight,
     faLayerGroup,
     faTasks,
-    faUsers
+    faUsers,
+    faPaperclip,
+    faCommentAlt
 } from '@fortawesome/free-solid-svg-icons';
 import './SubmissionList.css';
 
@@ -33,15 +35,14 @@ const SubmissionList = ({ userRole, session, onBack }) => {
     const [gradeComment, setGradeComment] = useState('');
 
     useEffect(() => {
-        if (isTeacher) {
-            fetchClasses();
-        }
+        fetchClasses();
     }, []);
 
     const fetchClasses = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:8080/api/classes/user/${session.user.id}?role=1`);
+            const roleParam = userRole ? `?role=${userRole}` : '';
+            const response = await fetch(`http://localhost:8080/api/classes/user/${session.user.id}${roleParam}`);
             if (response.ok) {
                 const data = await response.json();
                 setClasses(data);
@@ -71,10 +72,14 @@ const SubmissionList = ({ userRole, session, onBack }) => {
     const fetchSubmissions = async (postId) => {
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:8080/api/submissions/post/${postId}`);
+            const url = isTeacher 
+                ? `http://localhost:8080/api/submissions/post/${postId}`
+                : `http://localhost:8080/api/submissions/post/${postId}/user/${session.user.id}`;
+            const response = await fetch(url);
             if (response.ok) {
                 const data = await response.json();
-                setSubmissions(data);
+                const submissionsArray = Array.isArray(data) ? data : (data ? [data] : []);
+                setSubmissions(submissionsArray);
             }
         } catch (err) {
             console.error('Error fetching submissions:', err);
@@ -139,7 +144,7 @@ const SubmissionList = ({ userRole, session, onBack }) => {
                         <div className="item-card-icon"><FontAwesomeIcon icon={faLayerGroup} /></div>
                         <div className="item-card-info">
                             <h3>{cls.name}</h3>
-                            <span>Mã lớp: {cls.code}</span>
+                            <span>Mã lớp: {cls.joinCode}</span>
                         </div>
                         <FontAwesomeIcon icon={faChevronRight} className="chevron" />
                     </div>
@@ -156,17 +161,37 @@ const SubmissionList = ({ userRole, session, onBack }) => {
                 </button>
                 <h2>Bài tập của lớp: {selectedClass.name}</h2>
             </div>
-            <div className="items-grid">
+            <div className="items-grid-cards">
                 {assignments.length === 0 ? (
                     <p className="empty-msg">Chưa có bài tập nào trong lớp này.</p>
                 ) : assignments.map(asg => (
-                    <div key={asg.id} className="item-card" onClick={() => handleAssignmentClick(asg)}>
-                        <div className="item-card-icon asg"><FontAwesomeIcon icon={faTasks} /></div>
-                        <div className="item-card-info">
-                            <h3>{asg.title}</h3>
-                            <span>Tác giả: {asg.authorName}</span>
+                    <div key={asg.id} className="assignment-grid-card" onClick={() => handleAssignmentClick(asg)}>
+                        <div className="card-tag">Assignment</div>
+                        <div className="card-main-content">
+                            <h3 className="card-title">{asg.title}</h3>
+                            <p className="card-description">
+                                {asg.content || 'Không có mô tả cho bài tập này.'}
+                            </p>
                         </div>
-                        <FontAwesomeIcon icon={faChevronRight} className="chevron" />
+                        <div className="card-footer-layout">
+                            <div className="card-author-avatar">
+                                {asg.authorAvatar ? (
+                                    <img src={asg.authorAvatar} alt={asg.authorName} />
+                                ) : (
+                                    <div className="avatar-letter">{(asg.authorName || 'T').charAt(0)}</div>
+                                )}
+                            </div>
+                            <div className="card-footer-stats">
+                                <div className="stat-item">
+                                    <FontAwesomeIcon icon={faPaperclip} />
+                                    <span>{asg.attachments?.length || 0}</span>
+                                </div>
+                                <div className="stat-item">
+                                    <FontAwesomeIcon icon={faCommentAlt} />
+                                    <span>{asg.commentCount || (asg.recentComments?.length || 0)}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 ))}
             </div>
@@ -179,31 +204,80 @@ const SubmissionList = ({ userRole, session, onBack }) => {
                 <button className="back-link" onClick={() => setViewMode('assignments')}>
                     <FontAwesomeIcon icon={faArrowLeft} /> Quay lại danh sách bài tập
                 </button>
-                <h2>Danh sách nộp bài: {selectedAssignment.title}</h2>
+                <h2>{isTeacher ? `Danh sách nộp bài: ${selectedAssignment?.title}` : `Chi tiết bài nộp: ${selectedAssignment?.title}`}</h2>
             </div>
-            <div className="items-list">
-                {submissions.length === 0 ? (
-                    <p className="empty-msg">Chưa có học sinh nào nộp bài.</p>
-                ) : submissions.map(sub => (
-                    <div key={sub.id} className="submission-row-item" onClick={() => handleSubmissionClick(sub)}>
-                        <div className="sub-user-info">
-                            <div className="sub-avatar">{(sub.studentName || 'S').charAt(0).toUpperCase()}</div>
-                            <div>
-                                <strong>{sub.studentName}</strong>
-                                <span>Nộp lúc: {new Date(sub.submittedAt).toLocaleString('vi-VN')}</span>
+            
+            {!isTeacher && submissions.length > 0 ? (
+                // View for Student when they have a submission
+                <div className="grading-content" style={{ padding: 0 }}>
+                    <div className="grading-left-panel">
+                        <div className="grading-card">
+                            <h3><FontAwesomeIcon icon={faFileAlt} /> File bạn đã nộp</h3>
+                            <div className="grading-files-list">
+                                {(submissions[0].attachments || submissions[0].files || []).map((file, index) => (
+                                    <a key={index} href={file.fileUrl} target="_blank" rel="noopener noreferrer" className="grading-file-item">
+                                        <div className="file-icon"><FontAwesomeIcon icon={faFileAlt} /></div>
+                                        <div className="file-info">
+                                            <span className="file-name">{file.fileName}</span>
+                                            <span className="file-meta">Xem tài liệu</span>
+                                        </div>
+                                        <FontAwesomeIcon icon={faDownload} className="download-icon" />
+                                    </a>
+                                ))}
                             </div>
                         </div>
-                        <div className="sub-status">
-                            {sub.grade !== null && sub.grade !== undefined ? (
-                                <span className="grade-pill">{sub.grade}/10</span>
-                            ) : (
-                                <span className="pending-pill">Chờ chấm</span>
-                            )}
-                            <FontAwesomeIcon icon={faChevronRight} />
+                    </div>
+
+                    <div className="grading-right-panel">
+                        <div className="grading-card">
+                            <h3><FontAwesomeIcon icon={faStar} /> Kết quả</h3>
+                            <div className="grading-form">
+                                <div className="form-group">
+                                    <label>Điểm số</label>
+                                    <div className="grade-display" style={{ fontSize: '24px', fontWeight: 'bold', color: '#1a73e8', padding: '10px 0' }}>
+                                        {submissions[0].grade !== null && submissions[0].grade !== undefined ? (
+                                            <span className="grade-val">{submissions[0].grade} / 10</span>
+                                        ) : (
+                                            <span className="pending-text" style={{ color: '#f29900', fontSize: '18px' }}>Chưa có điểm</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Nhận xét từ giáo viên</label>
+                                    <p className="grade-comment-text" style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', borderLeft: '4px solid #dadce0' }}>
+                                        {submissions[0].gradeComment || "Chưa có nhận xét."}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                ))}
-            </div>
+                </div>
+            ) : (
+                // Standard list view (Teacher or Student without submission)
+                <div className="items-list">
+                    {submissions.length === 0 ? (
+                        <p className="empty-msg">{isTeacher ? "Chưa có học sinh nào nộp bài." : "Bạn chưa nộp bài tập này."}</p>
+                    ) : submissions.map(sub => (
+                        <div key={sub.id} className="submission-row-item" onClick={() => isTeacher && handleSubmissionClick(sub)}>
+                            <div className="sub-user-info">
+                                <div className="sub-avatar">{(sub.studentName || 'S').charAt(0).toUpperCase()}</div>
+                                <div>
+                                    <strong>{sub.studentName || 'Học sinh'}</strong>
+                                    <span>Nộp lúc: {new Date(sub.submittedAt).toLocaleString('vi-VN')}</span>
+                                </div>
+                            </div>
+                            <div className="sub-status">
+                                {sub.grade !== null && sub.grade !== undefined ? (
+                                    <span className="grade-pill">{sub.grade}/10</span>
+                                ) : (
+                                    <span className="pending-pill">Chờ chấm</span>
+                                )}
+                                {isTeacher && <FontAwesomeIcon icon={faChevronRight} />}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 
