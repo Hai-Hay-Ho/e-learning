@@ -102,8 +102,8 @@ const SubmissionList = ({ userRole, session, onBack }) => {
 
     const handleSubmissionClick = (sub) => {
         setSelectedSubmission(sub);
-        setGradeInput(sub.grade?.toString() || '');
-        setGradeComment(sub.gradeComment || '');
+        setGradeInput(sub.score?.toString() || '');
+        setGradeComment(sub.comment || '');
         setViewMode('grading');
     };
 
@@ -235,8 +235,8 @@ const SubmissionList = ({ userRole, session, onBack }) => {
                                 <div className="form-group">
                                     <label>Điểm số</label>
                                     <div className="grade-display" style={{ fontSize: '24px', fontWeight: 'bold', color: '#1a73e8', padding: '10px 0' }}>
-                                        {submissions[0].grade !== null && submissions[0].grade !== undefined ? (
-                                            <span className="grade-val">{submissions[0].grade} / 10</span>
+                                        {submissions[0].score !== null && submissions[0].score !== undefined ? (
+                                            <span className="grade-val">{submissions[0].score} / 10</span>
                                         ) : (
                                             <span className="pending-text" style={{ color: '#f29900', fontSize: '18px' }}>Chưa có điểm</span>
                                         )}
@@ -245,7 +245,7 @@ const SubmissionList = ({ userRole, session, onBack }) => {
                                 <div className="form-group">
                                     <label>Nhận xét từ giáo viên</label>
                                     <p className="grade-comment-text" style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', borderLeft: '4px solid #dadce0' }}>
-                                        {submissions[0].gradeComment || "Chưa có nhận xét."}
+                                        {submissions[0].comment || "Chưa có nhận xét."}
                                     </p>
                                 </div>
                             </div>
@@ -267,8 +267,8 @@ const SubmissionList = ({ userRole, session, onBack }) => {
                                 </div>
                             </div>
                             <div className="sub-status">
-                                {sub.grade !== null && sub.grade !== undefined ? (
-                                    <span className="grade-pill">{sub.grade}/10</span>
+                                {sub.score !== null && sub.score !== undefined ? (
+                                    <span className="grade-pill">{sub.score}/10</span>
                                 ) : (
                                     <span className="pending-pill">Chờ chấm</span>
                                 )}
