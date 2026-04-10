@@ -3,6 +3,7 @@ package com.example.demo.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "submissions")
@@ -29,4 +30,12 @@ public class Submission {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_id", insertable = false, updatable = false)
+    private User student;
+
+    @OneToMany(fetch = FetchType.LAZY)
+    @JoinColumn(name = "submission_id", insertable = false, updatable = false)
+    private List<SubmissionFile> files;
 }

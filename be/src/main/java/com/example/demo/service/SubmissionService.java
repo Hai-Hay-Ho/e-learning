@@ -76,6 +76,12 @@ public class SubmissionService {
                 .collect(Collectors.toList());
     }
 
+    public SubmissionDTO getSubmissionByPostAndUser(UUID postId, UUID userId) {
+        return submissionRepository.findByPostIdAndStudentId(postId, userId)
+                .map(this::mapToDTO)
+                .orElse(null);
+    }
+
     public SubmissionDTO getSubmissionById(UUID id) {
         return submissionRepository.findById(id).map(this::mapToDTO).orElse(null);
     }
@@ -89,20 +95,22 @@ public class SubmissionService {
         dto.setScore(sub.getScore());
         dto.setSubmittedAt(sub.getSubmittedAt());
 
-        userRepository.findById(sub.getStudentId()).ifPresent(user -> {
-            dto.setStudentName(user.getFullName());
-            dto.setStudentAvatar(user.getAvatarUrl());
-        });
+        if (sub.getStudent() != null) {
+            dto.setStudentName(sub.getStudent().getFullName());
+            dto.setStudentAvatar(sub.getStudent().getAvatarUrl());
+        }
 
-        List<SubmissionDTO.SubmissionFileDTO> files = submissionFileRepository.findBySubmissionId(sub.getId()).stream()
-                .map(f -> {
-                    SubmissionDTO.SubmissionFileDTO fDto = new SubmissionDTO.SubmissionFileDTO();
-                    fDto.setId(f.getId());
-                    fDto.setFileUrl(f.getFileUrl());
-                    fDto.setFileName(f.getFileName());
-                    return fDto;
-                }).collect(Collectors.toList());
-        dto.setFiles(files);
+        if (sub.getFiles() != null) {
+            List<SubmissionDTO.SubmissionFileDTO> files = sub.getFiles().stream()
+                    .map(f -> {
+                        SubmissionDTO.SubmissionFileDTO fDto = new SubmissionDTO.SubmissionFileDTO();
+                        fDto.setId(f.getId());
+                        fDto.setFileUrl(f.getFileUrl());
+                        fDto.setFileName(f.getFileName());
+                        return fDto;
+                    }).collect(Collectors.toList());
+            dto.setFiles(files);
+        }
         return dto;
     }
 
