@@ -99,12 +99,6 @@ function App() {
             />
           ) : activeTab === 'Messages' ? (
             <Chat session={session} userData={userData} />
-          ) : activeTab === 'Assignments' ? (
-            <SubmissionList 
-              session={session}
-              userRole={userRole}
-              onBack={() => setActiveTab('Dashboard')}
-            />
           ) : (
             <MainContent session={session} />
           )
