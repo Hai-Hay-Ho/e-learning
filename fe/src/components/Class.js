@@ -21,7 +21,7 @@ import {
     faPaperPlane
 } from '@fortawesome/free-solid-svg-icons';
 
-const Class = ({ session, userRole, userData, onStudentClick }) => {
+const Class = ({ session, userRole, userData }) => {
     const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -422,7 +422,6 @@ const Class = ({ session, userRole, userData, onStudentClick }) => {
                     userData={userData}
                     selectedClass={selectedClass}
                     onBack={() => setSelectedAssignment(null)}
-                    onStudentClick={onStudentClick}
                 />
             ) : selectedClass ? (
                 <div className="class-detail-container">

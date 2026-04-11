@@ -15,6 +15,7 @@ public class SubmissionDTO {
     private String studentAvatar;
     private String status;
     private BigDecimal score;
+    private String gradeComment;
     private LocalDateTime submittedAt;
     private List<SubmissionFileDTO> files;
 

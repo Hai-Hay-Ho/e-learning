@@ -23,7 +23,7 @@ import {
     faBullhorn,
 } from '@fortawesome/free-solid-svg-icons';
 
-const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, userData, onStudentClick }) => {
+const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, userData }) => {
     const isTeacher = userRole === '1';
     const [submissions, setSubmissions] = useState([]);
     const [mySubmission, setMySubmission] = useState(null);
@@ -32,14 +32,15 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
     const [uploadedFiles, setUploadedFiles] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [selectedSubmission, setSelectedSubmission] = useState(null);
-    const [gradeInput, setGradeInput] = useState('');
-    const [gradingSubmissionId, setGradingSubmissionId] = useState(null);
-    const [gradeComment, setGradeComment] = useState('');
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(false);
     const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'submitted', 'late', 'graded'
+    const [isGradingModalOpen, setIsGradingModalOpen] = useState(false);
+    const [submissionForGrading, setSubmissionForGrading] = useState(null);
+    const [tempGradeInput, setTempGradeInput] = useState('');
+    const [tempGradeComment, setTempGradeComment] = useState('');
+    const [isGradingSubmitting, setIsGradingSubmitting] = useState(false);
 
     const deadline = post.dueAt ? new Date(post.dueAt) : null;
     const now = new Date();
@@ -63,8 +64,26 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
         }
         fetchComments();
 
+        // grade realtime updates for teachers and students, comment realtime updates for all 
+        const submissionsChannel = supabase
+            .channel(`submissions-${post.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'submissions',
+                    filter: `post_id=eq.${post.id}`
+                },
+                (payload) => {
+                    console.log('Realtime submission change:', payload);
+                    fetchSubmissions(); 
+                }
+            )
+            .subscribe();
+
         // Realtime comments
-        const channel = supabase
+        const commentsChannel = supabase
             .channel(`comments-view-${post.id}`)
             .on(
                 'postgres_changes',
@@ -76,13 +95,14 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                 },
                 (payload) => {
                     console.log('Realtime comment change:', payload);
-                    fetchComments(); // Reload comments when any change occurs
+                    fetchComments(); 
                 }
             )
             .subscribe();
 
         return () => {
-            supabase.removeChannel(channel);
+            supabase.removeChannel(submissionsChannel);
+            supabase.removeChannel(commentsChannel);
         };
     }, [post.id]);
 
@@ -113,7 +133,6 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
             });
             if (response.ok) {
                 setNewComment('');
-                // fetchComments(); // No need to call manually if realtime is active, but keeping for safety
             }
         } catch (err) {
             console.error('Error submitting comment:', err);
@@ -127,7 +146,19 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
         try {
             const response = await fetch(`http://localhost:8080/api/submissions/post/${post.id}`);
             if (response.ok) {
-                const data = await response.json();
+                let data = await response.json();
+                data = await Promise.all(data.map(async (sub) => {
+                    try {
+                        const filesRes = await fetch(`http://localhost:8080/api/submissions/${sub.id}/files`);
+                        if (filesRes.ok) {
+                            const files = await filesRes.json();
+                            return { ...sub, attachments: files };
+                        }
+                    } catch (err) {
+                        console.error(`Error fetching files for submission ${sub.id}:`, err);
+                    }
+                    return sub;
+                }));
                 setSubmissions(data);
                 if (!isTeacher) {
                     const mine = data.find(s => s.studentId === session.user.id);
@@ -192,11 +223,10 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                 const updatedSub = await response.json();
                 setMySubmission(updatedSub);
                 setUploadedFiles([]);
-                fetchSubmissions(); // Update teacher's list if teacher is viewing or for state sync
+                fetchSubmissions(); 
                 alert('Nộp bài thành công!');
             }
         } catch (err) {
-            console.error('Error submitting:', err);
             alert('Có lỗi xảy ra khi nộp bài');
         } finally {
             setSubmitting(false);
@@ -215,24 +245,44 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
         }
     };
 
-    const handleGrade = async (submissionId) => {
-        const grade = parseInt(gradeInput, 10);
+    const openGradingModal = (submission) => {
+        setSubmissionForGrading(submission);
+        setTempGradeInput(submission.score ? submission.score.toString() : '');
+        setTempGradeComment(submission.gradeComment || '');
+        setIsGradingModalOpen(true);
+    };
+
+    const closeGradingModal = () => {
+        setIsGradingModalOpen(false);
+        setSubmissionForGrading(null);
+        setTempGradeInput('');
+        setTempGradeComment('');
+        setIsGradingSubmitting(false);
+    };
+
+    const handleModalGradeSubmit = async () => {
+        if (!submissionForGrading) return;
+        
+        const grade = parseFloat(tempGradeInput);
         if (isNaN(grade) || grade < 0 || grade > 10) {
             alert('Điểm phải từ 0 đến 10');
             return;
         }
+
+        setIsGradingSubmitting(true);
         try {
-            await fetch(`http://localhost:8080/api/submissions/${submissionId}/grade`, {
+            const response = await fetch(`http://localhost:8080/api/submissions/${submissionForGrading.id}/grade`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ grade, comment: gradeComment }),
+                body: JSON.stringify({ grade, comment: tempGradeComment }),
             });
-            setGradingSubmissionId(null);
-            setGradeInput('');
-            setGradeComment('');
             await fetchSubmissions();
+            closeGradingModal();
         } catch (err) {
             console.error('Error grading:', err);
+            alert('Lỗi khi lưu điểm');
+        } finally {
+            setIsGradingSubmitting(false);
         }
     };
 
@@ -240,7 +290,6 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
         if (!window.confirm(`Bạn có chắc muốn xóa file "${file.fileName}"?`)) return;
         
         try {
-            // Delete from Supabase Storage
             const pathParts = file.fileUrl.split('/public/submission_files/');
             if (pathParts.length > 1) {
                 const filePath = pathParts[1];
@@ -248,7 +297,6 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                 if (error) console.error('Supabase delete error:', error);
             }
 
-            // Delete from Database
             const response = await fetch(`http://localhost:8080/api/submissions/files/${file.id}`, {
                 method: 'DELETE'
             });
@@ -263,7 +311,7 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
     };
 
     const submittedCount = submissions.length;
-    const gradedCount = submissions.filter(s => s.grade !== null && s.grade !== undefined).length;
+    const gradedCount = submissions.filter(s => s.score !== null && s.score !== undefined).length;
 
     const formatDeadline = (date) => {
         if (!date) return '';
@@ -307,9 +355,17 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                     <span>{post.authorName}</span>
                                 </div>
                                 {post.dueAt && (
-                                    <div className={`deadline-info ${isOverdue ? 'overdue' : ''}`}>
-                                        <span>{formatDeadline(new Date(post.dueAt))}</span>
-                                    </div>
+                                    <>
+                                        {!isTeacher && mySubmission?.score !== null && mySubmission?.score !== undefined && (
+                                            <div className="student-grade-display">
+                                                <FontAwesomeIcon icon={faStar} className="meta-icon" style={{ color: '#1e8e3e' }} />
+                                                <span style={{ color: '#1e8e3e', fontWeight: '500' }}>Điểm: {mySubmission.score}/10</span>
+                                            </div>
+                                        )}
+                                        <div className={`deadline-info ${isOverdue ? 'overdue' : ''}`}>
+                                            <span>{formatDeadline(new Date(post.dueAt))}</span>
+                                        </div>
+                                    </>
                                 )}
                             </div>
                             {deadline && !isOverdue && timeLeft && (
@@ -346,7 +402,7 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                         <div className="file-link-info">
                                             <span className="file-link-name">{att.fileName}</span>
                                             <span className="file-link-meta">
-                                                {att.fileSize ? `${(att.fileSize / 1024 / 1024).toFixed(2)} MB` : ''} — {att.fileType}
+                                                {att.fileSize ? `${(att.fileSize / 1024 / 1024).toFixed(2)} MB` : ''} 
                                             </span>
                                         </div>
                                         <FontAwesomeIcon icon={faDownload} className="file-link-download" />
@@ -355,13 +411,13 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                             </div>
                         )}
 
-                        {/* Comments Section */}
-                        <div className="assignment-divider" />
-                        <div className="assignment-comments-section" style={{ marginTop: '24px' }}>
-                            <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#3c4043' }}>
-                                <FontAwesomeIcon icon={faUsers} />
-                                Nhận xét của lớp học ({comments.length})
-                            </h4>
+                            <>
+                                <div className="assignment-divider" />
+                                <div className="assignment-comments-section" style={{ marginTop: '24px' }}>
+                                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#3c4043' }}>
+                                        <FontAwesomeIcon icon={faUsers} />
+                                        Nhận xét của lớp học ({comments.length})
+                                    </h4>
                             
                             <div className="comments-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                                 {comments.map(comment => (
@@ -382,7 +438,7 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                 ))}
                             </div>
 
-                            <div class="add-comment-detail" >
+                            <div className="add-comment-detail" >
                                 <div className="user-avatar-md" style={{ 
                                     width: '40px', 
                                     height: '40px', 
@@ -434,10 +490,10 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                 </div>
                             </div>
                         </div>
+                            </>
                     </div>
                 </div>
 
-                {/* RIGHT: Teacher = Submissions list | Student = My Work */}
                 {post.type === 'assignment' && (
                     <div className="assignment-right-panel">
                         {isTeacher ? (
@@ -446,19 +502,10 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                 submittedCount={submittedCount}
                                 gradedCount={gradedCount}
                                 loadingSubmissions={loadingSubmissions}
-                                selectedSubmission={selectedSubmission}
-                                setSelectedSubmission={setSelectedSubmission}
-                                gradingSubmissionId={gradingSubmissionId}
-                                setGradingSubmissionId={setGradingSubmissionId}
-                                gradeInput={gradeInput}
-                                setGradeInput={setGradeInput}
-                                gradeComment={gradeComment}
-                                setGradeComment={setGradeComment}
-                                handleGrade={handleGrade}
                                 deadline={deadline}
                                 filterStatus={filterStatus}
                                 setFilterStatus={setFilterStatus}
-                                onStudentClick={onStudentClick}
+                                onOpenGradingModal={openGradingModal}
                             />
                         ) : (
                             <StudentPanel
@@ -476,23 +523,35 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                         )}
                     </div>
                 )}
+
+                {/* GRADING MODAL */}
+                {isTeacher && isGradingModalOpen && (
+                    <GradingModal
+                        submission={submissionForGrading}
+                        isOpen={isGradingModalOpen}
+                        onClose={closeGradingModal}
+                        gradeInput={tempGradeInput}
+                        setGradeInput={setTempGradeInput}
+                        gradeComment={tempGradeComment}
+                        setGradeComment={setTempGradeComment}
+                        handleGrade={handleModalGradeSubmit}
+                        isGrading={isGradingSubmitting}
+                    />
+                )}
             </div>
         </div>
     );
 };
 
-/* ==================== TEACHER PANEL ==================== */
+/* ==================== TEACHER UI ==================== */
 const TeacherPanel = ({
     submissions, submittedCount, gradedCount, loadingSubmissions,
-    selectedSubmission, setSelectedSubmission,
-    gradingSubmissionId, setGradingSubmissionId,
-    gradeInput, setGradeInput, gradeComment, setGradeComment,
-    handleGrade, deadline, filterStatus, setFilterStatus, onStudentClick
+    deadline, filterStatus, setFilterStatus, onOpenGradingModal
 }) => {
     const filteredSubmissions = submissions.filter(sub => {
         if (filterStatus === 'all') return true;
         const subDate = new Date(sub.submittedAt);
-        const isGraded = sub.grade !== null && sub.grade !== undefined;
+        const isGraded = sub.score !== null && sub.score !== undefined;
         const isLate = deadline && subDate > deadline;
 
         if (filterStatus === 'graded') return isGraded;
@@ -513,7 +572,7 @@ const TeacherPanel = ({
                     onClick={() => setFilterStatus(filterStatus === 'submitted' ? 'all' : 'submitted')}
                     style={{ cursor: 'pointer' }}
                 >
-                    <div className="stat-number">{submissions.filter(s => (s.grade === null || s.grade === undefined) && (!deadline || new Date(s.submittedAt) <= deadline)).length}</div>
+                    <div className="stat-number">{submissions.filter(s => (s.score === null || s.score === undefined) && (!deadline || new Date(s.submittedAt) <= deadline)).length}</div>
                     <div className="stat-label">Đúng hạn</div>
                 </div>
                 <div 
@@ -521,7 +580,7 @@ const TeacherPanel = ({
                     onClick={() => setFilterStatus(filterStatus === 'late' ? 'all' : 'late')}
                     style={{ cursor: 'pointer' }}
                 >
-                    <div className="stat-number">{submissions.filter(s => (s.grade === null || s.grade === undefined) && deadline && new Date(s.submittedAt) > deadline).length}</div>
+                    <div className="stat-number">{submissions.filter(s => (s.score === null || s.score === undefined) && deadline && new Date(s.submittedAt) > deadline).length}</div>
                     <div className="stat-label">Nộp muộn</div>
                 </div>
                 <div 
@@ -554,13 +613,13 @@ const TeacherPanel = ({
                     filteredSubmissions.map(sub => {
                         const subDate = new Date(sub.submittedAt);
                         const isLate = deadline && subDate > deadline;
-                        const isGraded = sub.grade !== null && sub.grade !== undefined;
+                        const isGraded = sub.score !== null && sub.score !== undefined;
 
                         return (
                             <div
                                 key={sub.id}
-                                className={`submission-row ${selectedSubmission?.id === sub.id ? 'selected' : ''}`}
-                                onClick={() => onStudentClick(sub)}
+                                className="submission-row"
+                                onClick={() => onOpenGradingModal(sub)}
                             >
                                 <div className="submission-row-left">
                                     <div className="student-avatar-sm">
@@ -576,7 +635,7 @@ const TeacherPanel = ({
                                 </div>
                                 <div className="submission-row-right">
                                     {isGraded ? (
-                                        <span className="grade-badge">{sub.grade}/10</span>
+                                        <span className="grade-badge">{sub.score}/10</span>
                                     ) : isLate ? (
                                         <span className="late-badge" style={{ color: '#d93025', backgroundColor: '#fce8e6', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '500' }}>Nộp muộn</span>
                                     ) : (
@@ -590,91 +649,12 @@ const TeacherPanel = ({
                 )}
             </div>
 
-            {/* Selected submission detail */}
-            {selectedSubmission && (
-                <div className="submission-detail-panel">
-                    <div className="sdp-header">
-                        <div className="student-avatar-sm">
-                            {selectedSubmission.studentAvatar
-                                ? <img src={selectedSubmission.studentAvatar} alt={selectedSubmission.studentName} />
-                                : (selectedSubmission.studentName || 'S').charAt(0).toUpperCase()
-                            }
-                        </div>
-                        <div>
-                            <strong>{selectedSubmission.studentName}</strong>
-                            <p>Nộp lúc: {new Date(selectedSubmission.submittedAt).toLocaleString('vi-VN')}</p>
-                        </div>
-                        <button className="sdp-close" onClick={() => setSelectedSubmission(null)}>
-                            <FontAwesomeIcon icon={faTimes} />
-                        </button>
-                    </div>
 
-                    <div className="sdp-files">
-                        <h5>File đã nộp</h5>
-                        {(selectedSubmission.attachments || []).map((att, i) => (
-                            <a key={i} href={att.fileUrl} target="_blank" rel="noopener noreferrer" className="sdp-file-link">
-                                <FontAwesomeIcon icon={faFileAlt} />
-                                <span>{att.fileName}</span>
-                                <FontAwesomeIcon icon={faDownload} className="ml-auto" />
-                            </a>
-                        ))}
-                    </div>
-
-                    <div className="sdp-grade-section">
-                        <h5>Chấm điểm</h5>
-                        {gradingSubmissionId === selectedSubmission.id ? (
-                            <div className="grade-input-form">
-                                <input
-                                    type="number"
-                                    min="0" max="10" step="0.5"
-                                    placeholder="Điểm (0–10)"
-                                    value={gradeInput}
-                                    onChange={e => setGradeInput(e.target.value)}
-                                    className="grade-input-field"
-                                />
-                                <textarea
-                                    placeholder="Nhận xét (tuỳ chọn)"
-                                    value={gradeComment}
-                                    onChange={e => setGradeComment(e.target.value)}
-                                    className="grade-comment-field"
-                                    rows={3}
-                                />
-                                <div className="grade-actions">
-                                    <button className="btn-cancel-grade" onClick={() => setGradingSubmissionId(null)}>Hủy</button>
-                                    <button className="btn-submit-grade" onClick={() => handleGrade(selectedSubmission.id)}>
-                                        <FontAwesomeIcon icon={faCheck} /> Lưu điểm
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="current-grade-display">
-                                {selectedSubmission.grade !== null && selectedSubmission.grade !== undefined ? (
-                                    <>
-                                        <div className="grade-circle">{selectedSubmission.grade}<span>/10</span></div>
-                                        {selectedSubmission.gradeComment && (
-                                            <p className="grade-comment-text">{selectedSubmission.gradeComment}</p>
-                                        )}
-                                        <button className="btn-edit-grade" onClick={() => {
-                                            setGradingSubmissionId(selectedSubmission.id);
-                                            setGradeInput(String(selectedSubmission.grade));
-                                            setGradeComment(selectedSubmission.gradeComment || '');
-                                        }}>Sửa điểm</button>
-                                    </>
-                                ) : (
-                                    <button className="btn-grade" onClick={() => setGradingSubmissionId(selectedSubmission.id)}>
-                                        <FontAwesomeIcon icon={faStar} /> Chấm điểm
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
 
-/* ==================== STUDENT PANEL ==================== */
+/* ==================== STUDENT UI ==================== */
 const StudentPanel = ({
     mySubmission, uploadedFiles, uploading, submitting, isOverdue,
     handleFileChange, removeFile, handleSubmit, handleUnsubmit, handleDeleteFile
@@ -695,27 +675,10 @@ const StudentPanel = ({
             )}
         </div>
 
-        {/* Show graded info if available */}
-        {mySubmission?.grade !== null && mySubmission?.grade !== undefined && (
-            <div className="student-grade-card">
-                <div className="grade-circle-container">
-                    <div className="grade-circle">
-                        {mySubmission.grade}<span>/10</span>
-                    </div>
-                </div>
-                <div className="grade-info-container">
-                    <p className="grade-label">Điểm của bạn</p>
-                    {mySubmission.gradeComment && (
-                        <p className="grade-comment-text">"{mySubmission.gradeComment}"</p>
-                    )}
-                </div>
-            </div>
-        )}
+        
 
         <div className="upload-work-section">
-            {/* File upload area for new or additional files */}
             <div className="upload-zone-container">
-                {/* Show previously submitted files at the TOP of the upload zone list */}
                 {mySubmission && (mySubmission.files || []).map((file, i) => (
                     <div key={`submitted-${i}`} className="uploaded-file-item submitted">
                         <div className="file-link-icon">
@@ -732,7 +695,6 @@ const StudentPanel = ({
                     </div>
                 ))}
 
-                {/* Show newly uploaded but NOT YET SAVED files */}
                 {uploadedFiles.map((f, i) => (
                     <div key={`new-${i}`} className="uploaded-file-item">
                         <div className="file-link-icon">
@@ -788,5 +750,126 @@ const StudentPanel = ({
         </div>
     </div>
 );
+
+/* ==================== GRADING MODAL ==================== */
+const GradingModal = ({
+    submission, isOpen, onClose, gradeInput, setGradeInput,
+    gradeComment, setGradeComment, handleGrade, isGrading
+}) => {
+    if (!isOpen || !submission) return null;
+
+    return (
+        <div className="grading-modal-overlay">
+            <div className="grading-modal-content">
+                {/* Header */}
+                <div className="grading-modal-header">
+                    <div className="student-info-header">
+                        <div className="student-avatar-modal">
+                            {submission.studentAvatar ? (
+                                <img src={submission.studentAvatar} alt={submission.studentName} />
+                            ) : (submission.studentName || 'S').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <h2>{submission.studentName || 'Học sinh'}</h2>
+                            <p style={{ margin: '4px 0 0 0', color: '#5f6368', fontSize: '13px' }}>
+                                Nộp lúc: {new Date(submission.submittedAt).toLocaleString('vi-VN')}
+                            </p>
+                        </div>
+                    </div>
+                    <button className="modal-close-btn" onClick={onClose}>
+                        <FontAwesomeIcon icon={faTimes} />
+                    </button>
+                </div>
+
+                {/* Submitted Files */}
+                <div className="grading-modal-files">
+                    <h4>
+                        <FontAwesomeIcon icon={faPaperclip} style={{ marginRight: '8px' }} />
+                        File đã nộp
+                    </h4>
+                    {(submission.attachments || []).map((file, idx) => (
+                        <a
+                            key={idx}
+                            href={file.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="modal-file-link"
+                        >
+                            <FontAwesomeIcon icon={faFileAlt} />
+                            <span>{file.fileName}</span>
+                            <FontAwesomeIcon icon={faDownload} />
+                        </a>
+                    ))}
+                    {(!submission.attachments || submission.attachments.length === 0) && (
+                        <p style={{ color: '#5f6368', fontSize: '13px', fontStyle: 'italic' }}>Không có file</p>
+                    )}
+                </div>
+
+                {/* Grading Form */}
+                <div className="grading-modal-form">
+                    <h4>
+                        <FontAwesomeIcon icon={faStar} style={{ marginRight: '8px', color: '#d93025' }} />
+                        Chấm điểm
+                    </h4>
+
+                    <div className="grade-form-group">
+                        <label>Điểm (0–10)</label>
+                        <input
+                            type="number"
+                            min="0"
+                            max="10"
+                            step="0.5"
+                            placeholder="Nhập điểm"
+                            value={gradeInput}
+                            onChange={(e) => {
+                                let value = e.target.value;
+                                if (value === '') {
+                                    setGradeInput('');
+                                    return;
+                                }
+                                let num = parseFloat(value);
+                                if (isNaN(num)) return;
+                                if (num > 10) num = 10;
+                                if (num < 0) num = 0;
+
+                                setGradeInput(num);
+                            }}
+                            className="grade-input"
+                            disabled={isGrading}
+                        />
+                    </div>
+
+
+                    <div className="grading-modal-actions">
+                        <button
+                            className="btn-cancel"
+                            onClick={onClose}
+                            disabled={isGrading}
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            className="btn-submit"
+                            onClick={() => handleGrade(submission.id)}
+                            disabled={isGrading || !gradeInput}
+                        >
+                            <FontAwesomeIcon icon={faCheck} style={{ marginRight: '6px' }} />
+                            {isGrading ? 'Đang lưu...' : 'Lưu điểm'}
+                        </button>
+                    </div>
+
+                    {submission.score !== null && submission.score !== undefined && (
+                        <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#e6f4ea', borderRadius: '8px', fontSize: '13px', color: '#188038' }}>
+                            <div>Điểm hiện tại: <strong>{submission.score}/10</strong></div>
+                            {submission.gradeComment && (
+                                <div style={{ marginTop: '8px', fontStyle: 'italic' }}>Nhận xét: {submission.gradeComment}</div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export default AssignmentDetail;

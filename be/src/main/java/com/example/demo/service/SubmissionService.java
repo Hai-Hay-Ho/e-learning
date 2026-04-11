@@ -93,6 +93,7 @@ public class SubmissionService {
         dto.setStudentId(sub.getStudentId());
         dto.setStatus(sub.getStatus());
         dto.setScore(sub.getScore());
+        dto.setGradeComment(sub.getGradeComment());
         dto.setSubmittedAt(sub.getSubmittedAt());
 
         if (sub.getStudent() != null) {
@@ -115,10 +116,26 @@ public class SubmissionService {
     }
 
     @Transactional
-    public SubmissionDTO gradeSubmission(UUID id, BigDecimal score) {
+    public SubmissionDTO gradeSubmission(UUID id, BigDecimal score, String comment) {
         Submission sub = submissionRepository.findById(id).orElseThrow();
         sub.setScore(score);
+        sub.setGradeComment(comment);
         sub.setStatus("graded");
         return mapToDTO(submissionRepository.save(sub));
+    }
+
+    public List<SubmissionDTO.SubmissionFileDTO> getSubmissionFiles(UUID submissionId) {
+        Submission sub = submissionRepository.findById(submissionId).orElseThrow();
+        if (sub.getFiles() == null) {
+            return List.of();
+        }
+        return sub.getFiles().stream()
+                .map(f -> {
+                    SubmissionDTO.SubmissionFileDTO fDto = new SubmissionDTO.SubmissionFileDTO();
+                    fDto.setId(f.getId());
+                    fDto.setFileUrl(f.getFileUrl());
+                    fDto.setFileName(f.getFileName());
+                    return fDto;
+                }).collect(Collectors.toList());
     }
 }

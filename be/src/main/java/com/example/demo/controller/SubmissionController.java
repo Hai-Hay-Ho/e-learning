@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.SubmissionDTO;
 import com.example.demo.service.SubmissionService;
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,6 +10,12 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+
+@Data
+class GradeRequest {
+    private BigDecimal grade;
+    private String comment;
+}
 
 @RestController
 @RequestMapping("/api/submissions")
@@ -33,8 +40,13 @@ public class SubmissionController {
     }
 
     @PutMapping("/{id}/grade")
-    public ResponseEntity<SubmissionDTO> grade(@PathVariable UUID id, @RequestParam BigDecimal score) {
-        return ResponseEntity.ok(submissionService.gradeSubmission(id, score));
+    public ResponseEntity<SubmissionDTO> grade(@PathVariable UUID id, @RequestBody GradeRequest gradeRequest) {
+        return ResponseEntity.ok(submissionService.gradeSubmission(id, gradeRequest.getGrade(), gradeRequest.getComment()));
+    }
+
+    @GetMapping("/{id}/files")
+    public ResponseEntity<List<SubmissionDTO.SubmissionFileDTO>> getSubmissionFiles(@PathVariable UUID id) {
+        return ResponseEntity.ok(submissionService.getSubmissionFiles(id));
     }
 
     @DeleteMapping("/files/{fileId}")
