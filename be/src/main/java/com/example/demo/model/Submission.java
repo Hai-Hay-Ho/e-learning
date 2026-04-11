@@ -25,6 +25,9 @@ public class Submission {
     @Column(precision = 5, scale = 2)
     private java.math.BigDecimal score;
 
+    @Column(name = "grade_comment", columnDefinition = "TEXT")
+    private String gradeComment;
+
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt = LocalDateTime.now();
 
