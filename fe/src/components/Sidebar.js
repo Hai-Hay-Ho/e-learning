@@ -5,11 +5,9 @@ import {
     faThLarge, 
     faChartLine, 
     faBook, 
-    faClipboardList, 
     faEnvelope, 
     faCog,
-    faLayerGroup,
-    faTasks
+    faLayerGroup
 } from '@fortawesome/free-solid-svg-icons';
 
 const Sidebar = ({ userRole, activeTab, setActiveTab }) => {

@@ -4,7 +4,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import './AssignmentDetail.css';
 import {
     faArrowLeft,
-    faCalendarAlt,
     faClock,
     faUpload,
     faFileAlt,
@@ -17,18 +16,16 @@ import {
     faDownload,
     faPaperclip,
     faChevronRight,
-    faUndo,
     faStar,
     faTasks,
     faBullhorn,
 } from '@fortawesome/free-solid-svg-icons';
 
-const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, userData }) => {
+const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, userData, onSwitchToMessages }) => {
     const isTeacher = userRole === '1';
     const [submissions, setSubmissions] = useState([]);
     const [mySubmission, setMySubmission] = useState(null);
     const [loadingSubmissions, setLoadingSubmissions] = useState(true);
-    const [activePanel, setActivePanel] = useState(isTeacher ? 'submissions' : 'my-work');
     const [uploadedFiles, setUploadedFiles] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -47,6 +44,62 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
     const isOverdue = deadline && now > deadline;
     const timeLeft = deadline ? getTimeLeft(deadline, now) : null;
 
+    // Handle starting a private conversation with the teacher
+    const handleMessageTeacher = async () => {
+        try {
+            // Get teacher info from post (author)
+            if (!post.authorId) {
+                console.error('Teacher ID not available');
+                alert('Không thể tìm thấy thông tin giáo viên');
+                return;
+            }
+
+            const teacherId = post.authorId;
+            const studentId = session.user.id;
+
+            // IDs must be deterministic (least id first, greatest id second) to match the unique index
+            const user1_id = studentId < teacherId ? studentId : teacherId;
+            const user2_id = studentId < teacherId ? teacherId : studentId;
+
+            // Check if conversation already exists
+            const { data: existingConv } = await supabase
+                .from('conversations')
+                .select('*')
+                .or(`and(user1_id.eq.${user1_id},user2_id.eq.${user2_id})`)
+                .maybeSingle();
+
+            let conversationId = null;
+            if (existingConv) {
+                conversationId = existingConv.id;
+            } else {
+                // Create new conversation
+                const { data: newConv, error: createError } = await supabase
+                    .from('conversations')
+                    .insert([{ user1_id, user2_id }])
+                    .select()
+                    .single();
+
+                if (createError) {
+                    console.error('Error creating conversation:', createError);
+                    alert('Lỗi tạo cuộc trò chuyện');
+                    return;
+                }
+                conversationId = newConv.id;
+            }
+
+            // Call the callback to switch to messages and set the conversation
+            if (onSwitchToMessages) {
+                onSwitchToMessages(conversationId, {
+                    id: teacherId,
+                    full_name: post.authorName,
+                });
+            }
+        } catch (error) {
+            console.error('Error in handleMessageTeacher:', error);
+            alert('Có lỗi xảy ra khi mở tin nhắn');
+        }
+    };
+
     function getTimeLeft(deadline, now) {
         const diff = deadline - now;
         if (diff <= 0) return null;
@@ -58,6 +111,7 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
         return `${minutes} phút`;
     }
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (post.type === 'assignment') {
             fetchSubmissions();
@@ -271,7 +325,7 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
 
         setIsGradingSubmitting(true);
         try {
-            const response = await fetch(`http://localhost:8080/api/submissions/${submissionForGrading.id}/grade`, {
+            await fetch(`http://localhost:8080/api/submissions/${submissionForGrading.id}/grade`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ grade, comment: tempGradeComment }),
@@ -519,6 +573,8 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                 handleSubmit={handleSubmit}
                                 handleUnsubmit={handleUnsubmit}
                                 handleDeleteFile={handleDeleteFile}
+                                teacherName={post.authorName}
+                                onMessageTeacher={handleMessageTeacher}
                             />
                         )}
                     </div>
@@ -657,7 +713,8 @@ const TeacherPanel = ({
 /* ==================== STUDENT UI ==================== */
 const StudentPanel = ({
     mySubmission, uploadedFiles, uploading, submitting, isOverdue,
-    handleFileChange, removeFile, handleSubmit, handleUnsubmit, handleDeleteFile
+    handleFileChange, removeFile, handleSubmit, handleUnsubmit, handleDeleteFile,
+    teacherName, onMessageTeacher
 }) => (
     <div className="student-work-panel">
         <div className="panel-header">
@@ -747,8 +804,78 @@ const StudentPanel = ({
                     {submitting ? 'Đang xử lý...' : (mySubmission ? 'Nộp bổ sung' : 'Nộp bài')}
                 </button>
             </div>
-        </div>
-    </div>
+
+            {/* Private Comment Section */}
+            <div style={{ marginTop: '32px' }}>
+                <div 
+                    className="private-comment-section"
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        padding: '20px',
+                        backgroundColor: '#fff',
+                        borderRadius: '12px',
+                        border: '1px solid #e8eaed',
+                        transition: 'box-shadow 0.2s ease',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        gap: '12px',
+                    }}
+                >
+                    {/* Header: Icon + Label */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            backgroundColor: '#e8f0fe',
+                            color: '#1967d2',
+                            flexShrink: 0,
+                            fontSize: '18px',
+                        }}>
+                            <FontAwesomeIcon icon={faUsers} />
+                        </div>
+                        <div style={{
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            color: '#202124',
+                        }}>Nhận xét riêng tư</div>
+                    </div>
+                    
+                    {/* Clickable Text */}
+                    <div 
+                        onClick={onMessageTeacher}
+                        style={{
+                            fontSize: '14px',
+                            color: '#1967d2',
+                            fontWeight: '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            display: 'inline-block',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            backgroundColor: 'transparent',
+                            width: 'fit-content',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#1256b9';
+                            e.currentTarget.style.backgroundColor = '#e8f0fe';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.color = '#1967d2';
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                    >Thêm nhận xét cho {teacherName}</div>
+                </div>
+            </div>
+                </div>
+            </div>
 );
 
 /* ==================== GRADING MODAL ==================== */

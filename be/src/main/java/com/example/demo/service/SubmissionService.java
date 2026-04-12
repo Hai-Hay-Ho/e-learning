@@ -5,7 +5,6 @@ import com.example.demo.model.Submission;
 import com.example.demo.model.SubmissionFile;
 import com.example.demo.repository.SubmissionFileRepository;
 import com.example.demo.repository.SubmissionRepository;
-import com.example.demo.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,8 +22,6 @@ public class SubmissionService {
     private SubmissionRepository submissionRepository;
     @Autowired
     private SubmissionFileRepository submissionFileRepository;
-    @Autowired
-    private UserRepository userRepository;
 
     @Transactional
     public SubmissionDTO submitAssignment(SubmissionDTO dto) {

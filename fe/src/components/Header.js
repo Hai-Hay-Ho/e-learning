@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import userAvatar from '../assets/img/user.jpg';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faBell } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../supabaseClient';
-import Login from '../auth/Login';
 
 const Header = ({ session, userData, onLoginClick }) => {
     const userDefaultAvatar = userData?.avatarUrl || session?.user?.user_metadata?.avatar_url || userAvatar;
