@@ -21,14 +21,14 @@ import {
     faPaperPlane
 } from '@fortawesome/free-solid-svg-icons';
 
-const Class = ({ session, userRole, userData }) => {
+const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
     const [classes, setClasses] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showJoinModal, setShowJoinModal] = useState(false);
     const [className, setClassName] = useState('');
     const [joinCode, setJoinCode] = useState('');
-    const [error, setError] = useState(null);
 
     // New states for Posts
     const [selectedClass, setSelectedClass] = useState(null);
@@ -52,6 +52,7 @@ const Class = ({ session, userRole, userData }) => {
 
     const isTeacher = userRole === "1";
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         fetchClasses();
     }, [userRole]);
@@ -202,7 +203,7 @@ const Class = ({ session, userRole, userData }) => {
                 const filePath = `${selectedClass.id}/${fileName}`;
 
                 // Upload to Supabase Storage
-                const { data, error } = await supabase.storage
+                const { error } = await supabase.storage
                     .from('post_attachments')
                     .upload(filePath, file, {
                         cacheControl: '3600',
@@ -422,6 +423,7 @@ const Class = ({ session, userRole, userData }) => {
                     userData={userData}
                     selectedClass={selectedClass}
                     onBack={() => setSelectedAssignment(null)}
+                    onSwitchToMessages={onSwitchToMessages}
                 />
             ) : selectedClass ? (
                 <div className="class-detail-container">

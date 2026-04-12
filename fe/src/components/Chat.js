@@ -3,20 +3,16 @@ import './Chat.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faSearch, 
-    faPlus, 
     faPhone, 
     faVideo, 
     faEllipsisV, 
-    faSmile, 
     faPaperclip, 
     faMicrophone, 
-    faPaperPlane,
-    faCheckDouble,
-    faChevronLeft
+    faPaperPlane
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../supabaseClient';
 
-const Chat = ({ session, userData }) => {
+const Chat = ({ session, userData, pendingConversation }) => {
     const [selectedConversation, setSelectedConversation] = useState(null);
     const [messages, setMessages] = useState([]);
     const [conversations, setConversations] = useState([]);
@@ -36,6 +32,7 @@ const Chat = ({ session, userData }) => {
     }, [messages]);
 
     // Fetch conversations on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (session?.user?.id) {
             fetchConversations();
@@ -87,6 +84,22 @@ const Chat = ({ session, userData }) => {
             setMessages([]);
         }
     }, [selectedConversation]);
+
+    // Handle pending conversation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        if (pendingConversation && conversations.length > 0) {
+            // Find the conversation by ID
+            const conv = conversations.find(c => c.id === pendingConversation.conversationId);
+            if (conv) {
+                const otherUser = getOtherUser(conv);
+                setSelectedConversation({
+                    ...conv,
+                    otherUser: otherUser
+                });
+            }
+        }
+    }, [pendingConversation, conversations]);
 
     const fetchConversations = async () => {
         const { data, error } = await supabase
@@ -140,7 +153,7 @@ const Chat = ({ session, userData }) => {
         const user2_id = session.user.id < otherUser.id ? otherUser.id : session.user.id;
 
         // Check if conversation already exists
-        let { data: existingConv, error: checkError } = await supabase
+        let { data: existingConv } = await supabase
             .from('conversations')
             .select('*')
             .or(`and(user1_id.eq.${user1_id},user2_id.eq.${user2_id})`)

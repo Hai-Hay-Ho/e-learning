@@ -20,7 +20,6 @@ const MainContent = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [selectedSchool, setSelectedSchool] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [universities, setUniversities] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
@@ -138,7 +137,7 @@ const MainContent = () => {
         try {
             const { data: { user: authUser } } = await supabase.auth.getUser();
             if (authUser) {
-                const { data, error } = await supabase
+                const { data } = await supabase
                     .from('users')
                     .select('*')
                     .eq('id', authUser.id)
@@ -146,7 +145,6 @@ const MainContent = () => {
 
                 if (data) {
                     setUser(data);
-                    setSelectedSchool(data.school || '');
                     setEditData({
                         full_name: data.full_name || '',
                         school: data.school || ''

@@ -14,6 +14,7 @@ function App() {
   const [userRole, setUserRole] = useState(null);
   const [userData, setUserData] = useState(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
+  const [pendingConversation, setPendingConversation] = useState(null);
 
   useEffect(() => {
     // Kiểm tra session hiện tại
@@ -65,6 +66,11 @@ function App() {
     }
   };
 
+  const handleSwitchToMessages = (conversationId, otherUser) => {
+    setPendingConversation({ conversationId, otherUser });
+    setActiveTab('Messages');
+  };
+
   if (!session && !showLogin) {
     // Nếu chưa đăng nhập, mặc định hiển thị trang chủ hoặc buộc login tùy bạn
     // Ở đây tôi giả định bạn có nút login ở Header (sẽ cập nhật Header sau)
@@ -90,9 +96,10 @@ function App() {
               session={session} 
               userRole={userRole} 
               userData={userData}
+              onSwitchToMessages={handleSwitchToMessages}
             />
           ) : activeTab === 'Messages' ? (
-            <Chat session={session} userData={userData} />
+            <Chat session={session} userData={userData} pendingConversation={pendingConversation} />
           ) : (
             <MainContent session={session} />
           )
