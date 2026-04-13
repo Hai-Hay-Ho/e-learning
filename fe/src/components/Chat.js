@@ -21,6 +21,7 @@ const Chat = ({ session, userData, pendingConversation }) => {
     const userDefaultAvatar = userData?.avatarUrl || session?.user?.user_metadata?.avatar_url;
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [conversationLastMessages, setConversationLastMessages] = useState({});
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -31,13 +32,11 @@ const Chat = ({ session, userData, pendingConversation }) => {
         scrollToBottom();
     }, [messages]);
 
-    // Fetch conversations on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (session?.user?.id) {
             fetchConversations();
             
-            // Subscribe to new conversations
+            // Subscribe conversations mới
             const convSubscription = supabase
                 .channel('public:conversations')
                 .on('postgres_changes', { 
@@ -60,7 +59,7 @@ const Chat = ({ session, userData, pendingConversation }) => {
         }
     }, [session?.user?.id]);
 
-    // Subscribe to messages when conversation changes
+    // Subscribe messages khi conversation thay đổi
     useEffect(() => {
         if (selectedConversation) {
             fetchMessages(selectedConversation.id);
@@ -74,6 +73,11 @@ const Chat = ({ session, userData, pendingConversation }) => {
                     filter: `conversation_id=eq.${selectedConversation.id}`
                 }, (payload) => {
                     setMessages(prev => [...prev, payload.new]);
+                    // cap nhật last message cho conversation này
+                    setConversationLastMessages(prev => ({
+                        ...prev,
+                        [selectedConversation.id]: payload.new
+                    }));
                 })
                 .subscribe();
 
@@ -85,8 +89,6 @@ const Chat = ({ session, userData, pendingConversation }) => {
         }
     }, [selectedConversation]);
 
-    // Handle pending conversation
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (pendingConversation && conversations.length > 0) {
             // Find the conversation by ID
@@ -113,7 +115,28 @@ const Chat = ({ session, userData, pendingConversation }) => {
             .order('created_at', { ascending: false });
 
         if (error) console.error('Error fetching conversations:', error);
-        else setConversations(data);
+        else {
+            setConversations(data);
+            
+            if (data && data.length > 0) {
+                const conversationIds = data.map(conv => conv.id);
+                const { data: messages, error: msgError } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .in('conversation_id', conversationIds)
+                    .order('created_at', { ascending: false });
+                
+                if (!msgError && messages) {
+                    const lastMessages = {};
+                    messages.forEach(msg => {
+                        if (!lastMessages[msg.conversation_id]) {
+                            lastMessages[msg.conversation_id] = msg;
+                        }
+                    });
+                    setConversationLastMessages(lastMessages);
+                }
+            }
+        }
     };
 
     const fetchMessages = async (conversationId) => {
@@ -148,7 +171,6 @@ const Chat = ({ session, userData, pendingConversation }) => {
     };
 
     const startConversation = async (otherUser) => {
-        // IDs must be deterministic (least id first, greatest id second) to match the unique index
         const user1_id = session.user.id < otherUser.id ? session.user.id : otherUser.id;
         const user2_id = session.user.id < otherUser.id ? otherUser.id : session.user.id;
 
@@ -169,7 +191,7 @@ const Chat = ({ session, userData, pendingConversation }) => {
             return;
         }
 
-        // Create new conversation
+        // tạo conversation mới
         const { data: newConv, error: createError } = await supabase
             .from('conversations')
             .insert([
@@ -196,19 +218,29 @@ const Chat = ({ session, userData, pendingConversation }) => {
         e.preventDefault();
         if (!newMessage.trim() || !selectedConversation) return;
 
-        const { error } = await supabase
+        const messageData = { 
+            conversation_id: selectedConversation.id, 
+            sender_id: session.user.id, 
+            content: newMessage,
+            created_at: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
             .from('messages')
-            .insert([
-                { 
-                    conversation_id: selectedConversation.id, 
-                    sender_id: session.user.id, 
-                    content: newMessage,
-                    created_at: new Date().toISOString()
-                }
-            ]);
+            .insert([messageData])
+            .select()
+            .single();
 
         if (error) console.error('Error sending message:', error);
-        else setNewMessage('');
+        else {
+            setNewMessage('');
+            if (data) {
+                setConversationLastMessages(prev => ({
+                    ...prev,
+                    [selectedConversation.id]: data
+                }));
+            }
+        }
     };
 
     const getOtherUser = (conv) => {
@@ -221,6 +253,23 @@ const Chat = ({ session, userData, pendingConversation }) => {
         // Cộng thêm 7 tiếng (7 * 60 * 60 * 1000 miliseconds) để chuyển từ UTC sang UTC+7
         const vnDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
         return vnDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const formatLastMessage = (conv) => {
+        const lastMsg = conversationLastMessages[conv.id];
+        
+        if (!lastMsg) {
+            return "Hãy gửi tin nhắn cho nhau!";
+        }
+        
+        const isMe = lastMsg.sender_id === session.user.id;
+        const messageText = lastMsg.content;
+        
+        if (isMe) {
+            return `Bạn: ${messageText}`;
+        } else {
+            return messageText;
+        }
     };
 
     return (
@@ -279,7 +328,7 @@ const Chat = ({ session, userData, pendingConversation }) => {
                                         </span>
                                     </div>
                                     <div className="chat-msg-row">
-                                        <span className="chat-last-msg">Start chatting...</span>
+                                        <span className="chat-last-msg">{formatLastMessage(conv)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -301,11 +350,6 @@ const Chat = ({ session, userData, pendingConversation }) => {
                                     <div className="header-name">{selectedConversation.otherUser?.full_name}</div>
                                     <div className="header-status">Online</div>
                                 </div>
-                            </div>
-                            <div className="header-actions">
-                                <button className="action-btn"><FontAwesomeIcon icon={faPhone} /></button>
-                                <button className="action-btn"><FontAwesomeIcon icon={faVideo} /></button>
-                                <button className="action-btn"><FontAwesomeIcon icon={faEllipsisV} /></button>
                             </div>
                         </div>
 
