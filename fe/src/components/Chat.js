@@ -22,6 +22,11 @@ const Chat = ({ session, userData, pendingConversation }) => {
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [conversationLastMessages, setConversationLastMessages] = useState({});
+    const [hoveredMessageId, setHoveredMessageId] = useState(null);
+    const [openMenuId, setOpenMenuId] = useState(null);
+    const [editingMessageId, setEditingMessageId] = useState(null);
+    const [editingContent, setEditingContent] = useState('');
+    const [detailMessageId, setDetailMessageId] = useState(null);
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -272,6 +277,76 @@ const Chat = ({ session, userData, pendingConversation }) => {
         }
     };
 
+    const formatDetailDate = (dateString) => {
+        if (!dateString) return '';
+        const utcDate = new Date(dateString);
+        const vnDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
+        
+        const hours = String(vnDate.getHours()).padStart(2, '0');
+        const minutes = String(vnDate.getMinutes()).padStart(2, '0');
+        const day = String(vnDate.getDate()).padStart(2, '0');
+        const month = String(vnDate.getMonth() + 1).padStart(2, '0');
+        const year = vnDate.getFullYear();
+        
+        return `${hours}:${minutes} ${day}/${month}/${year}`;
+    };
+
+    const handleDeleteMessage = async (messageId) => {
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .delete()
+                .eq('id', messageId);
+            
+            if (error) {
+                console.error('Error deleting message:', error);
+            } else {
+                setMessages(prev => prev.filter(msg => msg.id !== messageId));
+                setOpenMenuId(null);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    };
+
+    const handleStartEdit = (message) => {
+        setEditingMessageId(message.id);
+        setEditingContent(message.content);
+        setOpenMenuId(null);
+    };
+
+    const handleUpdateMessage = async () => {
+        if (!editingContent.trim() || !editingMessageId) return;
+
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .update({ content: editingContent })
+                .eq('id', editingMessageId);
+            
+            if (error) {
+                console.error('Error updating message:', error);
+            } else {
+                setMessages(prev => 
+                    prev.map(msg => 
+                        msg.id === editingMessageId 
+                            ? { ...msg, content: editingContent }
+                            : msg
+                    )
+                );
+                setEditingMessageId(null);
+                setEditingContent('');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setEditingMessageId(null);
+        setEditingContent('');
+    };
+
     return (
         <div className="chat-container">
             {/* Sidebar List */}
@@ -356,25 +431,126 @@ const Chat = ({ session, userData, pendingConversation }) => {
                         <div className="chat-messages">
                             {messages.map(msg => {
                                 const isMe = msg.sender_id === session.user.id;
+                                const isEditing = editingMessageId === msg.id;
+                                
                                 return (
-                                    <div key={msg.id} className={`message-row ${isMe ? 'me' : 'them'}`}>
+                                    <div 
+                                        key={msg.id} 
+                                        className={`message-row ${isMe ? 'me' : 'them'}`}
+                                        onMouseEnter={() => !editingMessageId && setHoveredMessageId(msg.id)}
+                                        onMouseLeave={() => {
+                                            setHoveredMessageId(null);
+                                            setOpenMenuId(null);
+                                        }}
+                                    >
                                         {!isMe && (
                                             <div className="msg-avatar">
                                                 <img src={selectedConversation.otherUser?.avatar_url} alt={selectedConversation.otherUser?.full_name} />
                                             </div>
                                         )}
-                                        <div className="message-bubble">
-                                            {!isMe && <div className="sender-name">{selectedConversation.otherUser?.full_name} <span className="time">{formatTime(msg.created_at)}</span></div>}
-                                            <div className="message-text">{msg.content}</div>
-                                            {isMe && (
-                                                <div className="me-meta">
-                                                    <span className="time">{formatTime(msg.created_at)}</span>
+                                        
+                                        <div className="message-wrapper">
+                                            <div className="message-bubble">
+                                                {!isMe && <div className="sender-name">{selectedConversation.otherUser?.full_name} <span className="time">{formatTime(msg.created_at)}</span></div>}
+                                                
+                                                {isEditing ? (
+                                                    <div className="edit-message">
+                                                        <input 
+                                                            type="text" 
+                                                            value={editingContent}
+                                                            onChange={(e) => setEditingContent(e.target.value)}
+                                                            autoFocus
+                                                        />
+                                                        <div className="edit-actions">
+                                                            <button onClick={handleUpdateMessage} className="edit-save">Lưu</button>
+                                                            <button onClick={handleCancelEdit} className="edit-cancel">Hủy</button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="message-text">{msg.content}</div>
+                                                )}
+                                                
+                                                {isMe && !isEditing && (
+                                                    <div className="me-meta">
+                                                        <span className="time">{formatTime(msg.created_at)}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {!isMe && hoveredMessageId === msg.id && !isEditing && (
+                                                <div className="message-actions">
+                                                    <button 
+                                                        className="ellipsis-btn"
+                                                        onClick={() => setOpenMenuId(openMenuId === msg.id ? null : msg.id)}
+                                                    >
+                                                        ⋮
+                                                    </button>
+                                                    
+                                                    {openMenuId === msg.id && (
+                                                        <div className="message-dropdown-menu">
+                                                            <button 
+                                                                className="dropdown-item"
+                                                                onClick={() => {
+                                                                    setDetailMessageId(msg.id);
+                                                                    setOpenMenuId(null);
+                                                                }}
+                                                            >
+                                                                Chi tiết
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
+                                        
                                         {isMe && (
                                             <div className="msg-avatar">
-                                                <img src={userDefaultAvatar}alt="User Avatar"/>
+                                                <img src={userDefaultAvatar} alt="User Avatar"/>
+                                            </div>
+                                        )}
+                                        
+                                        {isMe && hoveredMessageId === msg.id && !isEditing && (
+                                            <div className="message-actions">
+                                                <button 
+                                                    className="ellipsis-btn"
+                                                    onClick={() => setOpenMenuId(openMenuId === msg.id ? null : msg.id)}
+                                                >
+                                                    ⋮
+                                                </button>
+                                                
+                                                {openMenuId === msg.id && (
+                                                    <div className="message-dropdown-menu">
+                                                        <button 
+                                                            className="dropdown-item"
+                                                            onClick={() => {
+                                                                handleStartEdit(msg);
+                                                                setOpenMenuId(null);
+                                                            }}
+                                                        >
+                                                            Chỉnh sửa
+                                                        </button>
+                                                        
+                                                        <button 
+                                                            className="dropdown-item"
+                                                            onClick={() => {
+                                                                handleDeleteMessage(msg.id);
+                                                                setOpenMenuId(null);
+                                                            }}
+                                                        >
+                                                            Thu hồi
+                                                        </button>
+                                                        
+                                                        <button 
+                                                            className="dropdown-item"
+                                                            onClick={() => {
+                                                                setDetailMessageId(msg.id);
+                                                                setOpenMenuId(null);
+                                                            }}
+                                                        >
+                                                            Chi tiết
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -382,6 +558,25 @@ const Chat = ({ session, userData, pendingConversation }) => {
                             })}
                             <div ref={messagesEndRef} />
                         </div>
+
+                        {/* Detail Modal */}
+                        {detailMessageId && (
+                            <div className="message-detail-modal">
+                                <div className="modal-overlay" onClick={() => setDetailMessageId(null)}></div>
+                                <div className="modal-content">
+                                    <div className="modal-header">
+                                        <h3>Chi tiết tin nhắn</h3>
+                                        <button className="modal-close" onClick={() => setDetailMessageId(null)}>×</button>
+                                    </div>
+                                    <div className="modal-body">
+                                        <p className="detail-text">{messages.find(m => m.id === detailMessageId)?.content}</p>
+                                        <p className="detail-date">
+                                            Gửi lúc: <strong>{formatDetailDate(messages.find(m => m.id === detailMessageId)?.created_at)}</strong>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <form className="chat-input-area" onSubmit={sendMessage}>
                             <div className="input-container">
