@@ -509,3 +509,255 @@
 .send-btn span {
     font-size: 0.95rem;
 }
+
+/* Message Menu Styles */
+.message-wrapper {
+    position: relative;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.message-bubble {
+    flex: 1;
+}
+
+.message-actions {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+}
+
+.ellipsis-btn {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    color: #5f6368;
+    flex-shrink: 0;
+}
+
+.ellipsis-btn:hover {
+    background: #f0f0f0;
+    border-color: #dadce0;
+}
+
+.message-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    min-width: 140px;
+    z-index: 100;
+    animation: slideDown 0.2s ease-out;
+}
+
+.me .message-actions .message-dropdown-menu {
+    right: auto;
+    left: 0;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    text-align: left;
+    font-size: 0.9rem;
+    color: #202124;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.dropdown-item:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.dropdown-item:last-child {
+    border-radius: 0 0 8px 8px;
+}
+
+.dropdown-item:hover {
+    background: #f8f9fa;
+}
+
+.dropdown-item:active {
+    background: #e8e8e8;
+}
+
+/* Edit Message Styles */
+.edit-message {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.edit-message input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.edit-message input:focus {
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.edit-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.edit-save, .edit-cancel {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.edit-save {
+    background: #1a73e8;
+    color: white;
+}
+
+.edit-save:hover {
+    background: #1557b0;
+}
+
+.edit-cancel {
+    background: #f0f0f0;
+    color: #202124;
+}
+
+.edit-cancel:hover {
+    background: #e0e0e0;
+}
+
+/* Detail Modal Styles */
+.message-detail-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+}
+
+.modal-content {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 400px;
+    z-index: 1001;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #202124;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #5f6368;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.modal-close:hover {
+    background: #f0f0f0;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.detail-text {
+    margin: 0 0 16px 0;
+    font-size: 0.95rem;
+    color: #202124;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.detail-date {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #5f6368;
+}
+
+.detail-date strong {
+    color: #1a73e8;
+}

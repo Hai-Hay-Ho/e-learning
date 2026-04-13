@@ -71,20 +71,29 @@ function App() {
     setActiveTab('Messages');
   };
 
-  if (!session && !showLogin) {
-    // Nếu chưa đăng nhập, mặc định hiển thị trang chủ hoặc buộc login tùy bạn
-    // Ở đây tôi giả định bạn có nút login ở Header (sẽ cập nhật Header sau)
-  }
+  // Kiểm tra và buộc redirect về Dashboard nếu chưa đăng nhập
+  useEffect(() => {
+    if (!session && activeTab !== 'Dashboard') {
+      setActiveTab('Dashboard');
+    }
+  }, [session, activeTab]);
 
   return (
     <div className="dashboard-container">
       {!session && showLogin && <Login onClose={() => setShowLogin(false)} />}
       
       {/* Sidebar based on role */}
-      <Sidebar userRole={userRole} activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar userRole={userRole} activeTab={activeTab} setActiveTab={(tab) => {
+        // Nếu chưa đăng nhập và cố click vào tab khác, về Dashboard
+        if (!session && tab !== 'Dashboard') {
+          setActiveTab('Dashboard');
+        } else {
+          setActiveTab(tab);
+        }
+      }} />
 
-      <div className={`main-wrapper ${activeTab === 'Messages' ? 'no-padding' : ''}`}>
-        {activeTab !== 'Messages' && (
+      <div className={`main-wrapper ${activeTab === 'Messages' || activeTab === 'Classes' ? 'no-padding' : ''}`}>
+        {activeTab !== 'Messages' && activeTab !== 'Classes' && (
           <Header session={session} userData={userData} onLoginClick={() => setShowLogin(true)} />
         )}
 

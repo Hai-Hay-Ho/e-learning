@@ -21,6 +21,12 @@ const Chat = ({ session, userData, pendingConversation }) => {
     const userDefaultAvatar = userData?.avatarUrl || session?.user?.user_metadata?.avatar_url;
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [conversationLastMessages, setConversationLastMessages] = useState({});
+    const [hoveredMessageId, setHoveredMessageId] = useState(null);
+    const [openMenuId, setOpenMenuId] = useState(null);
+    const [editingMessageId, setEditingMessageId] = useState(null);
+    const [editingContent, setEditingContent] = useState('');
+    const [detailMessageId, setDetailMessageId] = useState(null);
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -31,13 +37,11 @@ const Chat = ({ session, userData, pendingConversation }) => {
         scrollToBottom();
     }, [messages]);
 
-    // Fetch conversations on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (session?.user?.id) {
             fetchConversations();
             
-            // Subscribe to new conversations
+            // Subscribe conversations mới
             const convSubscription = supabase
                 .channel('public:conversations')
                 .on('postgres_changes', { 
@@ -60,7 +64,7 @@ const Chat = ({ session, userData, pendingConversation }) => {
         }
     }, [session?.user?.id]);
 
-    // Subscribe to messages when conversation changes
+    // Subscribe messages khi conversation thay đổi
     useEffect(() => {
         if (selectedConversation) {
             fetchMessages(selectedConversation.id);
@@ -74,6 +78,11 @@ const Chat = ({ session, userData, pendingConversation }) => {
                     filter: `conversation_id=eq.${selectedConversation.id}`
                 }, (payload) => {
                     setMessages(prev => [...prev, payload.new]);
+                    // cap nhật last message cho conversation này
+                    setConversationLastMessages(prev => ({
+                        ...prev,
+                        [selectedConversation.id]: payload.new
+                    }));
                 })
                 .subscribe();
 
@@ -85,8 +94,6 @@ const Chat = ({ session, userData, pendingConversation }) => {
         }
     }, [selectedConversation]);
 
-    // Handle pending conversation
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (pendingConversation && conversations.length > 0) {
             // Find the conversation by ID
@@ -113,7 +120,28 @@ const Chat = ({ session, userData, pendingConversation }) => {
             .order('created_at', { ascending: false });
 
         if (error) console.error('Error fetching conversations:', error);
-        else setConversations(data);
+        else {
+            setConversations(data);
+            
+            if (data && data.length > 0) {
+                const conversationIds = data.map(conv => conv.id);
+                const { data: messages, error: msgError } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .in('conversation_id', conversationIds)
+                    .order('created_at', { ascending: false });
+                
+                if (!msgError && messages) {
+                    const lastMessages = {};
+                    messages.forEach(msg => {
+                        if (!lastMessages[msg.conversation_id]) {
+                            lastMessages[msg.conversation_id] = msg;
+                        }
+                    });
+                    setConversationLastMessages(lastMessages);
+                }
+            }
+        }
     };
 
     const fetchMessages = async (conversationId) => {
@@ -148,7 +176,6 @@ const Chat = ({ session, userData, pendingConversation }) => {
     };
 
     const startConversation = async (otherUser) => {
-        // IDs must be deterministic (least id first, greatest id second) to match the unique index
         const user1_id = session.user.id < otherUser.id ? session.user.id : otherUser.id;
         const user2_id = session.user.id < otherUser.id ? otherUser.id : session.user.id;
 
@@ -169,7 +196,7 @@ const Chat = ({ session, userData, pendingConversation }) => {
             return;
         }
 
-        // Create new conversation
+        // tạo conversation mới
         const { data: newConv, error: createError } = await supabase
             .from('conversations')
             .insert([
@@ -196,19 +223,29 @@ const Chat = ({ session, userData, pendingConversation }) => {
         e.preventDefault();
         if (!newMessage.trim() || !selectedConversation) return;
 
-        const { error } = await supabase
+        const messageData = { 
+            conversation_id: selectedConversation.id, 
+            sender_id: session.user.id, 
+            content: newMessage,
+            created_at: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
             .from('messages')
-            .insert([
-                { 
-                    conversation_id: selectedConversation.id, 
-                    sender_id: session.user.id, 
-                    content: newMessage,
-                    created_at: new Date().toISOString()
-                }
-            ]);
+            .insert([messageData])
+            .select()
+            .single();
 
         if (error) console.error('Error sending message:', error);
-        else setNewMessage('');
+        else {
+            setNewMessage('');
+            if (data) {
+                setConversationLastMessages(prev => ({
+                    ...prev,
+                    [selectedConversation.id]: data
+                }));
+            }
+        }
     };
 
     const getOtherUser = (conv) => {
@@ -221,6 +258,93 @@ const Chat = ({ session, userData, pendingConversation }) => {
         // Cộng thêm 7 tiếng (7 * 60 * 60 * 1000 miliseconds) để chuyển từ UTC sang UTC+7
         const vnDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
         return vnDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const formatLastMessage = (conv) => {
+        const lastMsg = conversationLastMessages[conv.id];
+        
+        if (!lastMsg) {
+            return "Hãy gửi tin nhắn cho nhau!";
+        }
+        
+        const isMe = lastMsg.sender_id === session.user.id;
+        const messageText = lastMsg.content;
+        
+        if (isMe) {
+            return `Bạn: ${messageText}`;
+        } else {
+            return messageText;
+        }
+    };
+
+    const formatDetailDate = (dateString) => {
+        if (!dateString) return '';
+        const utcDate = new Date(dateString);
+        const vnDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
+        
+        const hours = String(vnDate.getHours()).padStart(2, '0');
+        const minutes = String(vnDate.getMinutes()).padStart(2, '0');
+        const day = String(vnDate.getDate()).padStart(2, '0');
+        const month = String(vnDate.getMonth() + 1).padStart(2, '0');
+        const year = vnDate.getFullYear();
+        
+        return `${hours}:${minutes} ${day}/${month}/${year}`;
+    };
+
+    const handleDeleteMessage = async (messageId) => {
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .delete()
+                .eq('id', messageId);
+            
+            if (error) {
+                console.error('Error deleting message:', error);
+            } else {
+                setMessages(prev => prev.filter(msg => msg.id !== messageId));
+                setOpenMenuId(null);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    };
+
+    const handleStartEdit = (message) => {
+        setEditingMessageId(message.id);
+        setEditingContent(message.content);
+        setOpenMenuId(null);
+    };
+
+    const handleUpdateMessage = async () => {
+        if (!editingContent.trim() || !editingMessageId) return;
+
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .update({ content: editingContent })
+                .eq('id', editingMessageId);
+            
+            if (error) {
+                console.error('Error updating message:', error);
+            } else {
+                setMessages(prev => 
+                    prev.map(msg => 
+                        msg.id === editingMessageId 
+                            ? { ...msg, content: editingContent }
+                            : msg
+                    )
+                );
+                setEditingMessageId(null);
+                setEditingContent('');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setEditingMessageId(null);
+        setEditingContent('');
     };
 
     return (
@@ -279,7 +403,7 @@ const Chat = ({ session, userData, pendingConversation }) => {
                                         </span>
                                     </div>
                                     <div className="chat-msg-row">
-                                        <span className="chat-last-msg">Start chatting...</span>
+                                        <span className="chat-last-msg">{formatLastMessage(conv)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -302,35 +426,131 @@ const Chat = ({ session, userData, pendingConversation }) => {
                                     <div className="header-status">Online</div>
                                 </div>
                             </div>
-                            <div className="header-actions">
-                                <button className="action-btn"><FontAwesomeIcon icon={faPhone} /></button>
-                                <button className="action-btn"><FontAwesomeIcon icon={faVideo} /></button>
-                                <button className="action-btn"><FontAwesomeIcon icon={faEllipsisV} /></button>
-                            </div>
                         </div>
 
                         <div className="chat-messages">
                             {messages.map(msg => {
                                 const isMe = msg.sender_id === session.user.id;
+                                const isEditing = editingMessageId === msg.id;
+                                
                                 return (
-                                    <div key={msg.id} className={`message-row ${isMe ? 'me' : 'them'}`}>
+                                    <div 
+                                        key={msg.id} 
+                                        className={`message-row ${isMe ? 'me' : 'them'}`}
+                                        onMouseEnter={() => !editingMessageId && setHoveredMessageId(msg.id)}
+                                        onMouseLeave={() => {
+                                            setHoveredMessageId(null);
+                                            setOpenMenuId(null);
+                                        }}
+                                    >
                                         {!isMe && (
                                             <div className="msg-avatar">
                                                 <img src={selectedConversation.otherUser?.avatar_url} alt={selectedConversation.otherUser?.full_name} />
                                             </div>
                                         )}
-                                        <div className="message-bubble">
-                                            {!isMe && <div className="sender-name">{selectedConversation.otherUser?.full_name} <span className="time">{formatTime(msg.created_at)}</span></div>}
-                                            <div className="message-text">{msg.content}</div>
-                                            {isMe && (
-                                                <div className="me-meta">
-                                                    <span className="time">{formatTime(msg.created_at)}</span>
+                                        
+                                        <div className="message-wrapper">
+                                            <div className="message-bubble">
+                                                {!isMe && <div className="sender-name">{selectedConversation.otherUser?.full_name} <span className="time">{formatTime(msg.created_at)}</span></div>}
+                                                
+                                                {isEditing ? (
+                                                    <div className="edit-message">
+                                                        <input 
+                                                            type="text" 
+                                                            value={editingContent}
+                                                            onChange={(e) => setEditingContent(e.target.value)}
+                                                            autoFocus
+                                                        />
+                                                        <div className="edit-actions">
+                                                            <button onClick={handleUpdateMessage} className="edit-save">Lưu</button>
+                                                            <button onClick={handleCancelEdit} className="edit-cancel">Hủy</button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="message-text">{msg.content}</div>
+                                                )}
+                                                
+                                                {isMe && !isEditing && (
+                                                    <div className="me-meta">
+                                                        <span className="time">{formatTime(msg.created_at)}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {!isMe && hoveredMessageId === msg.id && !isEditing && (
+                                                <div className="message-actions">
+                                                    <button 
+                                                        className="ellipsis-btn"
+                                                        onClick={() => setOpenMenuId(openMenuId === msg.id ? null : msg.id)}
+                                                    >
+                                                        ⋮
+                                                    </button>
+                                                    
+                                                    {openMenuId === msg.id && (
+                                                        <div className="message-dropdown-menu">
+                                                            <button 
+                                                                className="dropdown-item"
+                                                                onClick={() => {
+                                                                    setDetailMessageId(msg.id);
+                                                                    setOpenMenuId(null);
+                                                                }}
+                                                            >
+                                                                Chi tiết
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
+                                        
                                         {isMe && (
                                             <div className="msg-avatar">
-                                                <img src={userDefaultAvatar}alt="User Avatar"/>
+                                                <img src={userDefaultAvatar} alt="User Avatar"/>
+                                            </div>
+                                        )}
+                                        
+                                        {isMe && hoveredMessageId === msg.id && !isEditing && (
+                                            <div className="message-actions">
+                                                <button 
+                                                    className="ellipsis-btn"
+                                                    onClick={() => setOpenMenuId(openMenuId === msg.id ? null : msg.id)}
+                                                >
+                                                    ⋮
+                                                </button>
+                                                
+                                                {openMenuId === msg.id && (
+                                                    <div className="message-dropdown-menu">
+                                                        <button 
+                                                            className="dropdown-item"
+                                                            onClick={() => {
+                                                                handleStartEdit(msg);
+                                                                setOpenMenuId(null);
+                                                            }}
+                                                        >
+                                                            Chỉnh sửa
+                                                        </button>
+                                                        
+                                                        <button 
+                                                            className="dropdown-item"
+                                                            onClick={() => {
+                                                                handleDeleteMessage(msg.id);
+                                                                setOpenMenuId(null);
+                                                            }}
+                                                        >
+                                                            Thu hồi
+                                                        </button>
+                                                        
+                                                        <button 
+                                                            className="dropdown-item"
+                                                            onClick={() => {
+                                                                setDetailMessageId(msg.id);
+                                                                setOpenMenuId(null);
+                                                            }}
+                                                        >
+                                                            Chi tiết
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -338,6 +558,25 @@ const Chat = ({ session, userData, pendingConversation }) => {
                             })}
                             <div ref={messagesEndRef} />
                         </div>
+
+                        {/* Detail Modal */}
+                        {detailMessageId && (
+                            <div className="message-detail-modal">
+                                <div className="modal-overlay" onClick={() => setDetailMessageId(null)}></div>
+                                <div className="modal-content">
+                                    <div className="modal-header">
+                                        <h3>Chi tiết tin nhắn</h3>
+                                        <button className="modal-close" onClick={() => setDetailMessageId(null)}>×</button>
+                                    </div>
+                                    <div className="modal-body">
+                                        <p className="detail-text">{messages.find(m => m.id === detailMessageId)?.content}</p>
+                                        <p className="detail-date">
+                                            Gửi lúc: <strong>{formatDetailDate(messages.find(m => m.id === detailMessageId)?.created_at)}</strong>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <form className="chat-input-area" onSubmit={sendMessage}>
                             <div className="input-container">
