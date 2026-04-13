@@ -112,8 +112,6 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
                         event: '*',
                         schema: 'public',
                         table: 'post_attachments'
-                        // Lưu ý: post_attachments có thể không có class_id, 
-                        // nhưng khi có bất kỳ file nào thay đổi, ta fetch lại posts là an toàn nhất
                     },
                     () => {
                         console.log('Attachment change received via Realtime');
@@ -414,61 +412,115 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
     };
 
     return (
-        <div className="main-content">
-            {selectedAssignment ? (
-                <AssignmentDetail
-                    post={selectedAssignment}
-                    session={session}
-                    userRole={userRole}
-                    userData={userData}
-                    selectedClass={selectedClass}
-                    onBack={() => setSelectedAssignment(null)}
-                    onSwitchToMessages={onSwitchToMessages}
-                />
-            ) : selectedClass ? (
-                <div className="class-detail-container">
-                    <div className="class-banner">
-                        <div className="banner-header">
-                            <button className="back-link-btn" onClick={() => setSelectedClass(null)}>
-                                <FontAwesomeIcon icon={faArrowLeft} />
-                            </button>
+        <div className="class-container">
+            {/* Sidebar */}
+            {!selectedAssignment && (
+                <div className="class-sidebar">
+                    <div className="class-sidebar-header">
+                        <div className="class-app-logo">
+                            <FontAwesomeIcon icon={faUsers} className="class-logo-icon" />
+                            <span>E-Classes</span>
                         </div>
-                        <h1>{selectedClass.name}</h1>
-                        <p>{selectedClass.teacherName || "Gi�o vi�n"}</p>
+                        
+                        <div className="class-actions-header">
+                            {isTeacher ? (
+                                <button className="class-create-join-btn" onClick={() => setShowCreateModal(true)} title="Tạo lớp học mới">
+                                    <FontAwesomeIcon icon={faPlus} />
+                                    <span>Tạo</span>
+                                </button>
+                            ) : (
+                                <button className="class-create-join-btn" onClick={() => setShowJoinModal(true)} title="Tham gia lớp học">
+                                    <FontAwesomeIcon icon={faSignInAlt} />
+                                    <span>Tham gia</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="class-content-layout">
-                        <div className="class-sidebar-info">
-                            <div className="info-card">
-                                <h4>Mã lớp học</h4>
-                                <div className="join-code-display" 
-                                     style={{ cursor: 'pointer' }} 
-                                     onClick={() => copyToClipboard(selectedClass.joinCode)}>
-                                    {selectedClass.joinCode} <FontAwesomeIcon icon={faCopy} size="xs" style={{ opacity: 0.6 }} />
+                    <div className="class-list-section">
+                        {classes.length > 0 && (
+                            <div className="class-list-label">Lớp học</div>
+                        )}
+                        
+                        {classes.map((cls) => (
+                            <div 
+                                key={cls.id} 
+                                className={`class-list-item ${selectedClass?.id === cls.id ? 'active' : ''}`}
+                                onClick={() => setSelectedClass(cls)}
+                            >
+                                <div className="class-card-mini">
+                                    {cls.teacherAvatar ? (
+                                        <img src={cls.teacherAvatar} alt={cls.teacherName} />
+                                    ) : (
+                                        cls.teacherName ? cls.teacherName.charAt(0).toUpperCase() : 'L'
+                                    )}
                                 </div>
-                            </div>
-                            <div className="info-card">
-                                <h4>Sắp đến hạn</h4>
-                                <p style={{ fontSize: '12px', color: '#70757a', margin: 0 }}>
-                                    Tuyệt vời! Không có bài tập nào sắp đến hạn.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="posts-feed-section">
-                            {isTeacher && (
-                                <div className="post-composer" onClick={() => setShowPostModal(true)}>
-                                    <span className="composer-placeholder">Thông báo mới</span>
-                                </div>
-                            )}
-
-                            <div className="posts-feed">
-                                {posts.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '40px', color: '#5f6368', background: 'white', border: '1px solid #dadce0', borderRadius: '8px' }}>
-                                        <FontAwesomeIcon icon={faBullhorn} size="2x" style={{ opacity: 0.2, marginBottom: '16px' }} />
-                                        <p>Chưa có bài đăng nào.</p>
+                                <div className="class-info-sidebar">
+                                    <div className="class-name-row">
+                                        <span className="class-name-sidebar">{cls.name}</span>
                                     </div>
-                                ) : (
+                                    <div className="class-teacher-name-sidebar">{cls.teacherName || "Giáo viên"}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Main Content Area */}
+            <div className="class-main-content">
+                {selectedAssignment ? (
+                    <AssignmentDetail
+                        post={selectedAssignment}
+                        session={session}
+                        userRole={userRole}
+                        userData={userData}
+                        selectedClass={selectedClass}
+                        onBack={() => setSelectedAssignment(null)}
+                        onSwitchToMessages={onSwitchToMessages}
+                    />
+                ) : selectedClass ? (
+                    <div className="class-detail-container">
+                        <div className="class-detail-scroll-area">
+                            <div className="class-banner">
+                                <div className="banner-header">
+                                </div>
+                                <h1>{selectedClass.name}</h1>
+                                <p>{selectedClass.teacherName || "Giáo viên"}</p>
+                            </div>
+
+                            <div className="class-content-layout">
+                                <div className="class-sidebar-info">
+                                    <div className="info-card">
+                                        <h4>Mã lớp học</h4>
+                                        <div className="join-code-display" 
+                                             style={{ cursor: 'pointer' }} 
+                                             onClick={() => copyToClipboard(selectedClass.joinCode)}>
+                                            {selectedClass.joinCode} <FontAwesomeIcon icon={faCopy} size="xs" style={{ opacity: 0.6 }} />
+                                        </div>
+                                    </div>
+                                    <div className="info-card">
+                                        <h4>Sắp đến hạn</h4>
+                                        <p style={{ fontSize: '12px', color: '#70757a', margin: 0 }}>
+                                            Tuyệt vời! Không có bài tập nào sắp đến hạn.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="posts-feed-section">
+                                    {isTeacher && (
+                                        <div className="post-composer" onClick={() => setShowPostModal(true)}>
+                                            <span className="composer-placeholder">Thông báo mới</span>
+                                        </div>
+                                    )}
+
+                                    <div className="posts-feed">
+                                        {posts.length === 0 ? (
+                                            <div style={{ textAlign: 'center', padding: '40px', color: '#5f6368', background: 'white', border: '1px solid #dadce0', borderRadius: '8px' }}>
+                                                <FontAwesomeIcon icon={faBullhorn} size="2x" style={{ opacity: 0.2, marginBottom: '16px' }} />
+                                                <p>Chưa có bài đăng nào.</p>
+                                            </div>
+                                        ) : (
                                     posts.map((post) => (
                                         <div 
                                             key={post.id} 
@@ -666,317 +718,177 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
                             </div>
                         </div>
                     </div>
-
-                    {showPostModal && (
-                        <div className="modal-overlay">
-                            <div className="modal-content-custom" style={{ width: '500px' }}>
-                                <h2>Tạo bài đăng mới</h2>
-                                <form onSubmit={handleCreatePost}>
-                                    <div className="form-group">
-                                        <label>Loại bài đăng</label>
-                                        <select 
-                                            value={postType} 
-                                            onChange={(e) => setPostType(e.target.value)}
-                                            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', marginBottom: '15px' }}
-                                        >
-                                            <option value="announcement">Thông báo</option>
-                                            <option value="material">Tài liệu</option>
-                                            <option value="assignment">Bài tập</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Tiêu đề</label>
-                                        <input 
-                                            type="text" 
-                                            value={postTitle} 
-                                            onChange={(e) => setPostTitle(e.target.value)}
-                                            placeholder="Nhập tiêu đề"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Nội dung</label>
-                                        <textarea 
-                                            value={postContent} 
-                                            onChange={(e) => setPostContent(e.target.value)}
-                                            placeholder="Nhập nội dung bài đăng"
-                                            rows="5"
-                                            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', minHeight: '100px' }}
-                                            required
-                                        ></textarea>
-                                    </div>
-
-                                    {postType === 'assignment' && (
-                                        <div className="form-group deadline-picker-group">
-                                            <label>
-                                                <FontAwesomeIcon icon={faCalendarAlt} style={{ marginRight: '8px', color: '#d93025' }} />
-                                                Hạn nộp bài (Deadline)
-                                            </label>
-                                            <input
-                                                type="datetime-local"
-                                                value={postDeadline}
-                                                onChange={(e) => setPostDeadline(e.target.value)}
-                                                className="deadline-input"
-                                                min={new Date().toISOString().slice(0, 16)}
-                                            />
-                                            {postDeadline && (
-                                                <p className="deadline-preview">
-                                                    📅 Hạn nộp: {new Date(postDeadline).toLocaleString('vi-VN', {
-                                                        weekday: 'long', year: 'numeric', month: 'long',
-                                                        day: 'numeric', hour: '2-digit', minute: '2-digit'
-                                                    })}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                    
-                                    <div className="form-group">
-                                        <label>Tập tin đính kèm ({attachments.length})</label>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {attachments.map((att, index) => (
-                                                <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '8px', border: '1px solid #dadce0', borderRadius: '4px', background: '#f8f9fa' }}>
-                                                    <FontAwesomeIcon icon={faFileAlt} style={{ marginRight: '8px', color: '#1967d2' }} />
-                                                    <span style={{ flex: 1, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{att.fileName}</span>
-                                                    <button type="button" onClick={() => removeAttachment(index)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#5f6368' }}>
-                                                        <FontAwesomeIcon icon={faTimes} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            
-                                            <label style={{ 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                justifyContent: 'center', 
-                                                padding: '10px', 
-                                                border: '2px dashed #dadce0', 
-                                                borderRadius: '4px', 
-                                                cursor: 'pointer', 
-                                                color: '#1967d2',
-                                                gap: '8px',
-                                                marginTop: '8px'
-                                            }}>
-                                                <input 
-                                                    type="file" 
-                                                    multiple 
-                                                    onChange={handleFileChange} 
-                                                    style={{ display: 'none' }} 
-                                                    disabled={uploading}
-                                                />
-                                                <FontAwesomeIcon icon={uploading ? faPlus : faPaperclip} spin={uploading} />
-                                                {uploading ? 'Đang tải lên...' : 'Thêm tập tin đính kèm'}
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div className="modal-actions">
-                                        <button type="button" onClick={() => setShowPostModal(false)}>Hủy</button>
-                                        <button type="submit" className="confirm-btn">Đăng</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    )}
-
-                    {showEditModal && (
-                        <div className="modal-overlay">
-                            <div className="modal-content-custom" style={{ width: '500px' }}>
-                                <h2>Chỉnh sửa bài đăng</h2>
-                                <form onSubmit={handleUpdatePost}>
-                                    <div className="form-group">
-                                        <label>Loại bài đăng</label>
-                                        <select 
-                                            value={postType} 
-                                            onChange={(e) => setPostType(e.target.value)}
-                                            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', marginBottom: '15px' }}
-                                        >
-                                            <option value="announcement">Thông báo</option>
-                                            <option value="material">Tài liệu</option>
-                                            <option value="assignment">Bài tập</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Tiêu đề</label>
-                                        <input 
-                                            type="text" 
-                                            value={postTitle} 
-                                            onChange={(e) => setPostTitle(e.target.value)}
-                                            placeholder="Nhập tiêu đề"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Nội dung</label>
-                                        <textarea 
-                                            value={postContent} 
-                                            onChange={(e) => setPostContent(e.target.value)}
-                                            placeholder="Nội dung bài đăng"
-                                            rows="5"
-                                            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', minHeight: '100px' }}
-                                            required
-                                        ></textarea>
-                                    </div>
-
-                                    {postType === 'assignment' && (
-                                        <div className="form-group deadline-picker-group">
-                                            <label>
-                                                <FontAwesomeIcon icon={faCalendarAlt} style={{ marginRight: '8px', color: '#d93025' }} />
-                                                Hạn nộp bài (Deadline)
-                                            </label>
-                                            <input
-                                                type="datetime-local"
-                                                value={postDeadline}
-                                                onChange={(e) => setPostDeadline(e.target.value)}
-                                                className="deadline-input"
-                                                min={new Date().toISOString().slice(0, 16)}
-                                            />
-                                            {postDeadline && (
-                                                <p className="deadline-preview">
-                                                    📅 Hạn nộp: {new Date(postDeadline).toLocaleString('vi-VN', {
-                                                        weekday: 'long', year: 'numeric', month: 'long',
-                                                        day: 'numeric', hour: '2-digit', minute: '2-digit'
-                                                    })}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                    
-                                    <div className="form-group">
-                                        <label>Tập tin đính kèm ({attachments.length})</label>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {attachments.map((att, index) => (
-                                                <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '8px', border: '1px solid #dadce0', borderRadius: '4px', background: '#f8f9fa' }}>
-                                                    <FontAwesomeIcon icon={faFileAlt} style={{ marginRight: '8px', color: '#1967d2' }} />
-                                                    <span style={{ flex: 1, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{att.fileName}</span>
-                                                    <button type="button" onClick={() => removeAttachment(index)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#5f6368' }}>
-                                                        <FontAwesomeIcon icon={faTimes} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            
-                                            <label style={{ 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                justifyContent: 'center', 
-                                                padding: '10px', 
-                                                border: '2px dashed #dadce0', 
-                                                borderRadius: '4px', 
-                                                cursor: 'pointer', 
-                                                color: '#1967d2',
-                                                gap: '8px',
-                                                marginTop: '8px'
-                                            }}>
-                                                <input 
-                                                    type="file" 
-                                                    multiple 
-                                                    onChange={handleFileChange} 
-                                                    style={{ display: 'none' }} 
-                                                    disabled={uploading}
-                                                />
-                                                <FontAwesomeIcon icon={uploading ? faPlus : faPaperclip} spin={uploading} />
-                                                {uploading ? 'Đang tải lên...' : 'Thêm tệp đính kèm'}
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div className="modal-actions">
-                                        <button type="button" onClick={() => {
-                                            setShowEditModal(false);
-                                            setEditingPost(null);
-                                            setPostTitle('');
-                                            setPostContent('');
-                                            setAttachments([]);
-                                        }}>Hủy</button>
-                                        <button type="submit" className="confirm-btn">Lưu thay đổi</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    )}
                 </div>
-            ) : selectedClass ? (
-                // This closing paren balances the selectedAssignment ternary above
-                <></>
+                </div>
             ) : (
-                <>
-                    <div className="content-header">
-                        <div>
-                            {isTeacher ? (
-                                <button className="create-btn" onClick={() => setShowCreateModal(true)}>
-                                    <FontAwesomeIcon icon={faPlus} style={{ marginRight: '8px' }} />
-                                    Tạo lớp học
-                                </button>
-                            ) : (
-                                <button className="create-btn" onClick={() => setShowJoinModal(true)}>
-                                    <FontAwesomeIcon icon={faSignInAlt} style={{ marginRight: '8px' }} />
-                                    Tham gia lớp học
-                                </button>
-                            )}
-                        </div>
+                <div className="class-empty-state">
+                    <div className="class-empty-state-icon">
+                        <FontAwesomeIcon icon={faUsers} />
                     </div>
+                    <div className="class-empty-state-text">
+                        {isTeacher ? "Bạn chưa tạo lớp học nào." : "Bạn chưa tham gia lớp học nào."}
+                    </div>
+                </div>
+            )}
+            </div>
 
-                    <div className="dashboard-grid">
-                        {classes.length === 0 ? (
-                            <div style={{ textAlign: 'center', gridColumn: '1/-1', padding: '50px' }}>
-                                <FontAwesomeIcon icon={faUsers} size="3x" style={{ color: '#ccc', marginBottom: '20px' }} />
-                                <p>{isTeacher ? "Bạn chưa tạo lớp học nào." : "Bạn chưa tham gia lớp học nào."}</p>
+            {showPostModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content-custom" style={{ width: '500px' }}>
+                        <h2>Tạo bài đăng mới</h2>
+                        <form onSubmit={handleCreatePost}>
+                            <div className="form-group">
+                                <label>Loại bài đăng</label>
+                                <select 
+                                    value={postType} 
+                                    onChange={(e) => setPostType(e.target.value)}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', marginBottom: '15px' }}
+                                >
+                                    <option value="announcement">Thông báo</option>
+                                    <option value="material">Tài liệu</option>
+                                    <option value="assignment">Bài tập</option>
+                                </select>
                             </div>
-                        ) : (
-                            classes.map((cls) => (
-                                <div key={cls.id} className="course-card-custom" onClick={() => setSelectedClass(cls)} style={{ cursor: 'pointer' }}>
-                                    <div className="course-header-custom" style={{ 
-                                        backgroundImage: `url('https://www.gstatic.com/classroom/themes/img_read.jpg')`,
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center',
-                                        height: '100px',
-                                        padding: '16px',
-                                        borderTopLeftRadius: '8px',
-                                        borderTopRightRadius: '8px',
-                                        position: 'relative',
-                                        color: 'white'
-                                    }}>
-                                        <div className="course-header-content">
-                                            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '500' }}>{cls.name}</h3>
-                                            <p style={{ margin: '4px 0', fontSize: '14px' }}>{cls.teacherName || "Giáo viên"}</p>
-                                        </div>
-                                        <div className="teacher-avatar-wrapper">
-                                            <div className="teacher-avatar">
-                                                {cls.teacherAvatar ? (
-                                                    <img src={cls.teacherAvatar} alt={cls.teacherName} />
-                                                ) : (
-                                                    <div className="avatar-placeholder">
-                                                        {cls.teacherName ? cls.teacherName.charAt(0).toUpperCase() : 'L'}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <button className="more-btn-custom" onClick={(e) => { e.stopPropagation(); }}><FontAwesomeIcon icon={faEllipsisH} /></button>
-                                    </div>
-                                    
-                                    <div className="course-body-custom" style={{ height: '100px', padding: '16px' }}>
-                                    </div>
+                            <div className="form-group">
+                                <label>Tiêu đề</label>
+                                <input 
+                                    type="text" 
+                                    value={postTitle} 
+                                    onChange={(e) => setPostTitle(e.target.value)}
+                                    placeholder="Nhập tiêu đề"
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Nội dung</label>
+                                <textarea 
+                                    value={postContent} 
+                                    onChange={(e) => setPostContent(e.target.value)}
+                                    placeholder="Nhập nội dung bài đăng"
+                                    rows="5"
+                                    style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', minHeight: '100px' }}
+                                    required
+                                ></textarea>
+                            </div>
 
-                                    <div className="course-footer-custom" style={{ 
-                                        borderTop: '1px solid #e0e0e0', 
-                                        padding: '8px 16px', 
-                                        display: 'flex', 
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}>
-                                        <div className="class-info-icons" style={{ display: 'flex', gap: '15px' }}>
-                                            <span onClick={(e) => { e.stopPropagation(); copyToClipboard(cls.joinCode); }}>
-                                                <FontAwesomeIcon icon={faIdBadge} style={{ color: '#5f6368', marginRight: '5px' }} />
-                                                <span style={{ fontSize: '13px', color: '#5f6368' }}>{cls.joinCode}</span>
-                                            </span>
-                                        </div>
-                                        <div className="course-actions-btns">
-                                            <button className="footer-icon-btn" onClick={(e) => e.stopPropagation()}><FontAwesomeIcon icon={faShareAlt} /></button>
-                                        </div>
-                                    </div>
+                            {postType === 'assignment' && (
+                                <div className="form-group deadline-picker-group">
+                                    <label>
+                                        <FontAwesomeIcon icon={faCalendarAlt} style={{ marginRight: '8px', color: '#d93025' }} />
+                                        Hạn nộp bài (Deadline)
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        value={postDeadline}
+                                        onChange={(e) => setPostDeadline(e.target.value)}
+                                        className="deadline-input"
+                                        min={new Date().toISOString().slice(0, 16)}
+                                    />
+                                    {postDeadline && (
+                                        <p className="deadline-preview">
+                                            📅 Hạn nộp: {new Date(postDeadline).toLocaleString('vi-VN', {
+                                                weekday: 'long', year: 'numeric', month: 'long',
+                                                day: 'numeric', hour: '2-digit', minute: '2-digit'
+                                            })}
+                                        </p>
+                                    )}
                                 </div>
-                            ))
-                        )}
+                            )}
+                            
+                            <div className="form-group">
+                                <label>Tập tin đính kèm ({attachments.length})</label>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {attachments.map((att, index) => (
+                                        <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '8px', border: '1px solid #dadce0', borderRadius: '4px', background: '#f8f9fa' }}>
+                                            <FontAwesomeIcon icon={faFileAlt} style={{ marginRight: '8px', color: '#1967d2' }} />
+                                            <span style={{ flex: 1, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{att.fileName}</span>
+                                            <button type="button" onClick={() => removeAttachment(index)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#5f6368' }}>
+                                                <FontAwesomeIcon icon={faTimes} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    
+                                    <label style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center', 
+                                        padding: '10px', 
+                                        border: '2px dashed #dadce0', 
+                                        borderRadius: '4px', 
+                                        cursor: 'pointer', 
+                                        color: '#1967d2',
+                                        gap: '8px',
+                                        marginTop: '8px'
+                                    }}>
+                                        <input 
+                                            type="file" 
+                                            multiple 
+                                            onChange={handleFileChange} 
+                                            style={{ display: 'none' }} 
+                                            disabled={uploading}
+                                        />
+                                        <FontAwesomeIcon icon={uploading ? faPlus : faPaperclip} spin={uploading} />
+                                        {uploading ? 'Đang tải lên...' : 'Thêm tập tin đính kèm'}
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="modal-actions">
+                                <button type="button" onClick={() => setShowPostModal(false)}>Hủy</button>
+                                <button type="submit" className="confirm-btn">Đăng</button>
+                            </div>
+                        </form>
                     </div>
-                </>
+                </div>
+            )}
+
+            {showCreateModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content-custom">
+                        <h2>Tạo lớp học mới</h2>
+                        <form onSubmit={handleCreateClass}>
+                            <div className="form-group">
+                                <label>Tạo lớp học</label>
+                                <input 
+                                    type="text" 
+                                    value={className} 
+                                    onChange={(e) => setClassName(e.target.value)}
+                                    placeholder="Nhập tên lớp học"
+                                    required
+                                />
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" onClick={() => setShowCreateModal(false)}>Hủy</button>
+                                <button type="submit" className="confirm-btn">Tạo</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showJoinModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content-custom">
+                        <h2>Tham gia lớp học</h2>
+                        <form onSubmit={handleJoinClass}>
+                            <div className="form-group">
+                                <label>Mã tham gia</label>
+                                <input 
+                                    type="text" 
+                                    value={joinCode} 
+                                    onChange={(e) => setJoinCode(e.target.value)}
+                                    placeholder="Nhập mã code 6 ký tự"
+                                    maxLength="6"
+                                    required
+                                />
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" onClick={() => setShowJoinModal(false)}>Hủy</button>
+                                <button type="submit" className="confirm-btn">Tham gia</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
 
             {showCreateModal && (
