@@ -744,11 +744,9 @@ const StudentPanel = ({
                         <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className="file-link-name-submitted">
                             {file.fileName}
                         </a>
-                        {!isOverdue && (
-                            <button className="remove-file-btn" onClick={() => handleDeleteFile(file)}>
-                                <FontAwesomeIcon icon={faTimes} />
-                            </button>
-                        )}
+                        <button className="remove-file-btn" onClick={() => handleDeleteFile(file)}>
+                            <FontAwesomeIcon icon={faTimes} />
+                        </button>
                     </div>
                 ))}
 
@@ -764,13 +762,13 @@ const StudentPanel = ({
                     </div>
                 ))}
 
-                <label className="upload-zone" style={{ opacity: isOverdue ? 0.5 : 1 }}>
+                <label className="upload-zone" style={{ opacity: 1 }}>
                     <input
                         type="file"
                         multiple
                         onChange={handleFileChange}
                         style={{ display: 'none' }}
-                        disabled={uploading || isOverdue}
+                        disabled={uploading}
                     />
                     <div className="upload-zone-inner">
                         <FontAwesomeIcon icon={uploading ? faClock : faUpload} className={`upload-icon ${uploading ? 'spin' : ''}`} />
@@ -797,7 +795,7 @@ const StudentPanel = ({
             <div className="student-actions-row">
                 <button
                     className="btn-submit-work"
-                    disabled={!uploadedFiles.length || submitting || uploading || isOverdue}
+                    disabled={!uploadedFiles.length || submitting || uploading}
                     onClick={handleSubmit}
                 >
                     <FontAwesomeIcon icon={faPaperPlane} />

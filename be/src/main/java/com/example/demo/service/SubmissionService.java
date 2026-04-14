@@ -1,8 +1,10 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.SubmissionDTO;
+import com.example.demo.model.AssignmentDeadline;
 import com.example.demo.model.Submission;
 import com.example.demo.model.SubmissionFile;
+import com.example.demo.repository.AssignmentDeadlineRepository;
 import com.example.demo.repository.SubmissionFileRepository;
 import com.example.demo.repository.SubmissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,8 @@ public class SubmissionService {
     private SubmissionRepository submissionRepository;
     @Autowired
     private SubmissionFileRepository submissionFileRepository;
+    @Autowired
+    private AssignmentDeadlineRepository assignmentDeadlineRepository;
 
     @Transactional
     public SubmissionDTO submitAssignment(SubmissionDTO dto) {
@@ -30,25 +34,40 @@ public class SubmissionService {
         final Submission sub;
         if (existing.isPresent()) {
             sub = existing.get();
-            sub.setSubmittedAt(LocalDateTime.now());
+            // Nộp bổ sung giữ nguyên submission, chỉ thêm file
         } else {
             sub = new Submission();
             sub.setPostId(dto.getPostId());
             sub.setStudentId(dto.getStudentId());
+            submissionRepository.save(sub); 
         }
         
-        submissionRepository.save(sub);
-        
-        if (dto.getFiles() != null) {
+        // Thêm các file mới
+        if (dto.getFiles() != null && !dto.getFiles().isEmpty()) {
             for (SubmissionDTO.SubmissionFileDTO fileDto : dto.getFiles()) {
                 SubmissionFile file = new SubmissionFile();
                 file.setSubmissionId(sub.getId());
                 file.setFileUrl(fileDto.getFileUrl());
                 file.setFileName(fileDto.getFileName());
+                file.setUploadedAt(LocalDateTime.now());
                 submissionFileRepository.save(file);
             }
         }
+        List<SubmissionFile> allFiles = submissionFileRepository.findBySubmissionId(sub.getId());
+        if (!allFiles.isEmpty()) {
+            // Lấy file upload sau cùng
+            LocalDateTime latestUploadTime = allFiles.stream()
+                .max((f1, f2) -> f1.getUploadedAt().compareTo(f2.getUploadedAt()))
+                .map(SubmissionFile::getUploadedAt)
+                .orElse(LocalDateTime.now());
+            sub.setSubmittedAt(latestUploadTime);
+            
+            // Tính status dựa trên deadline
+            String newStatus = calculateStatus(sub.getPostId(), latestUploadTime);
+            sub.setStatus(newStatus);
+        }
         
+        submissionRepository.save(sub);
         return getSubmissionById(sub.getId());
     }
 
@@ -59,12 +78,36 @@ public class SubmissionService {
             UUID submissionId = fileOpt.get().getSubmissionId();
             submissionFileRepository.deleteById(fileId);
             
-            // Check if there are any files left
             List<SubmissionFile> remainingFiles = submissionFileRepository.findBySubmissionId(submissionId);
             if (remainingFiles.isEmpty()) {
                 submissionRepository.deleteById(submissionId);
+            } else {
+                // Còn file -> cập nhật submittedAt = file upload sau cùng
+                Submission sub = submissionRepository.findById(submissionId).orElseThrow();
+                
+                LocalDateTime latestUploadTime = remainingFiles.stream()
+                    .max((f1, f2) -> f1.getUploadedAt().compareTo(f2.getUploadedAt()))
+                    .map(SubmissionFile::getUploadedAt)
+                    .orElse(LocalDateTime.now());
+                
+                sub.setSubmittedAt(latestUploadTime);
+                String newStatus = calculateStatus(sub.getPostId(), latestUploadTime);
+                sub.setStatus(newStatus);
+                
+                submissionRepository.save(sub);
             }
         }
+    }
+
+    private String calculateStatus(UUID postId, LocalDateTime submittedAt) {
+        Optional<AssignmentDeadline> deadline = assignmentDeadlineRepository.findByPostId(postId);
+        if (deadline.isPresent()) {
+            LocalDateTime deadlineTime = deadline.get().getDueAt();
+            if (submittedAt.isAfter(deadlineTime)) {
+                return "late";
+            }
+        }
+        return "submitted";
     }
 
     public List<SubmissionDTO> getSubmissionsByPost(UUID postId) {
@@ -105,6 +148,7 @@ public class SubmissionService {
                         fDto.setId(f.getId());
                         fDto.setFileUrl(f.getFileUrl());
                         fDto.setFileName(f.getFileName());
+                        fDto.setUploadedAt(f.getUploadedAt());
                         return fDto;
                     }).collect(Collectors.toList());
             dto.setFiles(files);
@@ -132,6 +176,7 @@ public class SubmissionService {
                     fDto.setId(f.getId());
                     fDto.setFileUrl(f.getFileUrl());
                     fDto.setFileName(f.getFileName());
+                    fDto.setUploadedAt(f.getUploadedAt());
                     return fDto;
                 }).collect(Collectors.toList());
     }
