@@ -470,7 +470,7 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                 <div className="assignment-comments-section" style={{ marginTop: '24px' }}>
                                     <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#3c4043' }}>
                                         <FontAwesomeIcon icon={faUsers} />
-                                        Nhận xét của lớp học ({comments.length})
+                                        Bình luận của lớp học ({comments.length})
                                     </h4>
                             
                             <div className="comments-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
@@ -515,7 +515,7 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <textarea 
-                                        placeholder="Thêm nhận xét cho lớp học..."
+                                        placeholder="Thêm bình luận cho lớp học..."
                                         className="comment-textarea"
                                         value={newComment}
                                         onChange={(e) => setNewComment(e.target.value)}

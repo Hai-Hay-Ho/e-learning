@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.model.Conversation;
 import com.example.demo.model.Message;
+import com.example.demo.model.MessageEdit;
 import com.example.demo.service.ChatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -44,5 +45,29 @@ public class ChatController {
                 UUID.fromString(payload.get("senderId").toString()),
                 payload.get("content").toString()
         ));
+    }
+
+    @PutMapping("/messages/{messageId}")
+    public ResponseEntity<Message> editMessage(
+            @PathVariable UUID messageId,
+            @RequestBody Map<String, String> payload) {
+        return ResponseEntity.ok(chatService.updateMessage(messageId, payload.get("content")));
+    }
+
+    @GetMapping("/messages/{messageId}/edits")
+    public ResponseEntity<List<MessageEdit>> getMessageEdits(@PathVariable UUID messageId) {
+        return ResponseEntity.ok(chatService.getMessageEdits(messageId));
+    }
+
+    @GetMapping("/messages/{messageId}/can-recall")
+    public ResponseEntity<Map<String, Boolean>> canRecallMessage(@PathVariable UUID messageId) {
+        boolean canRecall = chatService.canRecallMessage(messageId);
+        return ResponseEntity.ok(Map.of("canRecall", canRecall));
+    }
+
+    @DeleteMapping("/messages/{messageId}")
+    public ResponseEntity<Void> deleteMessage(@PathVariable UUID messageId) {
+        chatService.recallMessage(messageId);
+        return ResponseEntity.ok().build();
     }
 }

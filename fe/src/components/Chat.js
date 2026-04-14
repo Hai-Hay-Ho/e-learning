@@ -27,6 +27,8 @@ const Chat = ({ session, userData, pendingConversation }) => {
     const [editingMessageId, setEditingMessageId] = useState(null);
     const [editingContent, setEditingContent] = useState('');
     const [detailMessageId, setDetailMessageId] = useState(null);
+    const [messageEdits, setMessageEdits] = useState({});
+    const [recallLimitExceeded, setRecallLimitExceeded] = useState({});
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -293,6 +295,23 @@ const Chat = ({ session, userData, pendingConversation }) => {
 
     const handleDeleteMessage = async (messageId) => {
         try {
+            // Check if message is within 3 hours
+            const message = messages.find(m => m.id === messageId);
+            if (!message) return;
+
+            const createdTime = new Date(message.created_at);
+            const now = new Date();
+            const hoursDifference = (now - createdTime) / (1000 * 60 * 60);
+
+            if (hoursDifference >= 3) {
+                alert('Tin nhắn đã gửi quá 3 giờ, không thể thu hồi');
+                setRecallLimitExceeded(prev => ({
+                    ...prev,
+                    [messageId]: true
+                }));
+                return;
+            }
+
             const { error } = await supabase
                 .from('messages')
                 .delete()
@@ -319,9 +338,30 @@ const Chat = ({ session, userData, pendingConversation }) => {
         if (!editingContent.trim() || !editingMessageId) return;
 
         try {
+            const currentMessage = messages.find(m => m.id === editingMessageId);
+            
+            // Lưu lịch sử chỉnh sửa
+            const { data: editData, error: editError } = await supabase
+                .from('message_edits')
+                .insert([{
+                    message_id: editingMessageId,
+                    old_content: currentMessage.content,
+                    edited_at: new Date().toISOString()
+                }])
+                .select();
+
+            if (editError) {
+                console.error('Error saving edit history:', editError);
+            }
+
+            // Cập nhật nội dung tin nhắn
             const { error } = await supabase
                 .from('messages')
-                .update({ content: editingContent })
+                .update({ 
+                    content: editingContent,
+                    is_edited: true,
+                    updated_at: new Date().toISOString()
+                })
                 .eq('id', editingMessageId);
             
             if (error) {
@@ -330,7 +370,7 @@ const Chat = ({ session, userData, pendingConversation }) => {
                 setMessages(prev => 
                     prev.map(msg => 
                         msg.id === editingMessageId 
-                            ? { ...msg, content: editingContent }
+                            ? { ...msg, content: editingContent, is_edited: true, updated_at: new Date().toISOString() }
                             : msg
                     )
                 );
@@ -345,6 +385,40 @@ const Chat = ({ session, userData, pendingConversation }) => {
     const handleCancelEdit = () => {
         setEditingMessageId(null);
         setEditingContent('');
+    };
+
+    const canRecallMessage = (message) => {
+        if (!message.created_at) return false;
+        try {
+            // created_at từ Supabase là UTC nhưng backend lưu thiếu 7 giờ, cộng 7 tiếng để bù
+            const createdTime = new Date(message.created_at);
+            const createdTimeVN = new Date(createdTime.getTime() + 7 * 60 * 60 * 1000);
+            const now = new Date();
+            const timeDiffMs = now.getTime() - createdTimeVN.getTime();
+            const hoursDifference = timeDiffMs / (1000 * 60 * 60);
+            return hoursDifference < 3 && hoursDifference >= 0;
+        } catch (e) {
+            return false;
+        }
+    };
+
+    const fetchMessageEdits = async (messageId) => {
+        try {
+            const { data, error } = await supabase
+                .from('message_edits')
+                .select('*')
+                .eq('message_id', messageId)
+                .order('edited_at', { ascending: false });
+            
+            if (!error && data) {
+                setMessageEdits(prev => ({
+                    ...prev,
+                    [messageId]: data
+                }));
+            }
+        } catch (error) {
+            console.error('Error fetching edits:', error);
+        }
     };
 
     return (
@@ -451,6 +525,7 @@ const Chat = ({ session, userData, pendingConversation }) => {
                                         
                                         <div className="message-wrapper">
                                             <div className="message-bubble">
+                                                {msg.is_edited && <div className="edited-badge">Đã chỉnh sửa</div>}
                                                 {!isMe && <div className="sender-name">{selectedConversation.otherUser?.full_name} <span className="time">{formatTime(msg.created_at)}</span></div>}
                                                 
                                                 {isEditing ? (
@@ -467,7 +542,9 @@ const Chat = ({ session, userData, pendingConversation }) => {
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <div className="message-text">{msg.content}</div>
+                                                    <div className="message-text">
+                                                        {msg.content}
+                                                    </div>
                                                 )}
                                                 
                                                 {isMe && !isEditing && (
@@ -530,20 +607,25 @@ const Chat = ({ session, userData, pendingConversation }) => {
                                                             Chỉnh sửa
                                                         </button>
                                                         
-                                                        <button 
-                                                            className="dropdown-item"
-                                                            onClick={() => {
-                                                                handleDeleteMessage(msg.id);
-                                                                setOpenMenuId(null);
-                                                            }}
-                                                        >
-                                                            Thu hồi
-                                                        </button>
+                                                        {canRecallMessage(msg) && (
+                                                            <button 
+                                                                className="dropdown-item"
+                                                                onClick={() => {
+                                                                    handleDeleteMessage(msg.id);
+                                                                    setOpenMenuId(null);
+                                                                }}
+                                                            >
+                                                                Thu hồi
+                                                            </button>
+                                                        )}
                                                         
                                                         <button 
                                                             className="dropdown-item"
                                                             onClick={() => {
                                                                 setDetailMessageId(msg.id);
+                                                                if (msg.is_edited) {
+                                                                    fetchMessageEdits(msg.id);
+                                                                }
                                                                 setOpenMenuId(null);
                                                             }}
                                                         >
@@ -573,6 +655,18 @@ const Chat = ({ session, userData, pendingConversation }) => {
                                         <p className="detail-date">
                                             Gửi lúc: <strong>{formatDetailDate(messages.find(m => m.id === detailMessageId)?.created_at)}</strong>
                                         </p>
+                                        
+                                        {messages.find(m => m.id === detailMessageId)?.is_edited && (
+                                            <div className="edit-history">
+                                                <p className="edit-label">Đã chỉnh sửa</p>
+                                                {messageEdits[detailMessageId]?.map((edit, idx) => (
+                                                    <div key={idx} className="edit-item">
+                                                        <p className="edit-time">Lần {idx + 1}: {formatDetailDate(edit.edited_at)}</p>
+                                                        <p className="edit-content">Tin nhắn cũ: {edit.old_content}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

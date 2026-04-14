@@ -761,3 +761,59 @@
 .detail-date strong {
     color: #1a73e8;
 }
+
+/* Edited badge on top of bubble */
+.edited-badge {
+    font-size: 0.65rem;
+    color: #1a73e8;
+    font-style: italic;
+    display: block;
+    font-weight: 500;
+    width: 90%;
+    position: absolute;
+    top: -15px;
+    right: 0px;
+    border-radius: 4px;
+}
+
+/* Edit history in modal */
+.edit-history {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.edit-label {
+    font-weight: 600;
+    color: #202124;
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+}
+
+.edit-item {
+    margin-bottom: 12px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 3px solid #1a73e8;
+}
+
+.edit-time {
+    margin: 0 0 6px 0;
+    font-size: 0.8rem;
+    color: #5f6368;
+    font-weight: 500;
+}
+
+.edit-content {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #202124;
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+
+/* Disabled dropdown item */
+.dropdown-item.disabled {
+    display: none;
+}
