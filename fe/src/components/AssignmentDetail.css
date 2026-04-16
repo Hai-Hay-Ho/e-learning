@@ -2,15 +2,17 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #fff;
+    background: #f8fafc;
 }
 
 .assignment-header {
     display: flex;
     align-items: center;
-    padding: 12px 24px;
-    border-bottom: 1px solid #e0e0e0;
+    padding: 14px 24px;
+    border-bottom: 1px solid #e2e8f0;
     gap: 16px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .back-btn {
@@ -18,13 +20,14 @@
     border: none;
     cursor: pointer;
     padding: 8px;
-    border-radius: 50%;
-    color: #5f6368;
-    transition: background 0.2s;
+    border-radius: 10px;
+    color: #64748b;
+    transition: all 0.2s;
 }
 
 .back-btn:hover {
-    background: #f1f3f4;
+    background: #f1f5f9;
+    color: #6366f1;
 }
 
 .assignment-content-layout {
@@ -36,49 +39,54 @@
 .assignment-left-panel {
     flex: 1;
     overflow-y: auto;
-    padding: 24px;
-    border-right: 1px solid #e0e0e0;
+    padding: 28px;
+    border-right: 1px solid #e2e8f0;
+    background: #f8fafc;
 }
 
 .assignment-right-panel {
-    width: 350px;
-    background: #f8f9fa;
+    width: 380px;
+    background: #ffffff;
     display: flex;
     flex-direction: column;
+    border-left: 1px solid #e2e8f0;
 }
 
 .post-header-detail {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
+    gap: 14px;
+    margin-bottom: 18px;
 }
 
 .user-avatar-lg {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: #3c4043;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
     color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    font-weight: 500;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
 }
 
 .post-title-section h2 {
     margin: 0;
-    font-size: 24px;
-    font-weight: 500;
-    color: #1a73e8;
+    font-size: 22px;
+    font-weight: 700;
+    color: #6366f1;
+    letter-spacing: -0.3px;
 }
 
 .post-meta-detail {
-    font-size: 14px;
-    color: #5f6368;
+    font-size: 13px;
+    color: #64748b;
     display: flex;
     gap: 12px;
+    font-weight: 500;
 }
 
 .post-body-detail {
@@ -86,14 +94,14 @@
 }
 
 .post-content-text {
-    font-size: 16px;
-    line-height: 1.6;
-    color: #3c4043;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #475569;
     white-space: pre-wrap;
     margin-bottom: 24px;
 }
 
-/* Attachments */
+
 .detail-attachments {
     display: flex;
     flex-wrap: wrap;
@@ -104,24 +112,29 @@
 .detail-attachment-card {
     display: flex;
     align-items: center;
-    padding: 12px;
-    border: 1px solid #dadce0;
-    border-radius: 8px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
     text-decoration: none;
-    color: #3c4043;
+    color: #475569;
     background: #fff;
     min-width: 280px;
-    transition: background 0.2s, box-shadow 0.2s;
+    transition: all 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .detail-attachment-card:hover {
-    background: #f8f9fa;
-    box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+    background: #f8fafc;
+    border-color: #c7d2fe;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
+    transform: translateY(-1px);
 }
 
-/* Comments section */
+/* ============================================
+   COMMENTS SECTION
+   ============================================ */
 .comments-section-detail {
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid #e2e8f0;
     padding-top: 24px;
     margin-top: 40px;
 }
@@ -131,23 +144,36 @@
     align-items: center;
     gap: 8px;
     margin-bottom: 20px;
-    color: #3c4043;
-    font-weight: 500;
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 16px;
 }
 
 .comment-list-full {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 18px;
     margin-bottom: 24px;
 }
 
 .comment-item-full {
     display: flex;
     gap: 12px;
+    padding: 14px;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    transition: all 0.15s;
 }
 
-/* Student Panel Updates */
+.comment-item-full:hover {
+    border-color: #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* ============================================
+   STUDENT PANEL UPDATES
+   ============================================ */
 .student-actions-row {
     display: flex;
     flex-direction: column;
@@ -157,56 +183,74 @@
 
 .btn-submit-work {
     width: 100%;
-    padding: 10px;
-    background-color: #1a73e8;
+    padding: 12px;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
     color: white;
     border: none;
-    border-radius: 4px;
-    font-weight: 500;
+    border-radius: 12px;
+    font-weight: 700;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
 .btn-submit-work:hover:not(:disabled) {
-    background-color: #1765cc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
 .btn-submit-work:disabled {
-    background-color: #ccc;
+    background: #e2e8f0;
+    color: #94a3b8;
     cursor: not-allowed;
+    box-shadow: none;
 }
 
 .btn-unsubmit-simple {
     width: 100%;
-    padding: 8px;
+    padding: 10px;
     background: white;
-    color: #5f6368;
-    border: 1px solid #dadce0;
-    border-radius: 4px;
-    font-size: 14px;
+    color: #64748b;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-unsubmit-simple:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: #fef2f2;
 }
 
 .submitted-files-section {
     background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px;
     margin-bottom: 16px;
 }
 
 .submitted-files-section h4 {
     margin: 0 0 12px 0;
-    font-size: 14px;
-    color: #3c4043;
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .submitted-files-list {
@@ -220,28 +264,36 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px;
-    background: #f8f9fa;
-    border-radius: 4px;
+    padding: 10px;
+    background: #f8fafc;
+    border-radius: 10px;
     text-decoration: none;
-    color: #1a73e8;
+    color: #6366f1;
     font-size: 13px;
-    transition: background 0.2s;
+    font-weight: 600;
+    transition: all 0.15s;
+    border: 1px solid transparent;
 }
 
 .sdp-file-link:hover {
-    background: #f1f3f4;
+    background: #eef2ff;
+    border-color: #c7d2fe;
 }
 
 .submitted-at-text {
     font-size: 12px;
-    color: #5f6368;
+    color: #94a3b8;
     margin: 0;
     font-style: italic;
 }
 
 .student-grade-card {
     display: flex;
+    gap: 14px;
+    padding: 16px;
+    background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+    border: 1px solid #a7f3d0;
+    border-radius: 14px;
 }
 
 /* Style for files in upload zone */
@@ -249,26 +301,27 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px;
-    background: #f8f9fa;
-    border: 1px solid #dadce0;
-    border-radius: 4px;
+    padding: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     margin-bottom: 8px;
 }
 
 .uploaded-file-item.submitted {
     background: #fff;
-    border: 1px dashed #1a73e8;
+    border: 1.5px dashed #6366f1;
 }
 
 .file-link-name-submitted {
     flex: 1;
-    font-size: 14px;
-    color: #1a73e8;
+    font-size: 13px;
+    color: #6366f1;
     text-decoration: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 600;
 }
 
 .file-link-name-submitted:hover {
@@ -278,34 +331,40 @@
 .remove-file-btn {
     background: none;
     border: none;
-    color: #5f6368;
+    color: #94a3b8;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 6px 8px;
+    border-radius: 8px;
     transition: all 0.2s;
 }
 
+.remove-file-btn:hover {
+    background: #fef2f2;
+    color: #ef4444;
+}
 
 .grade-circle-container {
     flex-shrink: 0;
 }
 
 .grade-circle {
-    width: 50px;
-    height: 50px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    background: #1a73e8;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
+    font-weight: 800;
     font-size: 18px;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .grade-circle span {
-    font-size: 12px;
+    font-size: 11px;
     opacity: 0.8;
+    font-weight: 500;
 }
 
 .grade-info-container {
@@ -313,75 +372,94 @@
 }
 
 .grade-label {
-    font-weight: 600;
-    color: #1a73e8;
+    font-weight: 700;
+    color: #6366f1;
     margin: 0 0 4px 0;
+    font-size: 14px;
 }
 
 .grade-comment-text {
-    font-size: 14px;
-    color: #3c4043;
+    font-size: 13px;
+    color: #64748b;
     margin: 0;
     font-style: italic;
+    line-height: 1.5;
 }
 
+/* ============================================
+   COMMENT INPUT
+   ============================================ */
 .add-comment-detail {
     display: flex;
     gap: 12px;
     align-items: flex-start;
     background: #fff;
-    border-radius: 12px;
-    
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     margin-top: 20px;
+    padding: 4px;
 }
 
 .comment-textarea {
     width: 95%;
     padding: 12px 16px;
-    border-radius: 8px;
-    border: 1px solid #dadce0;
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
     font-size: 14px;
     min-height: 44px;
     max-height: 200px;
     resize: none;
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    background-color: #f8f9fa;
+    transition: all 0.2s;
+    background-color: #f8fafc;
+    font-family: 'Inter', sans-serif;
+    color: #0f172a;
 }
 
 .comment-textarea:focus {
-    border-color: #1a73e8;
+    border-color: #6366f1;
     background-color: #fff;
-    box-shadow: inset 0 0 0 1px #1a73e8;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+}
+
+.comment-textarea::placeholder {
+    color: #94a3b8;
 }
 
 .comment-submit-btn {
-    padding: 8px 24px;
+    padding: 9px 24px;
     border-radius: 24px;
     cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: 700;
+    font-size: 13px;
     display: flex;
     align-items: center;
     gap: 8px;
     transition: all 0.2s;
     border: none;
+    font-family: 'Inter', sans-serif;
 }
 
 .comment-submit-btn.active {
-    background: #1a73e8;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
     color: white;
-    box-shadow: 0 1px 2px rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.comment-submit-btn.active:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
 .comment-submit-btn.disabled {
-    background: #e0e0e0;
-    color: #70757a;
+    background: #e2e8f0;
+    color: #94a3b8;
     cursor: default;
 }
 
-/* My Work Panel (Student) */
+/* ============================================
+   MY WORK PANEL
+   ============================================ */
 .my-work-panel {
     padding: 24px;
     display: flex;
@@ -391,74 +469,82 @@
 
 .my-work-card {
     background: #fff;
-    padding: 16px;
-    border-radius: 8px;
-    box-shadow: 0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
+    padding: 18px;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
 }
 
 /* Status colors */
-.status-assigned { color: #5f6368; font-weight: 500; }
-.status-turned-in { color: #1e8e3e; font-weight: 500; }
-.status-missing { color: #d93025; font-weight: 500; }
+.status-assigned { color: #64748b; font-weight: 600; }
+.status-turned-in { color: #10b981; font-weight: 600; }
+.status-missing { color: #ef4444; font-weight: 600; }
 
-/* Teacher Panel Status and Filter box */
+/* ============================================
+   TEACHER PANEL STATUS AND FILTER
+   ============================================ */
 .stat-box {
     transition: all 0.2s ease;
     border: 2px solid transparent;
+    cursor: pointer;
+    border-radius: 12px;
 }
 
 .stat-box:hover {
-    background-color: #f1f3f4 !important;
     transform: translateY(-2px);
 }
 
 .stat-box.active {
-    box-shadow: 0 2px 6px rgba(26, 115, 232, 0.2);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
 }
 
 .stat-box.submitted.active {
-    border-color: #188038 !important;
-    background-color: #e6f4ea !important;
+    border-color: #10b981 !important;
+    background-color: #ecfdf5 !important;
 }
 
 .stat-box.overdue.active {
-    border-color: #d93025 !important;
-    background-color: #fce8e6 !important;
+    border-color: #ef4444 !important;
+    background-color: #fef2f2 !important;
 }
 
 .stat-box.graded.active {
-    border-color: #1a73e8 !important;
-    background-color: #e8f0fe !important;
+    border-color: #6366f1 !important;
+    background-color: #eef2ff !important;
 }
 
 .submission-row {
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    border-radius: 12px;
 }
 
 .submission-row:hover {
-    background-color: #f1f3f4;
+    background-color: #f1f5f9;
 }
 
 .submission-row.selected {
-    background-color: #e8f0fe !important;
+    background-color: #eef2ff !important;
 }
 
 .late-badge, .submitted-badge {
     display: inline-block;
     white-space: nowrap;
+    font-weight: 600;
+    font-size: 12px;
 }
 
-/* ====================================================
+/* ============================================
    GRADING MODAL
-   ==================================================== */
+   ============================================ */
 .grading-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -473,13 +559,13 @@
 
 .grading-modal-content {
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
     width: 90%;
     max-width: 600px;
     max-height: 85vh;
     overflow-y: auto;
-    animation: slideUp 0.3s ease;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes slideUp {
@@ -491,11 +577,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px;
-    border-bottom: 1px solid #dadce0;
+    padding: 22px 24px;
+    border-bottom: 1px solid #e2e8f0;
     position: sticky;
     top: 0;
     background: white;
+    border-radius: 20px 20px 0 0;
+    z-index: 1;
 }
 
 .student-info-header {
@@ -509,15 +597,16 @@
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: #1967d2;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
+    font-weight: 800;
     font-size: 18px;
     overflow: hidden;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
 }
 
 .student-avatar-modal img {
@@ -529,17 +618,19 @@
 .student-info-header h2 {
     margin: 0;
     font-size: 18px;
-    color: #202124;
+    color: #0f172a;
+    font-weight: 700;
+    letter-spacing: -0.2px;
 }
 
 .modal-close-btn {
     width: 36px;
     height: 36px;
     border: none;
-    background: #f1f3f4;
-    border-radius: 50%;
+    background: #f1f5f9;
+    border-radius: 10px;
     cursor: pointer;
-    color: #5f6368;
+    color: #64748b;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -547,43 +638,48 @@
 }
 
 .modal-close-btn:hover {
-    background: #dadce0;
-    color: #202124;
+    background: #e2e8f0;
+    color: #0f172a;
 }
 
 .grading-modal-files {
-    padding: 20px;
-    border-bottom: 1px solid #dadce0;
-    background: #f8f9fa;
+    padding: 22px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
 }
 
 .grading-modal-files h4 {
     margin: 0 0 12px;
-    font-size: 14px;
-    color: #3c4043;
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .modal-file-link {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px;
-    border: 1px solid #dadce0;
-    border-radius: 8px;
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     text-decoration: none;
-    color: #3c4043;
+    color: #475569;
     background: white;
     margin-bottom: 8px;
     transition: all 0.2s;
 }
 
 .modal-file-link:hover {
-    background: #e8f0fe;
-    border-color: #1967d2;
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #6366f1;
 }
 
 .modal-file-link svg {
     flex-shrink: 0;
+    color: #6366f1;
 }
 
 .modal-file-link span {
@@ -592,52 +688,57 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 13px;
+    font-weight: 600;
 }
 
 .grading-modal-form {
-    padding: 20px;
+    padding: 24px;
 }
 
 .grading-modal-form h4 {
-    margin: 0 0 16px;
+    margin: 0 0 18px;
     font-size: 16px;
-    color: #202124;
+    color: #0f172a;
+    font-weight: 700;
 }
 
 .grade-form-group {
-    margin-bottom: 16px;
+    margin-bottom: 18px;
 }
 
 .grade-form-group label {
     display: block;
     font-size: 13px;
-    font-weight: 500;
-    color: #3c4043;
+    font-weight: 600;
+    color: #475569;
     margin-bottom: 8px;
 }
 
 .grade-input,
 .grade-comment {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #dadce0;
-    border-radius: 6px;
+    padding: 11px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
     font-size: 14px;
-    font-family: inherit;
+    font-family: 'Inter', sans-serif;
     box-sizing: border-box;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
+    color: #0f172a;
+    background: #f8fafc;
 }
 
 .grade-input:focus,
 .grade-comment:focus {
     outline: none;
-    border-color: #1967d2;
-    box-shadow: 0 0 0 2px rgba(25, 103, 210, 0.1);
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+    background: #fff;
 }
 
 .grade-input {
     font-size: 16px;
-    font-weight: 500;
+    font-weight: 700;
 }
 
 .grade-comment {
@@ -647,29 +748,30 @@
 
 .grading-modal-actions {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     justify-content: flex-end;
-    margin-top: 20px;
+    margin-top: 24px;
 }
 
 .btn-cancel,
 .btn-submit {
-    padding: 10px 20px;
-    border-radius: 6px;
+    padding: 11px 22px;
+    border-radius: 12px;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     border: none;
     transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
 }
 
 .btn-cancel {
-    background: #f1f3f4;
-    color: #3c4043;
+    background: #f1f5f9;
+    color: #475569;
 }
 
 .btn-cancel:hover:not(:disabled) {
-    background: #dadce0;
+    background: #e2e8f0;
 }
 
 .btn-cancel:disabled {
@@ -678,22 +780,21 @@
 }
 
 .btn-submit {
-    background: #1967d2;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
 .btn-submit:hover:not(:disabled) {
-    background: #1557b0;
-    box-shadow: 0 2px 8px rgba(25, 103, 210, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
 .btn-submit:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
-
-
