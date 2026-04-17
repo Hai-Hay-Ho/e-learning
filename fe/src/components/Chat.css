@@ -15,6 +15,7 @@
 
 .chat-sidebar-header {
     padding: 24px 20px 16px;
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .chat-app-logo {

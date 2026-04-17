@@ -40,7 +40,11 @@ const Sidebar = ({ userRole, activeTab, setActiveTab }) => {
                 >
                     <span className="icon"><FontAwesomeIcon icon={faLayerGroup} /></span> Classes
                 </div>
-                <div className="menu-item">
+                <div 
+                    className={`menu-item ${activeTab === 'Quizzes' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('Quizzes')}
+                    style={{ cursor: 'pointer' }}
+                >
                     <span className="icon"><FontAwesomeIcon icon={faChartLine} /></span> Quizzes
                 </div>
                 {isTeacher && (

@@ -369,10 +369,8 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
                 setClassName('');
             } else {
                 const errorData = await response.json();
-                setError(errorData.message || "Kh�ng th? t?o l?p h?c");
             }
         } catch (err) {
-            setError("L?i k?t n?i server");
             console.error(err);
         }
     };
@@ -418,7 +416,6 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
                 <div className="class-sidebar">
                     <div className="class-sidebar-header">
                         <div className="class-app-logo">
-                            <FontAwesomeIcon icon={faUsers} className="class-logo-icon" />
                             <span>E-Classes</span>
                         </div>
                         

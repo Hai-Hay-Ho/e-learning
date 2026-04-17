@@ -6,6 +6,7 @@ import MainContent from './components/Dashboard';
 import ClassPage from './components/Class';
 import Login from './auth/Login';
 import Chat from './components/Chat';
+import EQuizz from './components/EQuizz';
 import { supabase } from './supabaseClient';
 
 function App() {
@@ -92,8 +93,8 @@ function App() {
         }
       }} />
 
-      <div className={`main-wrapper ${activeTab === 'Messages' || activeTab === 'Classes' ? 'no-padding' : ''}`}>
-        {activeTab !== 'Messages' && activeTab !== 'Classes' && (
+      <div className={`main-wrapper ${activeTab === 'Messages' || activeTab === 'Classes' || activeTab === 'Quizzes' ? 'no-padding' : ''}`}>
+        {activeTab !== 'Messages' && activeTab !== 'Classes' && activeTab !== 'Quizzes' && (
           <Header session={session} userData={userData} onLoginClick={() => setShowLogin(true)} />
         )}
 
@@ -109,6 +110,8 @@ function App() {
             />
           ) : activeTab === 'Messages' ? (
             <Chat session={session} userData={userData} pendingConversation={pendingConversation} />
+          ) : activeTab === 'Quizzes' ? (
+            <EQuizz session={session} userRole={userRole} />
           ) : (
             <MainContent session={session} />
           )
