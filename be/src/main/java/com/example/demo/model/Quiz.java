@@ -25,6 +25,9 @@ public class Quiz {
     @Column(name = "created_by")
     private UUID createdBy;
 
+    @Column(name = "deadline")
+    private LocalDateTime deadline;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 

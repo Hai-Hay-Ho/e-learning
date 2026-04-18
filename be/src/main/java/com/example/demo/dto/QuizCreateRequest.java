@@ -15,6 +15,7 @@ public class QuizCreateRequest {
         private Integer durationMinutes;
         private UUID classId;
         private UUID createdBy;
+        private java.time.LocalDateTime deadline;
     }
 
     @Data

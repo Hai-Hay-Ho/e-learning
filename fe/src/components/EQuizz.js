@@ -32,8 +32,7 @@ import { faYoutube } from '@fortawesome/free-brands-svg-icons';
 import './EQuizz.css';
 import { supabase } from '../supabaseClient';
 
-const EQuizz = ({ session, userRole }) => {
-    const [classes, setClasses] = useState([]);
+const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
     const [selectedClass, setSelectedClass] = useState(null);
     const [loading, setLoading] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -41,6 +40,7 @@ const EQuizz = ({ session, userRole }) => {
     const [quizzes, setQuizzes] = useState([]);
     const [quizTitle, setQuizTitle] = useState('');
     const [durationMinutes, setDurationMinutes] = useState(15);
+    const [deadline, setDeadline] = useState('');
     const [editingQuizId, setEditingQuizId] = useState(null);
     const [prevClassId, setPrevClassId] = useState(null);
     const [questions, setQuestions] = useState([
@@ -69,7 +69,6 @@ const EQuizz = ({ session, userRole }) => {
 
     useEffect(() => {
         if (session?.user?.id) {
-            fetchClasses();
             fetchAttempts();
         }
     }, [session]);
@@ -78,7 +77,6 @@ const EQuizz = ({ session, userRole }) => {
         if (selectedClass) {
             fetchQuizzes(selectedClass.id);
             
-            // Chỉ reset trạng thái nếu thực sự chuyển sang một lớp học KHÁC
             if (prevClassId !== selectedClass.id) {
                 stopQuiz();
                 setIsCreating(false);
@@ -86,7 +84,6 @@ const EQuizz = ({ session, userRole }) => {
                 setPrevClassId(selectedClass.id);
             }
             
-            // Realtime subscription (giữ nguyên)
             const channel = supabase
                 .channel(`class-quizzes-${selectedClass.id}`)
                 .on(
@@ -110,8 +107,6 @@ const EQuizz = ({ session, userRole }) => {
                         table: 'questions'
                     },
                     () => {
-                        // For questions/answers, we reload the whole list to be safe
-                        // as we can't easily filter by class_id here without complex joins
                         fetchQuizzes(selectedClass.id);
                     }
                 )
@@ -120,8 +115,12 @@ const EQuizz = ({ session, userRole }) => {
             return () => {
                 supabase.removeChannel(channel);
             };
+        } else if (classes && classes.length > 0 && !selectedClass) {
+            // Tự động chọn lớp đầu tiên nếu chưa có lớp nào được chọn
+            setSelectedClass(classes[0]);
+            setPrevClassId(classes[0].id);
         }
-    }, [selectedClass]);
+    }, [selectedClass, classes]);
 
     useEffect(() => {
         let timer;
@@ -148,6 +147,27 @@ const EQuizz = ({ session, userRole }) => {
         setTimeLeft(0);
     };
 
+    const handleResetForm = () => {
+        setQuizTitle('');
+        setDurationMinutes(15);
+        setDeadline('');
+        setEditingQuizId(null);
+        setQuestions([
+            {
+                id: Date.now(),
+                content: '',
+                answers: [
+                    { content: '', isCorrect: false },
+                    { content: '', isCorrect: false },
+                    { content: '', isCorrect: false },
+                    { content: '', isCorrect: true }
+                ],
+                isExpanded: true
+            }
+        ]);
+        setIsCreating(true);
+    };
+
     const fetchAttempts = async () => {
         if (!session?.user?.id) return;
         try {
@@ -161,26 +181,7 @@ const EQuizz = ({ session, userRole }) => {
         }
     };
 
-    const fetchClasses = async () => {
-        setLoading(true);
-        try {
-            const roleParam = userRole ? `?role=${userRole}` : '';
-            const response = await fetch(`http://localhost:8080/api/classes/user/${session.user.id}${roleParam}`);
-            if (response.ok) {
-                const data = await response.json();
-                setClasses(data);
-                // Chỉ set lớp mặc định nếu chưa có lớp nào được chọn
-                if (data.length > 0 && !selectedClass) {
-                    setSelectedClass(data[0]);
-                    setPrevClassId(data[0].id);
-                }
-            }
-        } catch (err) {
-            console.error("Error fetching classes:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Removed local fetchClasses as it is passed via props
 
     const fetchQuizzes = async (classId) => {
         try {
@@ -197,6 +198,7 @@ const EQuizz = ({ session, userRole }) => {
     const handleEditQuiz = (quiz) => {
         setQuizTitle(quiz.title);
         setDurationMinutes(quiz.durationMinutes || 15);
+        setDeadline(quiz.deadline ? quiz.deadline.substring(0, 16) : '');
         setEditingQuizId(quiz.id);
         setQuestions(quiz.questions.map(q => ({
             id: q.id,
@@ -355,6 +357,7 @@ const EQuizz = ({ session, userRole }) => {
             const quizData = {
                 title: quizTitle,
                 durationMinutes: durationMinutes,
+                deadline: deadline || null,
                 classId: selectedClass.id,
                 createdBy: session.user.id
             };
@@ -381,20 +384,7 @@ const EQuizz = ({ session, userRole }) => {
 
             if (response.ok) {
                 alert(editingQuizId ? "Đã cập nhật bộ câu hỏi thành công!" : "Đã lưu bộ câu hỏi thành công!");
-                setQuizTitle('');
-                setDurationMinutes(15);
-                setEditingQuizId(null);
-                setQuestions([{
-                    id: Date.now(),
-                    content: '',
-                    answers: [
-                        { content: '', isCorrect: false },
-                        { content: '', isCorrect: false },
-                        { content: '', isCorrect: false },
-                        { content: '', isCorrect: true }
-                    ],
-                    isExpanded: true
-                }]);
+                handleResetForm();
                 setIsCreating(false);
                 fetchQuizzes(selectedClass.id);
             } else {
@@ -438,7 +428,8 @@ const EQuizz = ({ session, userRole }) => {
                 });
             });
 
-            const scoreValue = (correctCount / totalQuestions) * 10;
+            const rawScore = (correctCount / totalQuestions) * 10;
+            const scoreValue = Math.ceil(rawScore * 100) / 100;
 
             const submissionData = {
                 quizId: activeQuiz.id,
@@ -489,7 +480,7 @@ const EQuizz = ({ session, userRole }) => {
                     </div>
                     
                     {isTeacher && (
-                        <button className="equizz-create-btn" onClick={() => setIsCreating(true)}>
+                        <button className="equizz-create-btn" onClick={handleResetForm}>
                             <FontAwesomeIcon icon={faPlus} />
                             <span>Tạo bộ câu hỏi</span>
                         </button>
@@ -498,7 +489,7 @@ const EQuizz = ({ session, userRole }) => {
 
                 <div className="equizz-list-section">
                     <div className="equizz-list-label">Lớp học</div>
-                    {loading ? (
+                    {isLoadingClasses ? (
                         <div style={{ textAlign: 'center', padding: '20px' }} className="loading-dots">Đang tải</div>
                     ) : (
                         classes.map((cls) => (
@@ -507,11 +498,18 @@ const EQuizz = ({ session, userRole }) => {
                                 className={`equizz-list-item ${selectedClass?.id === cls.id ? 'active' : ''}`}
                                 onClick={() => setSelectedClass(cls)}
                             >
-                                <div className="equizz-class-icon">
-                                    <FontAwesomeIcon icon={faLayerGroup} size="xs" />
+                                <div className="equizz-class-card-mini">
+                                    {cls.teacherAvatar ? (
+                                        <img src={cls.teacherAvatar} alt={cls.teacherName} />
+                                    ) : (
+                                        cls.teacherName ? cls.teacherName.charAt(0).toUpperCase() : 'L'
+                                    )}
                                 </div>
                                 <div className="equizz-class-info-sidebar">
-                                    <span className="equizz-class-name-sidebar">{cls.name}</span>
+                                    <div className="equizz-class-name-row">
+                                        <span className="equizz-class-name-sidebar">{cls.name}</span>
+                                    </div>
+                                    <div className="equizz-class-teacher-name-sidebar">{cls.teacherName || "Giáo viên"}</div>
                                 </div>
                             </div>
                         ))
@@ -614,8 +612,19 @@ const EQuizz = ({ session, userRole }) => {
                                             value={durationMinutes} 
                                             onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 0)}
                                             min="1"
+                                            title="Thời gian làm bài (phút)"
                                         />
                                         <span>Phút</span>
+                                    </div>
+                                    <div className="duration-input-wrapper deadline">
+                                        <FontAwesomeIcon icon={faCheckCircle} className="duration-icon" />
+                                        <input 
+                                            type="datetime-local" 
+                                            value={deadline} 
+                                            onChange={(e) => setDeadline(e.target.value)}
+                                            title="Thời hạn nộp bài"
+                                        />
+                                        <span>Hạn nộp</span>
                                     </div>
                                 </div>
                             </div>
@@ -717,22 +726,19 @@ const EQuizz = ({ session, userRole }) => {
                                     <h1>Bộ câu hỏi của lớp</h1>
                                     <p>{quizzes.length} bộ câu hỏi đã sẵn sàng</p>
                                 </div>
-                                {isTeacher && (
-                                    <button className="create-shortcut-btn" onClick={() => setIsCreating(true)}>
-                                        <FontAwesomeIcon icon={faPlus} />
-                                        <span>Tạo mới</span>
-                                    </button>
-                                )}
                             </div>
 
                             <div className="quiz-cards-grid">
                                 {quizzes.length > 0 ? (
                                     quizzes.map((quiz) => {
                                         const attempt = attempts.find(a => a.quizId === quiz.id);
+                                        const isOverdue = quiz.deadline && new Date(quiz.deadline) < new Date();
+                                        const canStart = !isTeacher && !attempt && !isOverdue;
+                                        
                                         return (
-                                            <div key={quiz.id} className={`quiz-summary-card ${attempt ? 'completed' : ''}`}>
+                                            <div key={quiz.id} className={`quiz-summary-card ${attempt ? 'completed' : ''} ${isOverdue && !attempt ? 'overdue' : ''}`}>
                                                 <div className="quiz-card-icon">
-                                                    <FontAwesomeIcon icon={attempt ? faCheckCircle : faBrain} />
+                                                    <FontAwesomeIcon icon={attempt ? faCheckCircle : (isOverdue ? faTrashAlt : faBrain)} />
                                                 </div>
                                                 <div className="quiz-card-content">
                                                     <h3>{quiz.title}</h3>
@@ -743,22 +749,40 @@ const EQuizz = ({ session, userRole }) => {
                                                         </span>
                                                         <span>
                                                             <FontAwesomeIcon icon={faLayerGroup} />
-                                                            Thời gian: {quiz.durationMinutes || 15} phút
+                                                            {quiz.durationMinutes || 15} phút
                                                         </span>
+                                                        {quiz.deadline && (
+                                                            <span className={isOverdue ? 'text-danger' : ''}>
+                                                                <FontAwesomeIcon icon={faFileAlt} />
+                                                                Hạn: {new Date(quiz.deadline).toLocaleString()}
+                                                            </span>
+                                                        )}
                                                         {attempt && (
                                                             <span className="quiz-score-badge">
                                                                 <FontAwesomeIcon icon={faBolt} />
-                                                                Điểm: {attempt.score}/10
+                                                                Điểm: {Number(attempt.score).toFixed(2)}/10
+                                                            </span>
+                                                        )}
+                                                        {!attempt && isOverdue && !isTeacher && (
+                                                            <span className="quiz-score-badge zero">
+                                                                <FontAwesomeIcon icon={faBolt} />
+                                                                Điểm: 0/10 (Quá hạn)
                                                             </span>
                                                         )}
                                                     </div>
                                                 </div>
                                                 <button 
-                                                    className="start-quiz-btn"
-                                                    onClick={() => isTeacher ? handleEditQuiz(quiz) : (attempt ? handleReviewQuiz(quiz, attempt) : handleStartQuiz(quiz))}
+                                                    className={`start-quiz-btn ${(!canStart && !isTeacher && !attempt) ? 'disabled' : ''}`}
+                                                    onClick={() => {
+                                                        if (isTeacher) handleEditQuiz(quiz);
+                                                        else if (attempt) handleReviewQuiz(quiz, attempt);
+                                                        else if (!isOverdue) handleStartQuiz(quiz);
+                                                        else alert("Hết hạn làm bài!");
+                                                    }}
+                                                    disabled={!isTeacher && !attempt && isOverdue}
                                                 >
                                                     <span>
-                                                        {isTeacher ? "Xem chi tiết" : (attempt ? "Xem lại bài làm" : "Bắt đầu làm bài")}
+                                                        {isTeacher ? "Xem chi tiết" : (attempt ? "Xem lại bài làm" : (isOverdue ? "Đã hết hạn" : "Bắt đầu làm bài"))}
                                                     </span>
                                                     <FontAwesomeIcon icon={attempt ? faFileAlt : faBolt} />
                                                 </button>

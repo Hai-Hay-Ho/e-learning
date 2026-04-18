@@ -69,28 +69,26 @@
 .equizz-list-section {
     flex: 1;
     overflow-y: auto;
-    padding: 16px;
 }
 
 .equizz-list-label {
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 0.7rem;
+    font-weight: 700;
     color: #94a3b8;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 12px;
-    padding-left: 8px;
+    padding: 16px 20px 8px;
 }
 
 .equizz-list-item {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border-radius: 12px;
+    padding: 12px 20px;
+    gap: 14px;
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-bottom: 4px;
+    align-items: center;
+    border-left: 3px solid transparent;
+    margin: 0 4px;
+    border-radius: 0 10px 10px 0;
 }
 
 .equizz-list-item:hover {
@@ -98,36 +96,57 @@
 }
 
 .equizz-list-item.active {
-    background: #eef2ff;
+    background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+    border-left-color: #6366f1;
 }
 
-.equizz-list-item.active .equizz-class-icon {
-    background: #6366f1;
-    color: white;
-}
-
-.equizz-class-icon {
-    width: 40px;
-    height: 40px;
-    background: #f1f5f9;
-    color: #64748b;
-    border-radius: 10px;
+.equizz-class-card-mini {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     display: flex;
     align-items: center;
     justify-content: center;
+    color: white;
     font-weight: 700;
-    font-size: 16px;
+    font-size: 0.88rem;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+}
+
+.equizz-class-card-mini img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .equizz-class-info-sidebar {
     flex: 1;
+    min-width: 0;
+}
+
+.equizz-class-name-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    align-items: center;
 }
 
 .equizz-class-name-sidebar {
-    display: block;
     font-weight: 600;
-    color: #334155;
-    font-size: 14px;
+    color: #0f172a;
+    font-size: 0.93rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.equizz-class-teacher-name-sidebar {
+    font-size: 0.82rem;
+    color: #94a3b8;
 }
 
 /* Main Content Styling */
@@ -661,7 +680,6 @@
     font-size: 15px;
 }
 
-/* Sidebar Styling Keep - Modified from original */
 .equizz-sidebar {
     width: 320px;
     background: white;
@@ -1202,4 +1220,42 @@
 .submit-quiz-btn:hover {
     background: #0f172a;
     transform: translateY(-2px);
+}
+
+/* Deadline & Overdue Styles */
+.duration-input-wrapper.deadline {
+    background: #fffafa;
+    border-color: #fecaca;
+}
+
+.duration-input-wrapper.deadline input {
+    width: 200px;
+    font-size: 14px;
+}
+
+.quiz-summary-card.overdue {
+    border-left: 4px solid #ef4444;
+}
+
+.quiz-score-badge.zero {
+    background: #fef2f2;
+    color: #ef4444 !important;
+}
+
+.text-danger {
+    color: #ef4444 !important;
+}
+
+.start-quiz-btn.disabled {
+    background: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+    border-color: #e2e8f0;
+}
+
+.quiz-summary-card:hover .start-quiz-btn.disabled {
+    background: #f1f5f9;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    transform: none;
 }
