@@ -21,8 +21,7 @@ import {
     faPaperPlane
 } from '@fortawesome/free-solid-svg-icons';
 
-const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
-    const [classes, setClasses] = useState([]);
+const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setClasses }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -56,7 +55,7 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
-        fetchClasses();
+        // No longer fetching here as it is handled by parent App.js
     }, [userRole]);
 
     useEffect(() => {
@@ -129,7 +128,7 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
         };
     }, [selectedClass]);
 
-    const fetchClasses = async () => {
+    const fetchClassesLocal = async () => {
         setLoading(true);
         try {
             const roleParam = userRole ? `?role=${userRole}` : '';
@@ -137,8 +136,6 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
             if (response.ok) {
                 const data = await response.json();
                 setClasses(data);
-            } else {
-                console.error("Failed to fetch classes from backend");
             }
         } catch (err) {
             console.error("Error fetching classes:", err);
@@ -415,7 +412,7 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
                 alert("Đã tham gia lớp học thành công!");
                 setShowJoinModal(false);
                 setJoinCode('');
-                fetchClasses();
+                fetchClassesLocal();
             } else {
                 const errorData = await response.json();
                 alert(errorData.message || "Mã code không hợp lệ hoặc bạn đã tham gia lớp này.");

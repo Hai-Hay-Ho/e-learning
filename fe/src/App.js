@@ -16,6 +16,8 @@ function App() {
   const [userData, setUserData] = useState(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [pendingConversation, setPendingConversation] = useState(null);
+  const [classes, setClasses] = useState([]);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(false);
 
   useEffect(() => {
     // Kiểm tra session hiện tại
@@ -59,11 +61,29 @@ function App() {
         const data = await response.json();
         setUserRole(data.role); 
         setUserData(data); // Lưu thông tin trả về từ supabase
+        fetchClasses(user.id, data.role);
       } else {
         console.error("Failed to sync user role with backend");
       }
     } catch (error) {
       console.error("Error syncing user with backend:", error);
+    }
+  };
+
+  const fetchClasses = async (userId, role) => {
+    if (!userId) return;
+    setIsLoadingClasses(true);
+    try {
+      const roleParam = role ? `?role=${role}` : '';
+      const response = await fetch(`http://localhost:8080/api/classes/user/${userId}${roleParam}`);
+      if (response.ok) {
+        const data = await response.json();
+        setClasses(data);
+      }
+    } catch (err) {
+      console.error("Error fetching classes:", err);
+    } finally {
+      setIsLoadingClasses(false);
     }
   };
 
@@ -106,12 +126,19 @@ function App() {
               session={session} 
               userRole={userRole} 
               userData={userData}
+              classes={classes}
+              setClasses={setClasses}
               onSwitchToMessages={handleSwitchToMessages}
             />
           ) : activeTab === 'Messages' ? (
             <Chat session={session} userData={userData} pendingConversation={pendingConversation} />
           ) : activeTab === 'Quizzes' ? (
-            <EQuizz session={session} userRole={userRole} />
+            <EQuizz 
+              session={session} 
+              userRole={userRole} 
+              classes={classes}
+              isLoadingClasses={isLoadingClasses}
+            />
           ) : (
             <MainContent session={session} />
           )
