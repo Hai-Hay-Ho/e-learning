@@ -30,6 +30,7 @@ public class QuizController {
             quiz.setDurationMinutes(request.getQuiz().getDurationMinutes() != null ? request.getQuiz().getDurationMinutes() : 15);
             quiz.setClassId(request.getQuiz().getClassId());
             quiz.setCreatedBy(request.getQuiz().getCreatedBy());
+            quiz.setDeadline(request.getQuiz().getDeadline());
             quiz.setCreatedAt(LocalDateTime.now());
             quiz.setUpdatedAt(LocalDateTime.now());
 
@@ -70,6 +71,7 @@ public class QuizController {
 
             existingQuiz.setTitle(request.getQuiz().getTitle());
             existingQuiz.setDurationMinutes(request.getQuiz().getDurationMinutes());
+            existingQuiz.setDeadline(request.getQuiz().getDeadline());
             existingQuiz.setUpdatedAt(LocalDateTime.now());
 
             // Simple way: clear existings and add new ones (since it's a builder)

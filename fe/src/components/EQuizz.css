@@ -1203,3 +1203,41 @@
     background: #0f172a;
     transform: translateY(-2px);
 }
+
+/* Deadline & Overdue Styles */
+.duration-input-wrapper.deadline {
+    background: #fffafa;
+    border-color: #fecaca;
+}
+
+.duration-input-wrapper.deadline input {
+    width: 200px;
+    font-size: 14px;
+}
+
+.quiz-summary-card.overdue {
+    border-left: 4px solid #ef4444;
+}
+
+.quiz-score-badge.zero {
+    background: #fef2f2;
+    color: #ef4444 !important;
+}
+
+.text-danger {
+    color: #ef4444 !important;
+}
+
+.start-quiz-btn.disabled {
+    background: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+    border-color: #e2e8f0;
+}
+
+.quiz-summary-card:hover .start-quiz-btn.disabled {
+    background: #f1f5f9;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    transform: none;
+}
