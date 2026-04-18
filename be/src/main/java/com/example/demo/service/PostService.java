@@ -9,9 +9,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,106 +22,87 @@ public class PostService {
     private final CommentRepository commentRepository;
 
     @Transactional
-    public PostDTO createPost(PostDTO postDTO) {
-        PostEntity post = PostEntity.builder()
-                .classId(postDTO.getClassId())
-                .authorId(postDTO.getAuthorId())
-                .type(postDTO.getType())
-                .title(postDTO.getTitle())
-                .content(postDTO.getContent())
-                .createdAt(java.time.LocalDateTime.now())
-                .build();
+    public List<PostDTO> createPost(PostDTO postDTO) {
+        List<UUID> targetClassIds = postDTO.getTargetClassIds();
+        if (targetClassIds == null || targetClassIds.isEmpty()) {
+            targetClassIds = Collections.singletonList(postDTO.getClassId());
+        }
 
-        PostEntity savedPost = postRepository.save(post);
-
-        if ("assignment".equals(postDTO.getType()) && postDTO.getDueAt() != null) {
-            AssignmentDeadline deadline = AssignmentDeadline.builder()
-                    .postId(savedPost.getId())
-                    .dueAt(postDTO.getDueAt())
+        List<PostDTO> createdPosts = new ArrayList<>();
+        
+        for (UUID classId : targetClassIds) {
+            PostEntity post = PostEntity.builder()
+                    .classId(classId)
+                    .authorId(postDTO.getAuthorId())
+                    .type(postDTO.getType())
+                    .title(postDTO.getTitle())
+                    .content(postDTO.getContent())
+                    .createdAt(java.time.LocalDateTime.now())
                     .build();
-            assignmentDeadlineRepository.save(deadline);
+
+            PostEntity savedPost = postRepository.save(post);
+
+            if ("assignment".equals(postDTO.getType()) && postDTO.getDueAt() != null) {
+                AssignmentDeadline deadline = AssignmentDeadline.builder()
+                        .postId(savedPost.getId())
+                        .dueAt(postDTO.getDueAt())
+                        .build();
+                assignmentDeadlineRepository.save(deadline);
+            }
+
+            if (postDTO.getAttachments() != null) {
+                List<PostAttachment> attachments = postDTO.getAttachments().stream()
+                        .map(att -> PostAttachment.builder()
+                                .postId(savedPost.getId())
+                                .fileUrl(att.getFileUrl())
+                                .fileName(att.getFileName())
+                                .fileType(att.getFileType())
+                                .fileSize(att.getFileSize())
+                                .build())
+                        .collect(Collectors.toList());
+                attachmentRepository.saveAll(attachments);
+            }
+            createdPosts.add(getPostDTO(savedPost));
         }
 
-        if (postDTO.getAttachments() != null) {
-            List<PostAttachment> attachments = postDTO.getAttachments().stream()
-                    .map(att -> PostAttachment.builder()
-                            .postId(savedPost.getId())
-                            .fileUrl(att.getFileUrl())
-                            .fileName(att.getFileName())
-                            .fileType(att.getFileType())
-                            .fileSize(att.getFileSize())
-                            .build())
-                    .collect(Collectors.toList());
-            attachmentRepository.saveAll(attachments);
-        }
-
-        return getPostDTO(savedPost);
+        return createdPosts;
     }
 
     public List<PostDTO> getPostsByClassId(UUID classId) {
-        return postRepository.findByClassIdOrderByCreatedAtDesc(classId).stream()
-                .map(this::getPostDTO)
-                .collect(Collectors.toList());
-    }
+        List<PostEntity> posts = postRepository.findByClassIdOrderByCreatedAtDesc(classId);
+        if (posts.isEmpty()) return Collections.emptyList();
 
-    @Transactional
-    public PostDTO updatePost(UUID postId, PostDTO postDTO) {
-        PostEntity post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
+        List<UUID> postIds = posts.stream().map(PostEntity::getId).collect(Collectors.toList());
+        List<UUID> authorIds = posts.stream().map(PostEntity::getAuthorId).distinct().collect(Collectors.toList());
 
-        post.setType(postDTO.getType());
-        post.setTitle(postDTO.getTitle());
-        post.setContent(postDTO.getContent());
+        // Batch fetching to fix N+1 problem
+        Map<UUID, User> authorsMap = userRepository.findAllById(authorIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
         
-        postRepository.save(post);
+        Map<UUID, List<PostAttachment>> attachmentsMap = attachmentRepository.findAllByPostIdIn(postIds).stream()
+                .collect(Collectors.groupingBy(PostAttachment::getPostId));
 
-        // Update deadline if assignment
-        if ("assignment".equals(post.getType())) {
-            Optional<AssignmentDeadline> deadlineOpt = assignmentDeadlineRepository.findByPostId(postId);
-            if (postDTO.getDueAt() != null) {
-                AssignmentDeadline deadline = deadlineOpt.orElseGet(() -> 
-                    AssignmentDeadline.builder().postId(postId).build());
-                deadline.setDueAt(postDTO.getDueAt());
-                assignmentDeadlineRepository.save(deadline);
-            } else {
-                deadlineOpt.ifPresent(assignmentDeadlineRepository::delete);
-            }
-        }
+        Map<UUID, AssignmentDeadline> deadlinesMap = assignmentDeadlineRepository.findAllByPostIdIn(postIds).stream()
+                .collect(Collectors.toMap(AssignmentDeadline::getPostId, d -> d));
 
-        // Update attachments: simpler way is to delete and recreate
-        attachmentRepository.deleteByPostId(postId);
-        if (postDTO.getAttachments() != null) {
-            List<PostAttachment> attachments = postDTO.getAttachments().stream()
-                    .map(att -> PostAttachment.builder()
-                            .postId(post.getId())
-                            .fileUrl(att.getFileUrl())
-                            .fileName(att.getFileName())
-                            .fileType(att.getFileType())
-                            .fileSize(att.getFileSize())
-                            .build())
-                    .collect(Collectors.toList());
-            attachmentRepository.saveAll(attachments);
-        }
+        // For counts and recent comments, we still do a bit of processing but much faster than before
+        return posts.stream().map(post -> {
+            User author = authorsMap.get(post.getAuthorId());
+            List<PostAttachment> attachments = attachmentsMap.getOrDefault(post.getId(), Collections.emptyList());
+            AssignmentDeadline deadline = deadlinesMap.get(post.getId());
+            
+            // Still fetching comments count - could be further optimized with a DB View or complex query
+            // but these batch fetches should already bring the 30s down to < 1s.
+            long commentCount = commentRepository.countByPostId(post.getId());
+            List<Comment> recentComments = commentRepository.findByPostIdOrderByCreatedAtAsc(post.getId(), PageRequest.of(0, 2));
 
-        return getPostDTO(post);
+            return convertToDTO(post, author, attachments, deadline, recentComments, commentCount);
+        }).collect(Collectors.toList());
     }
 
-    @Transactional
-    public void deletePost(UUID postId) {
-        attachmentRepository.deleteByPostId(postId);
-        assignmentDeadlineRepository.deleteByPostId(postId);
-        postRepository.deleteById(postId);
-    }
-
-    private PostDTO getPostDTO(PostEntity post) {
-        User author = userRepository.findById(post.getAuthorId()).orElse(null);
-        List<PostAttachment> attachments = attachmentRepository.findByPostId(post.getId());
-        Optional<AssignmentDeadline> deadline = assignmentDeadlineRepository.findByPostId(post.getId());
+    private PostDTO convertToDTO(PostEntity post, User author, List<PostAttachment> attachments, 
+                                AssignmentDeadline deadline, List<Comment> recentComments, long commentCount) {
         
-        // Fetch last 2 comments for feed view
-        List<Comment> recentComments = commentRepository.findByPostIdOrderByCreatedAtAsc(post.getId(), PageRequest.of(0, 2));
-        long commentCount = commentRepository.countByPostId(post.getId());
-
         List<PostDTO.AttachmentDTO> attachmentDTOs = attachments.stream()
                 .map(att -> PostDTO.AttachmentDTO.builder()
                         .id(att.getId())
@@ -156,10 +135,67 @@ public class PostService {
                 .title(post.getTitle())
                 .content(post.getContent())
                 .createdAt(post.getCreatedAt())
-                .dueAt(deadline.map(AssignmentDeadline::getDueAt).orElse(null))
+                .dueAt(deadline != null ? deadline.getDueAt() : null)
                 .attachments(attachmentDTOs)
                 .comments(commentDTOs)
                 .commentCount(commentCount)
                 .build();
+    }
+
+    private PostDTO getPostDTO(PostEntity post) {
+        User author = userRepository.findById(post.getAuthorId()).orElse(null);
+        List<PostAttachment> attachments = attachmentRepository.findByPostId(post.getId());
+        Optional<AssignmentDeadline> deadline = assignmentDeadlineRepository.findByPostId(post.getId());
+        List<Comment> recentComments = commentRepository.findByPostIdOrderByCreatedAtAsc(post.getId(), PageRequest.of(0, 2));
+        long commentCount = commentRepository.countByPostId(post.getId());
+        
+        return convertToDTO(post, author, attachments, deadline.orElse(null), recentComments, commentCount);
+    }
+
+    @Transactional
+    public PostDTO updatePost(UUID postId, PostDTO postDTO) {
+        PostEntity post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+
+        post.setType(postDTO.getType());
+        post.setTitle(postDTO.getTitle());
+        post.setContent(postDTO.getContent());
+        
+        postRepository.save(post);
+
+        if ("assignment".equals(post.getType())) {
+            Optional<AssignmentDeadline> deadlineOpt = assignmentDeadlineRepository.findByPostId(postId);
+            if (postDTO.getDueAt() != null) {
+                AssignmentDeadline deadline = deadlineOpt.orElseGet(() -> 
+                    AssignmentDeadline.builder().postId(postId).build());
+                deadline.setDueAt(postDTO.getDueAt());
+                assignmentDeadlineRepository.save(deadline);
+            } else {
+                deadlineOpt.ifPresent(assignmentDeadlineRepository::delete);
+            }
+        }
+
+        attachmentRepository.deleteByPostId(postId);
+        if (postDTO.getAttachments() != null) {
+            List<PostAttachment> attachments = postDTO.getAttachments().stream()
+                    .map(att -> PostAttachment.builder()
+                            .postId(post.getId())
+                            .fileUrl(att.getFileUrl())
+                            .fileName(att.getFileName())
+                            .fileType(att.getFileType())
+                            .fileSize(att.getFileSize())
+                            .build())
+                    .collect(Collectors.toList());
+            attachmentRepository.saveAll(attachments);
+        }
+
+        return getPostDTO(post);
+    }
+
+    @Transactional
+    public void deletePost(UUID postId) {
+        attachmentRepository.deleteByPostId(postId);
+        assignmentDeadlineRepository.deleteByPostId(postId);
+        postRepository.deleteById(postId);
     }
 }

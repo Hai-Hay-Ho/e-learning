@@ -41,6 +41,8 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
     const [uploading, setUploading] = useState(false);
     const [postDeadline, setPostDeadline] = useState('');
     const [commentTexts, setCommentTexts] = useState({});
+    const [targetClassIds, setTargetClassIds] = useState([]);
+    const [showClassSelector, setShowClassSelector] = useState(false);
     
     // States for Editing Post
     const [editingPost, setEditingPost] = useState(null);
@@ -236,12 +238,29 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
         setAttachments(attachments.filter((_, i) => i !== index));
     };
 
+    const toggleClassSelection = (classId) => {
+        setTargetClassIds(prev => 
+            prev.includes(classId) 
+                ? prev.filter(id => id !== classId) 
+                : [...prev, classId]
+        );
+    };
+
+    const toggleAllClasses = () => {
+        if (targetClassIds.length === classes.length) {
+            setTargetClassIds([]);
+        } else {
+            setTargetClassIds(classes.map(c => c.id));
+        }
+    };
+
     const handleCreatePost = async (e) => {
         e.preventDefault();
         if (!postTitle.trim() || !postContent.trim()) return;
 
         const newPost = {
             classId: selectedClass.id,
+            targetClassIds: targetClassIds.length > 0 ? targetClassIds : [selectedClass.id],
             authorId: session.user.id,
             type: postType,
             title: postTitle,
@@ -261,14 +280,15 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
 
             if (response.ok) {
                 const data = await response.json();
-                console.log("Post created:", data);
-                // Realtime will handle fetching
+                console.log("Posts created:", data);
                 setShowPostModal(false);
                 setPostTitle('');
                 setPostContent('');
                 setPostType('announcement');
                 setAttachments([]);
                 setPostDeadline('');
+                setTargetClassIds([]);
+                fetchPosts(selectedClass.id);
             }
         } catch (err) {
             console.error("Error creating post:", err);
@@ -369,10 +389,8 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
                 setClassName('');
             } else {
                 const errorData = await response.json();
-                setError(errorData.message || "Kh�ng th? t?o l?p h?c");
             }
         } catch (err) {
-            setError("L?i k?t n?i server");
             console.error(err);
         }
     };
@@ -418,7 +436,6 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
                 <div className="class-sidebar">
                     <div className="class-sidebar-header">
                         <div className="class-app-logo">
-                            <FontAwesomeIcon icon={faUsers} className="class-logo-icon" />
                             <span>E-Classes</span>
                         </div>
                         
@@ -630,7 +647,7 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
                                                                 <div style={{ flex: 1 }}>
                                                                     <div style={{ fontSize: '14px', fontWeight: '500' }}>{att.fileName}</div>
                                                                     <div style={{ fontSize: '12px', color: '#70757a' }}>
-                                                                        {att.fileSize ? `${(att.fileSize / 1024 / 1024).toFixed(2)} MB` : ''} {att.fileType}
+                                                                        {att.fileSize ? `${(att.fileSize / 1024 / 1024).toFixed(2)} MB` : ''}
                                                                     </div>
                                                                 </div>
                                                             </a>
@@ -734,8 +751,102 @@ const Class = ({ session, userRole, userData, onSwitchToMessages }) => {
 
             {showPostModal && (
                 <div className="modal-overlay">
-                    <div className="modal-content-custom" style={{ width: '500px' }}>
-                        <h2>Tạo bài đăng mới</h2>
+                    <div className="modal-content-custom" style={{ width: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h2 style={{ margin: 0 }}>Tạo bài đăng mới</h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+                                <span style={{ fontSize: '13px', color: '#5f6368' }}>Đăng lên:</span>
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowClassSelector(!showClassSelector)}
+                                    style={{ 
+                                        padding: '6px 14px', 
+                                        borderRadius: '20px', 
+                                        border: '1px solid #dadce0', 
+                                        background: showClassSelector ? '#f1f5f9' : 'white',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        color: '#3c4043',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                >
+                                    <FontAwesomeIcon icon={faUsers} size="sm" style={{ color: '#4f46e5' }} />
+                                    {targetClassIds.length === 0 ? "Lớp hiện tại" : 
+                                     targetClassIds.length === classes.length ? "Tất cả lớp" : 
+                                     `${targetClassIds.length} lớp đã chọn`}
+                                    <span style={{ fontSize: '10px', opacity: 0.5 }}>▼</span>
+                                </button>
+
+                                {showClassSelector && (
+                                    <div style={{ 
+                                        position: 'absolute',
+                                        top: '100%',
+                                        right: 0,
+                                        marginTop: '8px',
+                                        width: '280px',
+                                        background: 'white', 
+                                        padding: '12px', 
+                                        borderRadius: '12px', 
+                                        boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                                        border: '1px solid #e0e0e0',
+                                        zIndex: 100
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
+                                            <span style={{ fontWeight: '700', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Chọn lớp học</span>
+                                            <button 
+                                                type="button" 
+                                                onClick={toggleAllClasses}
+                                                style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}
+                                            >
+                                                {targetClassIds.length === classes.length ? "Bỏ chọn" : "Tất cả"}
+                                            </button>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+                                            {classes.map(cls => (
+                                                <div 
+                                                    key={cls.id} 
+                                                    onClick={() => toggleClassSelection(cls.id)}
+                                                    style={{ 
+                                                        display: 'flex', 
+                                                        alignItems: 'center', 
+                                                        gap: '10px', 
+                                                        padding: '8px 10px',
+                                                        borderRadius: '8px',
+                                                        cursor: 'pointer',
+                                                        background: targetClassIds.includes(cls.id) || (targetClassIds.length === 0 && cls.id === selectedClass.id) ? '#eef2ff' : 'transparent',
+                                                        transition: 'all 0.1s ease'
+                                                    }}
+                                                >
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={targetClassIds.includes(cls.id) || (targetClassIds.length === 0 && cls.id === selectedClass.id)}
+                                                        onChange={() => {}} // Controlled by div click
+                                                        style={{ cursor: 'pointer' }}
+                                                    />
+                                                    <span style={{ fontSize: '13px', fontWeight: '500', color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        {cls.name}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setShowClassSelector(false)}
+                                                style={{ padding: '4px 12px', background: '#1e293b', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                                            >
+                                                Xong
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                         <form onSubmit={handleCreatePost}>
                             <div className="form-group">
                                 <label>Loại bài đăng</label>

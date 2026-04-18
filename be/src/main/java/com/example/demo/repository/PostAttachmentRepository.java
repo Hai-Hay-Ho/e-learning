@@ -10,5 +10,6 @@ import java.util.UUID;
 @Repository
 public interface PostAttachmentRepository extends JpaRepository<PostAttachment, UUID> {
     List<PostAttachment> findByPostId(UUID postId);
+    List<PostAttachment> findAllByPostIdIn(List<UUID> postIds);
     void deleteByPostId(UUID postId);
 }

@@ -24,5 +24,6 @@ public class SubmissionDTO {
         private UUID id;
         private String fileUrl;
         private String fileName;
+        private LocalDateTime uploadedAt;
     }
 }

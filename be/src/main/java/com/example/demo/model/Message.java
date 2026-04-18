@@ -41,4 +41,10 @@ public class Message {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "is_edited")
+    private Boolean isEdited = false;
 }

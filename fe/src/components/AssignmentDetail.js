@@ -470,7 +470,7 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                 <div className="assignment-comments-section" style={{ marginTop: '24px' }}>
                                     <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#3c4043' }}>
                                         <FontAwesomeIcon icon={faUsers} />
-                                        Nhận xét của lớp học ({comments.length})
+                                        Bình luận của lớp học ({comments.length})
                                     </h4>
                             
                             <div className="comments-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
@@ -515,7 +515,7 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <textarea 
-                                        placeholder="Thêm nhận xét cho lớp học..."
+                                        placeholder="Thêm bình luận cho lớp học..."
                                         className="comment-textarea"
                                         value={newComment}
                                         onChange={(e) => setNewComment(e.target.value)}
@@ -744,11 +744,9 @@ const StudentPanel = ({
                         <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className="file-link-name-submitted">
                             {file.fileName}
                         </a>
-                        {!isOverdue && (
-                            <button className="remove-file-btn" onClick={() => handleDeleteFile(file)}>
-                                <FontAwesomeIcon icon={faTimes} />
-                            </button>
-                        )}
+                        <button className="remove-file-btn" onClick={() => handleDeleteFile(file)}>
+                            <FontAwesomeIcon icon={faTimes} />
+                        </button>
                     </div>
                 ))}
 
@@ -764,13 +762,13 @@ const StudentPanel = ({
                     </div>
                 ))}
 
-                <label className="upload-zone" style={{ opacity: isOverdue ? 0.5 : 1 }}>
+                <label className="upload-zone" style={{ opacity: 1 }}>
                     <input
                         type="file"
                         multiple
                         onChange={handleFileChange}
                         style={{ display: 'none' }}
-                        disabled={uploading || isOverdue}
+                        disabled={uploading}
                     />
                     <div className="upload-zone-inner">
                         <FontAwesomeIcon icon={uploading ? faClock : faUpload} className={`upload-icon ${uploading ? 'spin' : ''}`} />
@@ -797,7 +795,7 @@ const StudentPanel = ({
             <div className="student-actions-row">
                 <button
                     className="btn-submit-work"
-                    disabled={!uploadedFiles.length || submitting || uploading || isOverdue}
+                    disabled={!uploadedFiles.length || submitting || uploading}
                     onClick={handleSubmit}
                 >
                     <FontAwesomeIcon icon={faPaperPlane} />

@@ -2,13 +2,16 @@ package com.example.demo.service;
 
 import com.example.demo.model.Conversation;
 import com.example.demo.model.Message;
+import com.example.demo.model.MessageEdit;
 import com.example.demo.model.User;
 import com.example.demo.repository.ConversationRepository;
 import com.example.demo.repository.MessageRepository;
+import com.example.demo.repository.MessageEditRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,7 +25,12 @@ public class ChatService {
     private MessageRepository messageRepository;
 
     @Autowired
+    private MessageEditRepository messageEditRepository;
+
+    @Autowired
     private UserRepository userRepository;
+
+    private static final long RECALL_LIMIT_HOURS = 3;
 
     public List<Conversation> getConversationsForUser(UUID userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
@@ -51,6 +59,8 @@ public class ChatService {
                 .content(content)
                 .messageType("text")
                 .isRead(false)
+                .isEdited(false)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         return messageRepository.save(message);
@@ -58,5 +68,49 @@ public class ChatService {
 
     public List<Message> getMessages(UUID conversationId) {
         return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
+    }
+
+    public Message updateMessage(UUID messageId, String newContent) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+
+        // Lưu lịch sử chỉnh sửa
+        MessageEdit messageEdit = MessageEdit.builder()
+                .message(message)
+                .oldContent(message.getContent())
+                .editedAt(LocalDateTime.now())
+                .build();
+        messageEditRepository.save(messageEdit);
+
+        // Cập nhật nội dung tin nhắn
+        message.setContent(newContent);
+        message.setIsEdited(true);
+        message.setUpdatedAt(LocalDateTime.now());
+
+        return messageRepository.save(message);
+    }
+
+    public boolean canRecallMessage(UUID messageId) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+
+        LocalDateTime createdAt = message.getCreatedAt();
+        LocalDateTime now = LocalDateTime.now();
+        
+        long hours = java.time.temporal.ChronoUnit.HOURS.between(createdAt, now);
+        
+        return hours < RECALL_LIMIT_HOURS;
+    }
+
+    public void recallMessage(UUID messageId) {
+        if (!canRecallMessage(messageId)) {
+            throw new RuntimeException("Tin nhắn đã gửi quá 3 giờ, không thể thu hồi");
+        }
+
+        messageRepository.deleteById(messageId);
+    }
+
+    public List<MessageEdit> getMessageEdits(UUID messageId) {
+        return messageEditRepository.findByMessageIdOrderByEditedAtAsc(messageId);
     }
 }

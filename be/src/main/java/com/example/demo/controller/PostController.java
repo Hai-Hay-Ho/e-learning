@@ -17,7 +17,7 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping
-    public ResponseEntity<PostDTO> createPost(@RequestBody PostDTO postDTO) {
+    public ResponseEntity<List<PostDTO>> createPost(@RequestBody PostDTO postDTO) {
         return ResponseEntity.ok(postService.createPost(postDTO));
     }
 

@@ -10,5 +10,6 @@ import java.util.UUID;
 @Repository
 public interface AssignmentDeadlineRepository extends JpaRepository<AssignmentDeadline, UUID> {
     Optional<AssignmentDeadline> findByPostId(UUID postId);
+    java.util.List<AssignmentDeadline> findAllByPostIdIn(java.util.List<UUID> postIds);
     void deleteByPostId(UUID postId);
 }
