@@ -37,14 +37,30 @@ const EQuizz = ({ session, userRole }) => {
     const [selectedClass, setSelectedClass] = useState(null);
     const [loading, setLoading] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [question, setQuestion] = useState('');
-    const [options, setOptions] = useState({
-        A: '',
-        B: '',
-        C: '',
-        D: ''
-    });
-    const [correctOption, setCorrectOption] = useState('D'); // D is correct by default as per user request
+    const [isCreating, setIsCreating] = useState(false);
+    const [quizzes, setQuizzes] = useState([]);
+    const [quizTitle, setQuizTitle] = useState('');
+    const [durationMinutes, setDurationMinutes] = useState(15);
+    const [editingQuizId, setEditingQuizId] = useState(null);
+    const [questions, setQuestions] = useState([
+        {
+            id: Date.now(),
+            content: '',
+            answers: [
+                { content: '', is_correct: false },
+                { content: '', is_correct: false },
+                { content: '', is_correct: false },
+                { content: '', is_correct: true }
+            ],
+            isExpanded: true
+        }
+    ]);
+
+    // Student Quiz Taking State
+    const [isTakingQuiz, setIsTakingQuiz] = useState(false);
+    const [activeQuiz, setActiveQuiz] = useState(null);
+    const [timeLeft, setTimeLeft] = useState(0);
+    const [studentAnswers, setStudentAnswers] = useState({});
 
     const isTeacher = userRole === "1";
 
@@ -53,6 +69,39 @@ const EQuizz = ({ session, userRole }) => {
             fetchClasses();
         }
     }, [session]);
+
+    useEffect(() => {
+        if (selectedClass) {
+            fetchQuizzes(selectedClass.id);
+            stopQuiz();
+            setIsCreating(false);
+            setEditingQuizId(null);
+        }
+    }, [selectedClass]);
+
+    useEffect(() => {
+        let timer;
+        if (isTakingQuiz && timeLeft > 0) {
+            timer = setInterval(() => {
+                setTimeLeft(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        handleSubmitQuiz();
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [isTakingQuiz, timeLeft]);
+
+    const stopQuiz = () => {
+        setIsTakingQuiz(false);
+        setActiveQuiz(null);
+        setStudentAnswers({});
+        setTimeLeft(0);
+    };
 
     const fetchClasses = async () => {
         setLoading(true);
@@ -73,38 +122,213 @@ const EQuizz = ({ session, userRole }) => {
         }
     };
 
-    const handleGenerateAI = () => {
-        const correctText = options[correctOption];
-        if (!question.trim() || !correctText.trim()) {
-            alert("Vui lòng nhập câu hỏi và nội dung đáp án đúng!");
+    const fetchQuizzes = async (classId) => {
+        try {
+            const response = await fetch(`http://localhost:8080/api/quizzes/class/${classId}`);
+            if (response.ok) {
+                const data = await response.json();
+                setQuizzes(data);
+            }
+        } catch (err) {
+            console.error("Error fetching quizzes:", err);
+        }
+    };
+
+    const handleEditQuiz = (quiz) => {
+        setQuizTitle(quiz.title);
+        setDurationMinutes(quiz.durationMinutes || 15);
+        setEditingQuizId(quiz.id);
+        setQuestions(quiz.questions.map(q => ({
+            id: q.id,
+            content: q.content,
+            answers: q.answers.map(a => ({
+                id: a.id,
+                content: a.content,
+                is_correct: a.is_correct
+            })),
+            isExpanded: true
+        })));
+        setIsCreating(true);
+    };
+
+    const handleStartQuiz = (quiz) => {
+        setActiveQuiz(quiz);
+        setIsTakingQuiz(true);
+        setTimeLeft((quiz.durationMinutes || 15) * 60);
+        setStudentAnswers({});
+    };
+
+    const handleAddQuestion = () => {
+        const newQuestion = {
+            id: Date.now(),
+            content: '',
+            answers: [
+                { content: '', is_correct: false },
+                { content: '', is_correct: false },
+                { content: '', is_correct: false },
+                { content: '', is_correct: true }
+            ],
+            isExpanded: true
+        };
+        setQuestions([...questions, newQuestion]);
+    };
+
+    const handleDeleteQuestion = (id) => {
+        if (questions.length === 1) {
+            alert("Phải có ít nhất một câu hỏi!");
             return;
         }
+        setQuestions(questions.filter(q => q.id !== id));
+    };
 
-        setIsGenerating(true);
+    const handleQuestionChange = (id, value) => {
+        setQuestions(questions.map(q => q.id === id ? { ...q, content: value } : q));
+    };
 
-        // Simulate AI process
-        setTimeout(() => {
-            const newOptions = { ...options };
-            const distractorLabels = ['A', 'B', 'C', 'D'].filter(l => l !== correctOption);
-            
-            distractorLabels.forEach((label, index) => {
-                newOptions[label] = `Phương án gây nhiễu ${index + 1} cho "${correctText.slice(0, 15)}..."`;
+    const handleAnswerChange = (qId, ansIndex, value) => {
+        setQuestions(questions.map(q => {
+            if (q.id === qId) {
+                const newAnswers = q.answers.map((ans, idx) => 
+                    idx === ansIndex ? { ...ans, content: value } : ans
+                );
+                return { ...q, answers: newAnswers };
+            }
+            return q;
+        }));
+    };
+
+    const handleToggleCorrect = (qId, ansIndex) => {
+        setQuestions(questions.map(q => {
+            if (q.id === qId) {
+                const newAnswers = q.answers.map((ans, idx) => ({
+                    ...ans,
+                    is_correct: idx === ansIndex
+                }));
+                return { ...q, answers: newAnswers };
+            }
+            return q;
+        }));
+    };
+
+    const handleAddOption = (qId) => {
+        setQuestions(questions.map(q => {
+            if (q.id === qId) {
+                if (q.answers.length >= 5) return q;
+                const newAnswers = [...q.answers];
+                newAnswers[3] = { ...newAnswers[3], content: 'Tùy chọn 4', is_correct: false };
+                newAnswers.push({ content: 'nhập đáp án đúng', is_correct: true });
+                return { ...q, answers: newAnswers };
+            }
+            return q;
+        }));
+    };
+
+    const shuffleArray = (array) => {
+        const newArr = [...array];
+        for (let i = newArr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+        }
+        return newArr;
+    };
+
+    const validateForm = () => {
+        if (!quizTitle.trim()) {
+            alert("Vui lòng nhập tiêu đề bộ câu hỏi!");
+            return false;
+        }
+        
+        for (let i = 0; i < questions.length; i++) {
+            const q = questions[i];
+            if (!q.content.trim()) {
+                alert(`Câu hỏi #${i + 1} chưa có nội dung!`);
+                return false;
+            }
+            for (let j = 0; j < q.answers.length; j++) {
+                if (!q.answers[j].content.trim()) {
+                    alert(`Đáp án ${j + 1} của câu hỏi #${i + 1} chưa được điền!`);
+                    return false;
+                }
+            }
+            if (!q.answers.some(a => a.is_correct)) {
+                alert(`Câu hỏi #${i + 1} chưa chọn đáp án đúng!`);
+                return false;
+            }
+        }
+        return true;
+    };
+
+    const handleSave = async () => {
+        if (!validateForm()) return;
+
+        setLoading(true);
+        try {
+            const quizData = {
+                title: quizTitle,
+                duration_minutes: durationMinutes,
+                class_id: selectedClass.id,
+                created_by: session.user.id
+            };
+
+            const url = editingQuizId ? `http://localhost:8080/api/quizzes/${editingQuizId}` : 'http://localhost:8080/api/quizzes';
+            const method = editingQuizId ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    quiz: quizData,
+                    questions: questions.map((q, idx) => ({
+                        content: q.content,
+                        question_order: idx + 1,
+                        answers: (editingQuizId ? q.answers : shuffleArray(q.answers)).map((ans, aIdx) => ({
+                            content: ans.content,
+                            is_correct: ans.is_correct,
+                            answer_order: aIdx + 1
+                        }))
+                    }))
+                })
             });
 
-            setOptions(newOptions);
-            setIsGenerating(false);
-        }, 1500);
+            if (response.ok) {
+                alert(editingQuizId ? "Đã cập nhật bộ câu hỏi thành công!" : "Đã lưu bộ câu hỏi thành công!");
+                setQuizTitle('');
+                setDurationMinutes(15);
+                setEditingQuizId(null);
+                setQuestions([{
+                    id: Date.now(),
+                    content: '',
+                    answers: [
+                        { content: '', is_correct: false },
+                        { content: '', is_correct: false },
+                        { content: '', is_correct: false },
+                        { content: '', is_correct: true }
+                    ],
+                    isExpanded: true
+                }]);
+                setIsCreating(false);
+                fetchQuizzes(selectedClass.id);
+            } else {
+                const errorData = await response.json();
+                alert("Lỗi khi lưu: " + (errorData.message || "Unknown error"));
+            }
+        } catch (err) {
+            console.error("Error saving quiz:", err);
+            alert("Đã xảy ra lỗi kết nối!");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleOptionChange = (label, value) => {
-        setOptions(prev => ({ ...prev, [label]: value }));
+    const handleSubmitQuiz = () => {
+        alert("Thời gian đã hết hoặc bạn đã nộp bài! Hệ thống đang ghi nhận kết quả.");
+        stopQuiz();
     };
 
-    const handleSave = () => {
-        alert("Đã lưu bộ câu hỏi thành công! (Mockup)");
-        // Reset form
-        setQuestion('');
-        setOptions({ A: '', B: '', C: '', D: '' });
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
     return (
@@ -116,10 +340,12 @@ const EQuizz = ({ session, userRole }) => {
                         <span>E-Quizz</span>
                     </div>
                     
-                    <button className="equizz-create-btn">
-                        <FontAwesomeIcon icon={faPlus} />
-                        <span>Tạo bộ câu hỏi</span>
-                    </button>
+                    {isTeacher && (
+                        <button className="equizz-create-btn" onClick={() => setIsCreating(true)}>
+                            <FontAwesomeIcon icon={faPlus} />
+                            <span>Tạo bộ câu hỏi</span>
+                        </button>
+                    )}
                 </div>
 
                 <div className="equizz-list-section">
@@ -146,124 +372,236 @@ const EQuizz = ({ session, userRole }) => {
             </aside>
 
             {/* Main Content */}
+            {/* Main Content */}
             <main className="equizz-main-content">
                 {selectedClass ? (
-                    <div className="equizz-builder-scroll-area">
-                        {/* AI Toolbox Banner */}
-                        <div className="equizz-ai-banner">
-                            <div className="equizz-ai-banner-title">
-                                <div className="ai-spark-icon">
-                                    <FontAwesomeIcon icon={faBolt} />
+                    isTakingQuiz ? (
+                        /* Student Taking Quiz View */
+                        <div className="equizz-taking-view">
+                            <div className="taking-header">
+                                <div className="quiz-info">
+                                    <h2>{activeQuiz.title}</h2>
+                                    <p>{activeQuiz.questions.length} câu hỏi</p>
                                 </div>
-                                <p>Hãy sử dụng <span className="ai-highlight">E-QUIZZ AI</span> để nhanh chóng tạo ra nhiều câu hỏi khác</p>
-                                <div className="ai-mascot-container">
-                                    <FontAwesomeIcon icon={faRobot} className="ai-robot-mascot" />
+                                <div className="countdown-timer">
+                                    <FontAwesomeIcon icon={faBolt} className="timer-icon" />
+                                    <span>{formatTime(timeLeft)}</span>
                                 </div>
-                            </div>
-                            <div className="equizz-ai-cards">
-                                <div className="equizz-ai-card">
-                                    <div className="ai-card-icon-wrapper file">
-                                        <FontAwesomeIcon icon={faFileAlt} />
-                                    </div>
-                                    <span>Trích xuất từ tệp</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Question Builder Card */}
-                        <div className="equizz-question-builder-card">
-                            <div className="card-drag-handle">
-                                <FontAwesomeIcon icon={faEllipsisH} />
                             </div>
 
-                            <div className="card-header">
-                                <div className="header-left">
-                                    <span className="question-number"># 1</span>
-                                </div>
-                                <div className="header-right">
-                                    <button className="ai-similar-btn" onClick={handleGenerateAI}>
-                                        <FontAwesomeIcon icon={faClone} />
-                                        <span>Tạo câu hỏi tương tự</span>
-                                        <div className="spark-badge">
-                                            <FontAwesomeIcon icon={faBolt} />
+                            <div className="taking-scroll-area">
+                                {activeQuiz.questions.map((q, idx) => (
+                                    <div key={q.id} className="taking-question-card">
+                                        <div className="taking-q-header">
+                                            <span className="q-index">Câu {idx + 1}</span>
+                                            <p className="q-content">{q.content}</p>
                                         </div>
-                                    </button>
-                                    <button className="utility-icon-btn">
-                                        <FontAwesomeIcon icon={faCopy} />
-                                    </button>
-                                    <button className="utility-icon-btn delete">
-                                        <FontAwesomeIcon icon={faTrashAlt} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="question-input-section">
-                                <textarea 
-                                    className="question-textarea"
-                                    placeholder="Nhập nội dung câu hỏi tại đây..."
-                                    rows="2"
-                                    value={question}
-                                    onChange={(e) => setQuestion(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="options-vertical-list">
-                                {['A', 'B', 'C', 'D'].map((label) => (
-                                    <div key={label} className={`option-row ${correctOption === label ? 'is-correct' : ''}`}>
-                                        <div 
-                                            className="option-radio-indicator"
-                                            onClick={() => setCorrectOption(label)}
-                                        >
-                                            {correctOption === label ? (
-                                                <FontAwesomeIcon icon={faCheckCircle} className="checked-icon" />
-                                            ) : (
-                                                <FontAwesomeIcon icon={faCircle} className="unchecked-icon" />
-                                            )}
+                                        <div className="taking-answers-list">
+                                            {q.answers.map((ans) => (
+                                                <label key={ans.id} className={`taking-answer-item ${studentAnswers[q.id] === ans.id ? 'selected' : ''}`}>
+                                                    <input 
+                                                        type="radio"
+                                                        name={`question-${q.id}`}
+                                                        checked={studentAnswers[q.id] === ans.id}
+                                                        onChange={() => setStudentAnswers({...studentAnswers, [q.id]: ans.id})}
+                                                    />
+                                                    <span className="ans-text">{ans.content}</span>
+                                                </label>
+                                            ))}
                                         </div>
-                                        <input 
-                                            type="text"
-                                            className="option-text-input"
-                                            placeholder={correctOption === label ? "Nhập đáp án đúng..." : `Tùy chọn ${['1','2','3','4'][['A','B','C','D'].indexOf(label)]}`}
-                                            value={options[label]}
-                                            onChange={(e) => handleOptionChange(label, e.target.value)}
-                                        />
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="options-footer-actions">
-                                <button className="add-option-full-btn" onClick={() => {/* handle add option logic */}}>
-                                    <FontAwesomeIcon icon={faPlusCircle} />
-                                    <span>Thêm tùy chọn</span>
-                                </button>
-                            </div>
-
-                            <div className="card-footer">
-                                <button className="equizz-save-main-btn" onClick={handleSave} disabled={!question}>
-                                    <FontAwesomeIcon icon={faSave} />
-                                    <span>Lưu câu hỏi</span>
+                            <div className="taking-footer">
+                                <button className="submit-quiz-btn" onClick={handleSubmitQuiz}>
+                                    <FontAwesomeIcon icon={faCheckCircle} />
+                                    <span>Nộp bài ngay</span>
                                 </button>
                             </div>
                         </div>
+                    ) : isCreating ? (
+                        <div className="equizz-builder-scroll-area">
+                            <div className="builder-header">
+                                <button className="back-to-list-btn" onClick={() => { setIsCreating(false); setEditingQuizId(null); }}>
+                                    <FontAwesomeIcon icon={faChevronDown} rotation={90} />
+                                    <span>Quay lại</span>
+                                </button>
+                                <h2>{editingQuizId ? "Chỉnh sửa bộ câu hỏi" : "Tạo bộ câu hỏi mới"}</h2>
+                            </div>
 
-                        {/* Add New Question Section */}
-                        <div className="add-new-question-section">
-                            <div className="question-type-grid">
-                                <div className="q-type-card trắc-nghiệm">
-                                    <div className="q-type-icon checked">
-                                        <FontAwesomeIcon icon={faCheckCircle} />
+                            <div className="equizz-header-input-section">
+                                <div className="title-row">
+                                    <input 
+                                        type="text"
+                                        className="quiz-title-input"
+                                        placeholder="Nhập tiêu đề bộ câu hỏi..."
+                                        value={quizTitle}
+                                        onChange={(e) => setQuizTitle(e.target.value)}
+                                    />
+                                    <div className="duration-input-wrapper">
+                                        <FontAwesomeIcon icon={faBolt} className="duration-icon" />
+                                        <input 
+                                            type="number" 
+                                            value={durationMinutes} 
+                                            onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 0)}
+                                            min="1"
+                                        />
+                                        <span>Phút</span>
                                     </div>
-                                    <span>Thêm câu hỏi +</span>
                                 </div>
                             </div>
+
+                            {/* Question List */}
+                            {questions.map((q, index) => (
+                                <div key={q.id} className="equizz-question-builder-card">
+                                    <div className="card-drag-handle">
+                                        <FontAwesomeIcon icon={faEllipsisH} />
+                                    </div>
+
+                                    <div className="card-header">
+                                        <div className="header-left">
+                                            <span className="question-number"># {index + 1}</span>
+                                        </div>
+                                        <div className="header-right">
+                                            <button className="utility-icon-btn">
+                                                <FontAwesomeIcon icon={faCopy} />
+                                            </button>
+                                            <button 
+                                                className="utility-icon-btn delete"
+                                                onClick={() => handleDeleteQuestion(q.id)}
+                                            >
+                                                <FontAwesomeIcon icon={faTrashAlt} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="question-input-section">
+                                        <textarea 
+                                            className="question-textarea"
+                                            placeholder="Nhập nội dung câu hỏi tại đây..."
+                                            rows="2"
+                                            value={q.content}
+                                            onChange={(e) => handleQuestionChange(q.id, e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="options-vertical-list">
+                                        {q.answers.map((ans, ansIdx) => (
+                                            <div key={ansIdx} className={`option-row ${ans.is_correct ? 'is-correct' : ''}`}>
+                                                <div 
+                                                    className="option-radio-indicator"
+                                                    onClick={() => handleToggleCorrect(q.id, ansIdx)}
+                                                >
+                                                    {ans.is_correct ? (
+                                                        <FontAwesomeIcon icon={faCheckCircle} className="checked-icon" />
+                                                    ) : (
+                                                        <FontAwesomeIcon icon={faCircle} className="unchecked-icon" />
+                                                    )}
+                                                </div>
+                                                <input 
+                                                    type="text"
+                                                    className="option-text-input"
+                                                    placeholder={
+                                                        q.answers.length === 5 
+                                                        ? (ansIdx === 3 ? "Tùy chọn 4" : (ansIdx === 4 ? "Nhập đáp án đúng..." : `Đáp án ${ansIdx + 1}`))
+                                                        : (ans.is_correct ? "Nhập đáp án đúng..." : `Tùy chọn ${ansIdx + 1}`)
+                                                    }
+                                                    value={ans.content}
+                                                    onChange={(e) => handleAnswerChange(q.id, ansIdx, e.target.value)}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {q.answers.length < 5 && (
+                                        <div className="options-footer-actions">
+                                            <button 
+                                                className="add-option-full-btn" 
+                                                onClick={() => handleAddOption(q.id)}
+                                            >
+                                                <FontAwesomeIcon icon={faPlusCircle} />
+                                                <span>Thêm tùy chọn</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+
+                            <div className="add-new-question-section">
+                                <button className="q-type-card trắc-nghiệm" onClick={handleAddQuestion}>
+                                    <FontAwesomeIcon icon={faPlus} />
+                                    <span>Thêm câu hỏi mới</span>
+                                </button>
+                            </div>
+
+                            <div className="global-save-section">
+                                <button className="equizz-save-main-btn" onClick={handleSave} disabled={loading}>
+                                    <FontAwesomeIcon icon={loading ? faBolt : faSave} className={loading ? "fa-spin" : ""} />
+                                    <span>{loading ? "Đang lưu..." : (editingQuizId ? "Cập nhật bộ câu hỏi" : "Lưu bộ câu hỏi")}</span>
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="equizz-list-view">
+                            <div className="list-view-header">
+                                <div className="header-info">
+                                    <h1>Bộ câu hỏi của lớp</h1>
+                                    <p>{quizzes.length} bộ câu hỏi đã sẵn sàng</p>
+                                </div>
+                                {isTeacher && (
+                                    <button className="create-shortcut-btn" onClick={() => setIsCreating(true)}>
+                                        <FontAwesomeIcon icon={faPlus} />
+                                        <span>Tạo mới</span>
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="quiz-cards-grid">
+                                {quizzes.length > 0 ? (
+                                    quizzes.map((quiz) => (
+                                        <div key={quiz.id} className="quiz-summary-card">
+                                            <div className="quiz-card-icon">
+                                                <FontAwesomeIcon icon={faBrain} />
+                                            </div>
+                                            <div className="quiz-card-content">
+                                                <h3>{quiz.title}</h3>
+                                                <div className="quiz-meta">
+                                                    <span>
+                                                        <FontAwesomeIcon icon={faGraduationCap} /> 
+                                                        {quiz.questions?.length || 0} câu hỏi
+                                                    </span>
+                                                    <span>
+                                                        <FontAwesomeIcon icon={faLayerGroup} />
+                                                        Thời gian: {quiz.durationMinutes || 15} phút
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                className="start-quiz-btn"
+                                                onClick={() => isTeacher ? handleEditQuiz(quiz) : handleStartQuiz(quiz)}
+                                            >
+                                                <span>{isTeacher ? "Xem chi tiết" : "Bắt đầu"}</span>
+                                                <FontAwesomeIcon icon={faBolt} />
+                                            </button>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="no-quizzes-state">
+                                        <FontAwesomeIcon icon={faFlask} className="empty-flask" />
+                                        <p>Chưa có bộ câu hỏi nào được tạo cho lớp này.</p>
+                                        {isTeacher && <button onClick={() => setIsCreating(true)}>Tạo ngay bộ câu hỏi đầu tiên</button>}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )
                 ) : (
                     <div className="equizz-empty-state">
                         <div className="equizz-empty-icon">
                             <FontAwesomeIcon icon={faGraduationCap} />
                         </div>
-                        <h3>Chọn một lớp học để bắt đầu tạo Quiz</h3>
+                        <h3>Chọn một lớp học để xem các bộ câu hỏi</h3>
                     </div>
                 )}
             </main>
