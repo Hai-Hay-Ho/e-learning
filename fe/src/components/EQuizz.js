@@ -42,15 +42,16 @@ const EQuizz = ({ session, userRole }) => {
     const [quizTitle, setQuizTitle] = useState('');
     const [durationMinutes, setDurationMinutes] = useState(15);
     const [editingQuizId, setEditingQuizId] = useState(null);
+    const [prevClassId, setPrevClassId] = useState(null);
     const [questions, setQuestions] = useState([
         {
             id: Date.now(),
             content: '',
             answers: [
-                { content: '', is_correct: false },
-                { content: '', is_correct: false },
-                { content: '', is_correct: false },
-                { content: '', is_correct: true }
+                { content: '', isCorrect: false },
+                { content: '', isCorrect: false },
+                { content: '', isCorrect: false },
+                { content: '', isCorrect: true }
             ],
             isExpanded: true
         }
@@ -61,21 +62,64 @@ const EQuizz = ({ session, userRole }) => {
     const [activeQuiz, setActiveQuiz] = useState(null);
     const [timeLeft, setTimeLeft] = useState(0);
     const [studentAnswers, setStudentAnswers] = useState({});
+    const [attempts, setAttempts] = useState([]);
+    const [isReviewing, setIsReviewing] = useState(false);
 
     const isTeacher = userRole === "1";
 
     useEffect(() => {
         if (session?.user?.id) {
             fetchClasses();
+            fetchAttempts();
         }
     }, [session]);
 
     useEffect(() => {
         if (selectedClass) {
             fetchQuizzes(selectedClass.id);
-            stopQuiz();
-            setIsCreating(false);
-            setEditingQuizId(null);
+            
+            // Chỉ reset trạng thái nếu thực sự chuyển sang một lớp học KHÁC
+            if (prevClassId !== selectedClass.id) {
+                stopQuiz();
+                setIsCreating(false);
+                setEditingQuizId(null);
+                setPrevClassId(selectedClass.id);
+            }
+            
+            // Realtime subscription (giữ nguyên)
+            const channel = supabase
+                .channel(`class-quizzes-${selectedClass.id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'quizzes',
+                        filter: `class_id=eq.${selectedClass.id}`
+                    },
+                    (payload) => {
+                        console.log('Realtime update received:', payload);
+                        fetchQuizzes(selectedClass.id);
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'questions'
+                    },
+                    () => {
+                        // For questions/answers, we reload the whole list to be safe
+                        // as we can't easily filter by class_id here without complex joins
+                        fetchQuizzes(selectedClass.id);
+                    }
+                )
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
         }
     }, [selectedClass]);
 
@@ -98,9 +142,23 @@ const EQuizz = ({ session, userRole }) => {
 
     const stopQuiz = () => {
         setIsTakingQuiz(false);
+        setIsReviewing(false);
         setActiveQuiz(null);
         setStudentAnswers({});
         setTimeLeft(0);
+    };
+
+    const fetchAttempts = async () => {
+        if (!session?.user?.id) return;
+        try {
+            const response = await fetch(`http://localhost:8080/api/quiz-attempts/user/${session.user.id}`);
+            if (response.ok) {
+                const data = await response.json();
+                setAttempts(data);
+            }
+        } catch (err) {
+            console.error("Error fetching attempts:", err);
+        }
     };
 
     const fetchClasses = async () => {
@@ -111,8 +169,10 @@ const EQuizz = ({ session, userRole }) => {
             if (response.ok) {
                 const data = await response.json();
                 setClasses(data);
-                if (data.length > 0) {
+                // Chỉ set lớp mặc định nếu chưa có lớp nào được chọn
+                if (data.length > 0 && !selectedClass) {
                     setSelectedClass(data[0]);
+                    setPrevClassId(data[0].id);
                 }
             }
         } catch (err) {
@@ -144,7 +204,7 @@ const EQuizz = ({ session, userRole }) => {
             answers: q.answers.map(a => ({
                 id: a.id,
                 content: a.content,
-                is_correct: a.is_correct
+                isCorrect: a.isCorrect
             })),
             isExpanded: true
         })));
@@ -154,8 +214,34 @@ const EQuizz = ({ session, userRole }) => {
     const handleStartQuiz = (quiz) => {
         setActiveQuiz(quiz);
         setIsTakingQuiz(true);
+        setIsReviewing(false);
         setTimeLeft((quiz.durationMinutes || 15) * 60);
         setStudentAnswers({});
+    };
+
+    const handleReviewQuiz = async (quiz, attempt) => {
+        setLoading(true);
+        try {
+            const response = await fetch(`http://localhost:8080/api/quiz-attempts/attempt/${attempt.id}/answers`);
+            if (!response.ok) throw new Error("Failed to fetch answers");
+            const savedAnswers = await response.json();
+
+            const answersMap = {};
+            savedAnswers.forEach(ans => {
+                answersMap[ans.questionId] = ans.selectedAnswerId;
+            });
+
+            setStudentAnswers(answersMap);
+            setActiveQuiz(quiz);
+            setIsTakingQuiz(true);
+            setIsReviewing(true);
+            setTimeLeft(0);
+        } catch (err) {
+            console.error("Error fetching saved answers:", err);
+            alert("Lỗi khi tải bài làm cũ: " + err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleAddQuestion = () => {
@@ -163,10 +249,10 @@ const EQuizz = ({ session, userRole }) => {
             id: Date.now(),
             content: '',
             answers: [
-                { content: '', is_correct: false },
-                { content: '', is_correct: false },
-                { content: '', is_correct: false },
-                { content: '', is_correct: true }
+                { content: '', isCorrect: false },
+                { content: '', isCorrect: false },
+                { content: '', isCorrect: false },
+                { content: '', isCorrect: true }
             ],
             isExpanded: true
         };
@@ -202,7 +288,7 @@ const EQuizz = ({ session, userRole }) => {
             if (q.id === qId) {
                 const newAnswers = q.answers.map((ans, idx) => ({
                     ...ans,
-                    is_correct: idx === ansIndex
+                    isCorrect: idx === ansIndex
                 }));
                 return { ...q, answers: newAnswers };
             }
@@ -215,8 +301,8 @@ const EQuizz = ({ session, userRole }) => {
             if (q.id === qId) {
                 if (q.answers.length >= 5) return q;
                 const newAnswers = [...q.answers];
-                newAnswers[3] = { ...newAnswers[3], content: 'Tùy chọn 4', is_correct: false };
-                newAnswers.push({ content: 'nhập đáp án đúng', is_correct: true });
+                newAnswers[3] = { ...newAnswers[3], content: 'Tùy chọn 4', isCorrect: false };
+                newAnswers.push({ content: 'nhập đáp án đúng', isCorrect: true });
                 return { ...q, answers: newAnswers };
             }
             return q;
@@ -237,24 +323,27 @@ const EQuizz = ({ session, userRole }) => {
             alert("Vui lòng nhập tiêu đề bộ câu hỏi!");
             return false;
         }
-        
-        for (let i = 0; i < questions.length; i++) {
-            const q = questions[i];
-            if (!q.content.trim()) {
-                alert(`Câu hỏi #${i + 1} chưa có nội dung!`);
+
+        // Nếu là tạo mới, bắt buộc phải có ít nhất 1 câu hỏi đầy đủ
+        if (!editingQuizId) {
+            if (questions.length === 0) {
+                alert("Vui lòng thêm ít nhất một câu hỏi!");
                 return false;
             }
-            for (let j = 0; j < q.answers.length; j++) {
-                if (!q.answers[j].content.trim()) {
-                    alert(`Đáp án ${j + 1} của câu hỏi #${i + 1} chưa được điền!`);
+            
+            for (let i = 0; i < questions.length; i++) {
+                const q = questions[i];
+                if (!q.content.trim()) {
+                    alert(`Câu hỏi #${i + 1} chưa có nội dung!`);
+                    return false;
+                }
+                if (!q.answers.some(a => a.isCorrect && a.content.trim())) {
+                    alert(`Câu hỏi #${i + 1} chưa có đáp án đúng!`);
                     return false;
                 }
             }
-            if (!q.answers.some(a => a.is_correct)) {
-                alert(`Câu hỏi #${i + 1} chưa chọn đáp án đúng!`);
-                return false;
-            }
         }
+        
         return true;
     };
 
@@ -265,9 +354,9 @@ const EQuizz = ({ session, userRole }) => {
         try {
             const quizData = {
                 title: quizTitle,
-                duration_minutes: durationMinutes,
-                class_id: selectedClass.id,
-                created_by: session.user.id
+                durationMinutes: durationMinutes,
+                classId: selectedClass.id,
+                createdBy: session.user.id
             };
 
             const url = editingQuizId ? `http://localhost:8080/api/quizzes/${editingQuizId}` : 'http://localhost:8080/api/quizzes';
@@ -280,11 +369,11 @@ const EQuizz = ({ session, userRole }) => {
                     quiz: quizData,
                     questions: questions.map((q, idx) => ({
                         content: q.content,
-                        question_order: idx + 1,
+                        questionOrder: idx + 1,
                         answers: (editingQuizId ? q.answers : shuffleArray(q.answers)).map((ans, aIdx) => ({
                             content: ans.content,
-                            is_correct: ans.is_correct,
-                            answer_order: aIdx + 1
+                            isCorrect: ans.isCorrect,
+                            answerOrder: aIdx + 1
                         }))
                     }))
                 })
@@ -299,10 +388,10 @@ const EQuizz = ({ session, userRole }) => {
                     id: Date.now(),
                     content: '',
                     answers: [
-                        { content: '', is_correct: false },
-                        { content: '', is_correct: false },
-                        { content: '', is_correct: false },
-                        { content: '', is_correct: true }
+                        { content: '', isCorrect: false },
+                        { content: '', isCorrect: false },
+                        { content: '', isCorrect: false },
+                        { content: '', isCorrect: true }
                     ],
                     isExpanded: true
                 }]);
@@ -320,9 +409,68 @@ const EQuizz = ({ session, userRole }) => {
         }
     };
 
-    const handleSubmitQuiz = () => {
-        alert("Thời gian đã hết hoặc bạn đã nộp bài! Hệ thống đang ghi nhận kết quả.");
-        stopQuiz();
+    const handleSubmitQuiz = async () => {
+        if (isReviewing) {
+            stopQuiz();
+            return;
+        }
+
+        const confirmSubmit = window.confirm("Bạn có chắc chắn muốn nộp bài?");
+        if (!confirmSubmit) return;
+
+        setLoading(true);
+        try {
+            let correctCount = 0;
+            const totalQuestions = activeQuiz.questions.length;
+            const studentChoices = [];
+
+            activeQuiz.questions.forEach(q => {
+                const selectedAnsId = studentAnswers[q.id];
+                const correctAnswer = q.answers.find(a => a.isCorrect);
+                const isCorrect = selectedAnsId === correctAnswer?.id;
+                
+                if (isCorrect) correctCount++;
+                
+                studentChoices.push({
+                    question_id: q.id,
+                    selected_answer_id: selectedAnsId,
+                    is_correct: isCorrect
+                });
+            });
+
+            const scoreValue = (correctCount / totalQuestions) * 10;
+
+            const submissionData = {
+                quizId: activeQuiz.id,
+                userId: session.user.id,
+                score: scoreValue,
+                answers: studentChoices.map(choice => ({
+                    questionId: choice.question_id,
+                    selectedAnswerId: choice.selected_answer_id,
+                    isCorrect: choice.is_correct
+                }))
+            };
+
+            const response = await fetch('http://localhost:8080/api/quiz-attempts/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(submissionData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Lỗi khi lưu bài làm");
+            }
+
+            alert(`Bạn đã hoàn thành bài thi! Điểm của bạn: ${scoreValue.toFixed(2)}/10`);
+            await fetchAttempts();
+            stopQuiz();
+        } catch (err) {
+            console.error("Error submitting quiz:", err);
+            alert("Lỗi khi nộp bài: " + (err.message || "Unknown error"));
+        } finally {
+            setLoading(false);
+        }
     };
 
     const formatTime = (seconds) => {
@@ -390,33 +538,53 @@ const EQuizz = ({ session, userRole }) => {
                             </div>
 
                             <div className="taking-scroll-area">
-                                {activeQuiz.questions.map((q, idx) => (
-                                    <div key={q.id} className="taking-question-card">
-                                        <div className="taking-q-header">
-                                            <span className="q-index">Câu {idx + 1}</span>
-                                            <p className="q-content">{q.content}</p>
+                                {activeQuiz.questions.map((q, idx) => {
+                                    const selectedId = studentAnswers[q.id];
+                                    return (
+                                        <div key={q.id} className="taking-question-card">
+                                            <div className="taking-q-header">
+                                                <span className="q-index">Câu {idx + 1}</span>
+                                                <p className="q-content">{q.content}</p>
+                                            </div>
+                                            <div className="taking-answers-list">
+                                                {q.answers.map((ans) => {
+                                                    const isSelected = selectedId === ans.id;
+                                                    const isCorrect = ans.isCorrect;
+                                                    let statusClass = '';
+                                                    if (isReviewing) {
+                                                        if (isCorrect) statusClass = 'correct-ans';
+                                                        else if (isSelected && !isCorrect) statusClass = 'wrong-ans';
+                                                    }
+
+                                                    return (
+                                                        <label key={ans.id} className={`taking-answer-item ${isSelected ? 'selected' : ''} ${statusClass}`}>
+                                                            <input 
+                                                                type="radio"
+                                                                name={`question-${q.id}`}
+                                                                checked={isSelected}
+                                                                onChange={() => !isReviewing && setStudentAnswers({...studentAnswers, [q.id]: ans.id})}
+                                                                disabled={isReviewing}
+                                                            />
+                                                            <span className="ans-text">{ans.content}</span>
+                                                            {isReviewing && isCorrect && (
+                                                                <FontAwesomeIcon icon={faCheckCircle} className="review-status-icon correct" />
+                                                            )}
+                                                            {isReviewing && isSelected && !isCorrect && (
+                                                                <FontAwesomeIcon icon={faTrashAlt} className="review-status-icon wrong" />
+                                                            )}
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                        <div className="taking-answers-list">
-                                            {q.answers.map((ans) => (
-                                                <label key={ans.id} className={`taking-answer-item ${studentAnswers[q.id] === ans.id ? 'selected' : ''}`}>
-                                                    <input 
-                                                        type="radio"
-                                                        name={`question-${q.id}`}
-                                                        checked={studentAnswers[q.id] === ans.id}
-                                                        onChange={() => setStudentAnswers({...studentAnswers, [q.id]: ans.id})}
-                                                    />
-                                                    <span className="ans-text">{ans.content}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             <div className="taking-footer">
                                 <button className="submit-quiz-btn" onClick={handleSubmitQuiz}>
-                                    <FontAwesomeIcon icon={faCheckCircle} />
-                                    <span>Nộp bài ngay</span>
+                                    <FontAwesomeIcon icon={isReviewing ? faChevronDown : faCheckCircle} rotation={isReviewing ? 90 : 0} />
+                                    <span>{isReviewing ? "Quay lại danh sách" : "Nộp bài ngay"}</span>
                                 </button>
                             </div>
                         </div>
@@ -488,12 +656,12 @@ const EQuizz = ({ session, userRole }) => {
 
                                     <div className="options-vertical-list">
                                         {q.answers.map((ans, ansIdx) => (
-                                            <div key={ansIdx} className={`option-row ${ans.is_correct ? 'is-correct' : ''}`}>
+                                            <div key={ansIdx} className={`option-row ${ans.isCorrect ? 'is-correct' : ''}`}>
                                                 <div 
                                                     className="option-radio-indicator"
                                                     onClick={() => handleToggleCorrect(q.id, ansIdx)}
                                                 >
-                                                    {ans.is_correct ? (
+                                                    {ans.isCorrect ? (
                                                         <FontAwesomeIcon icon={faCheckCircle} className="checked-icon" />
                                                     ) : (
                                                         <FontAwesomeIcon icon={faCircle} className="unchecked-icon" />
@@ -505,7 +673,7 @@ const EQuizz = ({ session, userRole }) => {
                                                     placeholder={
                                                         q.answers.length === 5 
                                                         ? (ansIdx === 3 ? "Tùy chọn 4" : (ansIdx === 4 ? "Nhập đáp án đúng..." : `Đáp án ${ansIdx + 1}`))
-                                                        : (ans.is_correct ? "Nhập đáp án đúng..." : `Tùy chọn ${ansIdx + 1}`)
+                                                        : (ans.isCorrect ? "Nhập đáp án đúng..." : `Tùy chọn ${ansIdx + 1}`)
                                                     }
                                                     value={ans.content}
                                                     onChange={(e) => handleAnswerChange(q.id, ansIdx, e.target.value)}
@@ -559,33 +727,44 @@ const EQuizz = ({ session, userRole }) => {
 
                             <div className="quiz-cards-grid">
                                 {quizzes.length > 0 ? (
-                                    quizzes.map((quiz) => (
-                                        <div key={quiz.id} className="quiz-summary-card">
-                                            <div className="quiz-card-icon">
-                                                <FontAwesomeIcon icon={faBrain} />
-                                            </div>
-                                            <div className="quiz-card-content">
-                                                <h3>{quiz.title}</h3>
-                                                <div className="quiz-meta">
-                                                    <span>
-                                                        <FontAwesomeIcon icon={faGraduationCap} /> 
-                                                        {quiz.questions?.length || 0} câu hỏi
-                                                    </span>
-                                                    <span>
-                                                        <FontAwesomeIcon icon={faLayerGroup} />
-                                                        Thời gian: {quiz.durationMinutes || 15} phút
-                                                    </span>
+                                    quizzes.map((quiz) => {
+                                        const attempt = attempts.find(a => a.quizId === quiz.id);
+                                        return (
+                                            <div key={quiz.id} className={`quiz-summary-card ${attempt ? 'completed' : ''}`}>
+                                                <div className="quiz-card-icon">
+                                                    <FontAwesomeIcon icon={attempt ? faCheckCircle : faBrain} />
                                                 </div>
+                                                <div className="quiz-card-content">
+                                                    <h3>{quiz.title}</h3>
+                                                    <div className="quiz-meta">
+                                                        <span>
+                                                            <FontAwesomeIcon icon={faGraduationCap} /> 
+                                                            {quiz.questions?.length || 0} câu hỏi
+                                                        </span>
+                                                        <span>
+                                                            <FontAwesomeIcon icon={faLayerGroup} />
+                                                            Thời gian: {quiz.durationMinutes || 15} phút
+                                                        </span>
+                                                        {attempt && (
+                                                            <span className="quiz-score-badge">
+                                                                <FontAwesomeIcon icon={faBolt} />
+                                                                Điểm: {attempt.score}/10
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    className="start-quiz-btn"
+                                                    onClick={() => isTeacher ? handleEditQuiz(quiz) : (attempt ? handleReviewQuiz(quiz, attempt) : handleStartQuiz(quiz))}
+                                                >
+                                                    <span>
+                                                        {isTeacher ? "Xem chi tiết" : (attempt ? "Xem lại bài làm" : "Bắt đầu làm bài")}
+                                                    </span>
+                                                    <FontAwesomeIcon icon={attempt ? faFileAlt : faBolt} />
+                                                </button>
                                             </div>
-                                            <button 
-                                                className="start-quiz-btn"
-                                                onClick={() => isTeacher ? handleEditQuiz(quiz) : handleStartQuiz(quiz)}
-                                            >
-                                                <span>{isTeacher ? "Xem chi tiết" : "Bắt đầu"}</span>
-                                                <FontAwesomeIcon icon={faBolt} />
-                                            </button>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <div className="no-quizzes-state">
                                         <FontAwesomeIcon icon={faFlask} className="empty-flask" />

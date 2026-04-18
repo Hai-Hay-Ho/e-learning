@@ -140,7 +140,7 @@
 }
 
 .equizz-builder-scroll-area {
-    max-width: 900px;
+    max-width: 1100px;
     margin: 32px auto;
     width: 95%;
     display: flex;
@@ -792,9 +792,10 @@
 
 /* List View Styling */
 .equizz-list-view {
-    max-width: 1000px;
+    max-width: 1100px;
     margin: 40px auto;
     width: 90%;
+    padding-bottom: 100px; /* Added significant bottom padding */
 }
 
 .list-view-header {
@@ -848,10 +849,12 @@
 .quiz-summary-card {
     background: white;
     border-radius: 20px;
-    padding: 24px;
+    min-height: 280px; /* Increased min-height */
+    padding: 32px; /* Increased padding */
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    justify-content: space-between; /* Space things out */
+    gap: 24px;
     border: 1px solid #e2e8f0;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -896,6 +899,20 @@
     font-size: 13px;
     color: #64748b;
     font-weight: 500;
+}
+
+.quiz-score-badge {
+    background: #f0fdf4;
+    color: #166534 !important;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-weight: 700 !important;
+    margin-top: 4px;
+    display: inline-flex !important;
+}
+
+.quiz-summary-card.completed {
+    border-left: 4px solid #10b981;
 }
 
 .start-quiz-btn {
@@ -1001,12 +1018,13 @@
 
 /* Taking Quiz View */
 .equizz-taking-view {
-    max-width: 800px;
+    max-width: 1100px;
     margin: 40px auto;
-    width: 90%;
-    height: calc(100vh - 120px);
+    width: 95%;
+    height: calc(100vh); /* Increased height */
     display: flex;
     flex-direction: column;
+    padding-bottom: 40px; /* Padding for bottom */
 }
 
 .taking-header {
@@ -1133,6 +1151,30 @@
     font-size: 16px;
     font-weight: 600;
     color: #475569;
+}
+
+/* Review Status Styling */
+.taking-answer-item.correct-ans {
+    background: #f0fdf4;
+    border-color: #10b981;
+}
+
+.taking-answer-item.wrong-ans {
+    background: #fef2f2;
+    border-color: #ef4444;
+}
+
+.review-status-icon {
+    margin-left: auto;
+    font-size: 18px;
+}
+
+.review-status-icon.correct {
+    color: #10b981;
+}
+
+.review-status-icon.wrong {
+    color: #ef4444;
 }
 
 .taking-footer {

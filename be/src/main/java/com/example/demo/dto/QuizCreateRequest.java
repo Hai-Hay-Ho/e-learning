@@ -12,22 +12,22 @@ public class QuizCreateRequest {
     @Data
     public static class QuizDTO {
         private String title;
-        private Integer duration_minutes;
-        private UUID class_id;
-        private UUID created_by;
+        private Integer durationMinutes;
+        private UUID classId;
+        private UUID createdBy;
     }
 
     @Data
     public static class QuestionDTO {
         private String content;
-        private Integer question_order;
+        private Integer questionOrder;
         private List<AnswerDTO> answers;
     }
 
     @Data
     public static class AnswerDTO {
         private String content;
-        private Boolean is_correct;
-        private Integer answer_order;
+        private Boolean isCorrect;
+        private Integer answerOrder;
     }
 }

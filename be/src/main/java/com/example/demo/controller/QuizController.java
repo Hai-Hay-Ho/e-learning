@@ -27,9 +27,9 @@ public class QuizController {
         try {
             Quiz quiz = new Quiz();
             quiz.setTitle(request.getQuiz().getTitle());
-            quiz.setDurationMinutes(request.getQuiz().getDuration_minutes() != null ? request.getQuiz().getDuration_minutes() : 15);
-            quiz.setClassId(request.getQuiz().getClass_id());
-            quiz.setCreatedBy(request.getQuiz().getCreated_by());
+            quiz.setDurationMinutes(request.getQuiz().getDurationMinutes() != null ? request.getQuiz().getDurationMinutes() : 15);
+            quiz.setClassId(request.getQuiz().getClassId());
+            quiz.setCreatedBy(request.getQuiz().getCreatedBy());
             quiz.setCreatedAt(LocalDateTime.now());
             quiz.setUpdatedAt(LocalDateTime.now());
 
@@ -37,7 +37,7 @@ public class QuizController {
             for (QuizCreateRequest.QuestionDTO qDto : request.getQuestions()) {
                 Question question = new Question();
                 question.setContent(qDto.getContent());
-                question.setQuestionOrder(qDto.getQuestion_order());
+                question.setQuestionOrder(qDto.getQuestionOrder());
                 question.setQuiz(quiz);
                 question.setCreatedAt(LocalDateTime.now());
 
@@ -45,8 +45,8 @@ public class QuizController {
                 for (QuizCreateRequest.AnswerDTO aDto : qDto.getAnswers()) {
                     Answer answer = new Answer();
                     answer.setContent(aDto.getContent());
-                    answer.setIsCorrect(aDto.getIs_correct());
-                    answer.setAnswerOrder(aDto.getAnswer_order());
+                    answer.setIsCorrect(aDto.getIsCorrect());
+                    answer.setAnswerOrder(aDto.getAnswerOrder());
                     answer.setQuestion(question);
                     answers.add(answer);
                 }
@@ -69,7 +69,7 @@ public class QuizController {
             if (existingQuiz == null) return ResponseEntity.notFound().build();
 
             existingQuiz.setTitle(request.getQuiz().getTitle());
-            existingQuiz.setDurationMinutes(request.getQuiz().getDuration_minutes());
+            existingQuiz.setDurationMinutes(request.getQuiz().getDurationMinutes());
             existingQuiz.setUpdatedAt(LocalDateTime.now());
 
             // Simple way: clear existings and add new ones (since it's a builder)
@@ -78,7 +78,7 @@ public class QuizController {
             for (QuizCreateRequest.QuestionDTO qDto : request.getQuestions()) {
                 Question question = new Question();
                 question.setContent(qDto.getContent());
-                question.setQuestionOrder(qDto.getQuestion_order());
+                question.setQuestionOrder(qDto.getQuestionOrder());
                 question.setQuiz(existingQuiz);
                 question.setCreatedAt(LocalDateTime.now());
 
@@ -86,8 +86,8 @@ public class QuizController {
                 for (QuizCreateRequest.AnswerDTO aDto : qDto.getAnswers()) {
                     Answer answer = new Answer();
                     answer.setContent(aDto.getContent());
-                    answer.setIsCorrect(aDto.getIs_correct());
-                    answer.setAnswerOrder(aDto.getAnswer_order());
+                    answer.setIsCorrect(aDto.getIsCorrect());
+                    answer.setAnswerOrder(aDto.getAnswerOrder());
                     answer.setQuestion(question);
                     answers.add(answer);
                 }
