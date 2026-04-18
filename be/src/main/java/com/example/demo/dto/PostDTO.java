@@ -16,6 +16,7 @@ import java.util.UUID;
 public class PostDTO {
     private UUID id;
     private UUID classId;
+    private List<UUID> targetClassIds;
     private UUID authorId;
     private String authorName;
     private String authorAvatar;
