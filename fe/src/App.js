@@ -62,11 +62,8 @@ function App() {
         setUserRole(data.role); 
         setUserData(data); // Lưu thông tin trả về từ supabase
         fetchClasses(user.id, data.role);
-      } else {
-        console.error("Failed to sync user role with backend");
       }
     } catch (error) {
-      console.error("Error syncing user with backend:", error);
     }
   };
 

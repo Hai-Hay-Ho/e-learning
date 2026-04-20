@@ -950,62 +950,126 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
                 </div>
             )}
 
-            {showCreateModal && (
+            {showEditModal && (
                 <div className="modal-overlay">
-                    <div className="modal-content-custom">
-                        <h2>Tạo lớp học mới</h2>
-                        <form onSubmit={handleCreateClass}>
+                    <div className="modal-content-custom" style={{ width: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h2 style={{ margin: 0 }}>Chỉnh sửa bài đăng</h2>
+                        </div>
+
+                        <form onSubmit={handleUpdatePost}>
                             <div className="form-group">
-                                <label>Tạo lớp học</label>
+                                <label>Loại bài đăng</label>
+                                <select 
+                                    value={postType} 
+                                    onChange={(e) => setPostType(e.target.value)}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', marginBottom: '15px' }}
+                                >
+                                    <option value="announcement">Thông báo</option>
+                                    <option value="material">Tài liệu</option>
+                                    <option value="assignment">Bài tập</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Tiêu đề</label>
                                 <input 
                                     type="text" 
-                                    value={className} 
-                                    onChange={(e) => setClassName(e.target.value)}
-                                    placeholder="Nhập tên lớp học"
+                                    value={postTitle} 
+                                    onChange={(e) => setPostTitle(e.target.value)}
+                                    placeholder="Nhập tiêu đề"
                                     required
                                 />
                             </div>
+                            <div className="form-group">
+                                <label>Nội dung</label>
+                                <textarea 
+                                    value={postContent} 
+                                    onChange={(e) => setPostContent(e.target.value)}
+                                    placeholder="Nhập nội dung bài đăng"
+                                    rows="5"
+                                    style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #e0e0e0', minHeight: '100px' }}
+                                    required
+                                ></textarea>
+                            </div>
+
+                            {postType === 'assignment' && (
+                                <div className="form-group deadline-picker-group">
+                                    <label>
+                                        <FontAwesomeIcon icon={faCalendarAlt} style={{ marginRight: '8px', color: '#d93025' }} />
+                                        Hạn nộp bài (Deadline)
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        value={postDeadline}
+                                        onChange={(e) => setPostDeadline(e.target.value)}
+                                        className="deadline-input"
+                                        min={new Date().toISOString().slice(0, 16)}
+                                    />
+                                    {postDeadline && (
+                                        <p className="deadline-preview">
+                                            📅 Hạn nộp: {new Date(postDeadline).toLocaleString('vi-VN', {
+                                                weekday: 'long', year: 'numeric', month: 'long',
+                                                day: 'numeric', hour: '2-digit', minute: '2-digit'
+                                            })}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                            
+                            <div className="form-group">
+                                <label>Tập tin đính kèm ({attachments.length})</label>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {attachments.map((att, index) => (
+                                        <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '8px', border: '1px solid #dadce0', borderRadius: '4px', background: '#f8f9fa' }}>
+                                            <FontAwesomeIcon icon={faFileAlt} style={{ marginRight: '8px', color: '#1967d2' }} />
+                                            <span style={{ flex: 1, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{att.fileName}</span>
+                                            <button type="button" onClick={() => removeAttachment(index)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#5f6368' }}>
+                                                <FontAwesomeIcon icon={faTimes} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    
+                                    <label style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center', 
+                                        padding: '10px', 
+                                        border: '2px dashed #dadce0', 
+                                        borderRadius: '4px', 
+                                        cursor: 'pointer', 
+                                        color: '#1967d2',
+                                        gap: '8px',
+                                        marginTop: '8px'
+                                    }}>
+                                        <input 
+                                            type="file" 
+                                            multiple 
+                                            onChange={handleFileChange} 
+                                            style={{ display: 'none' }} 
+                                            disabled={uploading}
+                                        />
+                                        <FontAwesomeIcon icon={uploading ? faPlus : faPaperclip} spin={uploading} />
+                                        {uploading ? 'Đang tải lên...' : 'Thêm tập tin đính kèm'}
+                                    </label>
+                                </div>
+                            </div>
+
                             <div className="modal-actions">
-                                <button type="button" onClick={() => setShowCreateModal(false)}>Hủy</button>
-                                <button type="submit" className="confirm-btn">Tạo</button>
+                                <button type="button" onClick={() => { setShowEditModal(false); setEditingPost(null); }}>Hủy</button>
+                                <button type="submit" className="confirm-btn">Cập nhật</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
-            {showJoinModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content-custom">
-                        <h2>Tham gia lớp học</h2>
-                        <form onSubmit={handleJoinClass}>
-                            <div className="form-group">
-                                <label>Mã tham gia</label>
-                                <input 
-                                    type="text" 
-                                    value={joinCode} 
-                                    onChange={(e) => setJoinCode(e.target.value)}
-                                    placeholder="Nhập mã code 6 ký tự"
-                                    maxLength="6"
-                                    required
-                                />
-                            </div>
-                            <div className="modal-actions">
-                                <button type="button" onClick={() => setShowJoinModal(false)}>Hủy</button>
-                                <button type="submit" className="confirm-btn">Tham gia</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
             {showCreateModal && (
                 <div className="modal-overlay">
                     <div className="modal-content-custom">
                         <h2>Tạo lớp học mới</h2>
                         <form onSubmit={handleCreateClass}>
                             <div className="form-group">
-                                <label>Tạo lớp học</label>
+                                <label>Tên lớp học</label>
                                 <input 
                                     type="text" 
                                     value={className} 
