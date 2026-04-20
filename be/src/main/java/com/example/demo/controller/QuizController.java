@@ -22,6 +22,12 @@ public class QuizController {
     @Autowired
     private QuizRepository quizRepository;
 
+    @Autowired
+    private com.example.demo.service.EmailService emailService;
+
+    @Autowired
+    private com.example.demo.repository.UserRepository userRepository;
+
     @PostMapping
     public ResponseEntity<?> createQuiz(@RequestBody QuizCreateRequest request) {
         try {
@@ -57,6 +63,26 @@ public class QuizController {
             quiz.setQuestions(questions);
 
             Quiz savedQuiz = quizRepository.save(quiz);
+
+            // Gửi thông báo email cho sinh viên
+            try {
+                List<String> studentEmails = userRepository.findEmailsByClassId(savedQuiz.getClassId());
+                com.example.demo.model.User teacher = userRepository.findById(savedQuiz.getCreatedBy()).orElse(null);
+                String teacherName = teacher != null ? teacher.getFullName() : "Giảng viên";
+                
+                String directLink = "http://localhost:3000/?tab=Quizzes&id=" + savedQuiz.getId();
+                emailService.sendNotification(
+                    studentEmails, 
+                    "[Thông báo] Giảng viên đã đăng một bộ câu hỏi mới", 
+                    teacherName, 
+                    "vừa đăng một bộ câu hỏi mới", 
+                    savedQuiz.getTitle(), 
+                    directLink
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to trigger email notification: " + e.getMessage());
+            }
+
             return ResponseEntity.ok(savedQuiz);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());

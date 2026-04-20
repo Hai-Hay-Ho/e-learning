@@ -20,6 +20,7 @@ public class PostService {
     private final UserRepository userRepository;
     private final AssignmentDeadlineRepository assignmentDeadlineRepository;
     private final CommentRepository commentRepository;
+    private final EmailService emailService;
 
     @Transactional
     public List<PostDTO> createPost(PostDTO postDTO) {
@@ -27,6 +28,10 @@ public class PostService {
         if (targetClassIds == null || targetClassIds.isEmpty()) {
             targetClassIds = Collections.singletonList(postDTO.getClassId());
         }
+
+        // Lấy thông tin giảng viên một lần duy nhất
+        User author = userRepository.findById(postDTO.getAuthorId()).orElse(null);
+        String teacherName = author != null ? author.getFullName() : "Giảng viên";
 
         List<PostDTO> createdPosts = new ArrayList<>();
         
@@ -63,6 +68,35 @@ public class PostService {
                 attachmentRepository.saveAll(attachments);
             }
             createdPosts.add(getPostDTO(savedPost));
+
+            // Gửi thông báo email cho bất kể loại bài đăng nào
+            try {
+                List<String> studentEmails = userRepository.findEmailsByClassId(classId);
+                String directLink = "http://localhost:3000/?tab=Classes&id=" + classId;
+                
+                // Xác định nhãn thông báo dựa trên loại bài đăng
+                String actionLabel = "vừa đăng một thông báo mới";
+                String emailSubject = "[Thông báo] Giảng viên đã đăng một thông báo mới";
+                
+                if ("assignment".equals(savedPost.getType())) {
+                    actionLabel = "vừa đăng một bài tập mới";
+                    emailSubject = "[Thông báo] Giảng viên đã đăng một bài tập mới";
+                } else if ("material".equals(savedPost.getType())) {
+                    actionLabel = "vừa đăng một tài liệu mới";
+                    emailSubject = "[Thông báo] Giảng viên đã đăng một tài liệu mới";
+                }
+                
+                emailService.sendNotification(
+                    studentEmails, 
+                    emailSubject, 
+                    teacherName, 
+                    actionLabel, 
+                    savedPost.getTitle(), 
+                    directLink
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to trigger post notification: " + e.getMessage());
+            }
         }
 
         return createdPosts;
