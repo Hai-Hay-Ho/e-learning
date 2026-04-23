@@ -5,21 +5,20 @@ import {
     faBookOpen, 
     faGraduationCap, 
     faBullseye, 
-    faClock,
     faChartBar,
-    faLightbulb,
-    faPalette,
     faFont,
     faHome,
     faImage,
     faEllipsisH,
-    faCamera
+    faCamera,
+    faClipboardList,
+    faCalendarCheck
 } from '@fortawesome/free-solid-svg-icons';
 
 const MainContent = ({ session, classes, setActiveTab, setSelectedClass }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [,setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [universities, setUniversities] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
@@ -32,6 +31,12 @@ const MainContent = ({ session, classes, setActiveTab, setSelectedClass }) => {
     //list bài tập đã nộp và các lượt làm Quiz của sinh viên
     const [submissions, setSubmissions] = useState([]);
     const [quizAttempts, setQuizAttempts] = useState([]);
+    const [teacherStats, setTeacherStats] = useState({
+        totalClasses: 0,
+        totalExercises: 0,
+        ungradedAssignments: 0,
+        todaySubmissions: 0
+    });
 
     useEffect(() => {
         if (session?.user) {
@@ -44,18 +49,38 @@ const MainContent = ({ session, classes, setActiveTab, setSelectedClass }) => {
     //api lấy danh sách bài nộp và bài kiểm tra
     const fetchStats = async () => {
         try {
-            const [subRes, quizRes] = await Promise.all([
-                fetch(`http://localhost:8080/api/submissions/user/${session.user.id}`),
-                fetch(`http://localhost:8080/api/quiz-attempts/user/${session.user.id}`)
-            ]);
+            // Check if user is teacher or student from user state or supabase
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (!authUser) return;
 
-            if (subRes.ok) {
-                const subData = await subRes.json();
-                setSubmissions(subData);
-            }
-            if (quizRes.ok) {
-                const quizData = await quizRes.json();
-                setQuizAttempts(quizData);
+            const { data: userData } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', authUser.id)
+                .single();
+
+            if (userData && String(userData.role) === "1") {
+                // Fetch teacher stats
+                const response = await fetch(`http://localhost:8080/api/stats/teacher/${authUser.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setTeacherStats(data);
+                }
+            } else {
+                // Fetch student stats
+                const [subRes, quizRes] = await Promise.all([
+                    fetch(`http://localhost:8080/api/submissions/user/${session.user.id}`),
+                    fetch(`http://localhost:8080/api/quiz-attempts/user/${session.user.id}`)
+                ]);
+
+                if (subRes.ok) {
+                    const subData = await subRes.json();
+                    setSubmissions(subData);
+                }
+                if (quizRes.ok) {
+                    const quizData = await quizRes.json();
+                    setQuizAttempts(quizData);
+                }
             }
         } catch (error) {
             console.error('Error fetching stats:', error);
@@ -319,26 +344,53 @@ const MainContent = ({ session, classes, setActiveTab, setSelectedClass }) => {
                         <h2>Overview</h2>
                     </div>
                     <div className="overview-cards">
-                        <div className="overview-card">
-                            <div className="overview-card-icon"><FontAwesomeIcon icon={faBookOpen} /></div>
-                            <h3>{stats.totalClasses}</h3>
-                            <p>Tổng lớp học tham gia</p>
-                        </div>
-                        <div className="overview-card">
-                            <div className="overview-card-icon"><FontAwesomeIcon icon={faGraduationCap} /></div>
-                            <h3>{stats.totalCompleted}</h3>
-                            <p>Số bài tập hoàn thành</p>
-                        </div>
-                        <div className="overview-card">
-                            <div className="overview-card-icon"><FontAwesomeIcon icon={faBullseye} /></div>
-                            <h3>{stats.avgScore}</h3>
-                            <p>Tổng điểm trung bình</p>
-                        </div>
-                        <div className="overview-card">
-                            <div className="overview-card-icon"><FontAwesomeIcon icon={faChartBar} /></div>
-                            <h3>{stats.classification}</h3>
-                            <p>Xếp loại học tập</p>
-                        </div>
+                        {String(user?.role) === "1" ? (
+                            <>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faBookOpen} /></div>
+                                    <h3>{teacherStats.totalClasses}</h3>
+                                    <p>Tổng số lớp học của bạn</p>
+                                </div>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faGraduationCap} /></div>
+                                    <h3>{teacherStats.totalExercises}</h3>
+                                    <p>Tổng số bài tập đã tạo</p>
+                                </div>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faClipboardList} /></div>
+                                    <h3>{teacherStats.ungradedAssignments}</h3>
+                                    <p>Số bài tập chưa chấm</p>
+                                </div>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faCalendarCheck} /></div>
+                                    <h3>{teacherStats.todaySubmissions}</h3>
+                                    <p>Số lượt nộp bài hôm nay</p>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faBookOpen} /></div>
+                                    <h3>{stats.totalClasses}</h3>
+                                    <p>Tổng lớp học tham gia</p>
+                                </div>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faGraduationCap} /></div>
+                                    <h3>{stats.totalCompleted}</h3>
+                                    <p>Số bài tập hoàn thành</p>
+                                </div>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faBullseye} /></div>
+                                    <h3>{stats.avgScore}</h3>
+                                    <p>Tổng điểm trung bình</p>
+                                </div>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faChartBar} /></div>
+                                    <h3>{stats.classification}</h3>
+                                    <p>Xếp loại học tập</p>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </section>
 

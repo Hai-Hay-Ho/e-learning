@@ -24,8 +24,6 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
     const [showJoinModal, setShowJoinModal] = useState(false);
     const [className, setClassName] = useState('');
     const [joinCode, setJoinCode] = useState('');
-
-    // New states for Posts
     const [selectedClass, setSelectedClass] = useState(null);
     const [posts, setPosts] = useState([]);
     const [showPostModal, setShowPostModal] = useState(false);
@@ -75,7 +73,6 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
                         filter: `class_id=eq.${selectedClass.id}`
                     },
                     (payload) => {
-                        console.log('Post change received via Realtime:', payload.eventType);
                         fetchPosts(selectedClass.id);
                     }
                 )
@@ -93,7 +90,6 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
                         table: 'comments'
                     },
                     (payload) => {
-                        console.log('Comment change received via Realtime:', payload.eventType);
                         fetchPosts(selectedClass.id); // Tải lại posts để lấy recentComments mới nhất
                     }
                 )
@@ -111,7 +107,6 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
                         table: 'post_attachments'
                     },
                     () => {
-                        console.log('Attachment change received via Realtime');
                         fetchPosts(selectedClass.id);
                     }
                 )
@@ -272,8 +267,6 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
             });
 
             if (response.ok) {
-                const data = await response.json();
-                console.log("Posts created:", data);
                 setShowPostModal(false);
                 setPostTitle('');
                 setPostContent('');
@@ -380,9 +373,7 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
                 setClasses([...classes, data]);
                 setShowCreateModal(false);
                 setClassName('');
-            } else {
-                const errorData = await response.json();
-            }
+            } 
         } catch (err) {
             console.error(err);
         }

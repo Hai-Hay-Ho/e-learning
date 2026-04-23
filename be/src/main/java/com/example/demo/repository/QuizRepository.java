@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface QuizRepository extends JpaRepository<Quiz, UUID> {
     List<Quiz> findByClassId(UUID classId);
+    long countByClassIdIn(List<UUID> classIds);
+    List<Quiz> findByClassIdIn(List<UUID> classIds);
 }
