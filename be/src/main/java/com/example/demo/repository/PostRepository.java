@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface PostRepository extends JpaRepository<PostEntity, UUID> {
     List<PostEntity> findByClassIdOrderByCreatedAtDesc(UUID classId);
+    long countByClassIdInAndType(List<UUID> classIds, String type);
+    List<PostEntity> findByClassIdInAndType(List<UUID> classIds, String type);
 }

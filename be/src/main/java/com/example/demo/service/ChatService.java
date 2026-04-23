@@ -113,4 +113,13 @@ public class ChatService {
     public List<MessageEdit> getMessageEdits(UUID messageId) {
         return messageEditRepository.findByMessageIdOrderByEditedAtAsc(messageId);
     }
+    
+    public long countUnreadMessages(UUID userId) {
+        return messageRepository.countUnreadMessagesByUserId(userId);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void markAsRead(UUID conversationId, UUID userId) {
+        messageRepository.markAsRead(conversationId, userId, LocalDateTime.now());
+    }
 }

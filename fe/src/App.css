@@ -145,6 +145,22 @@ body {
   transform: translateX(4px);
 }
 
+.unread-badge {
+  background: var(--danger);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
 .menu-item .icon {
   width: 20px;
   display: flex;

@@ -5,21 +5,20 @@ import {
     faBookOpen, 
     faGraduationCap, 
     faBullseye, 
-    faClock,
     faChartBar,
-    faLightbulb,
-    faPalette,
     faFont,
     faHome,
     faImage,
     faEllipsisH,
-    faCamera
+    faCamera,
+    faClipboardList,
+    faCalendarCheck
 } from '@fortawesome/free-solid-svg-icons';
 
-const MainContent = () => {
+const MainContent = ({ session, classes, setActiveTab, setSelectedClass }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [,setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [universities, setUniversities] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
@@ -29,10 +28,127 @@ const MainContent = () => {
         school: ''
     });
 
+    //list bài tập đã nộp và các lượt làm Quiz của sinh viên
+    const [submissions, setSubmissions] = useState([]);
+    const [quizAttempts, setQuizAttempts] = useState([]);
+    const [teacherStats, setTeacherStats] = useState({
+        totalClasses: 0,
+        totalExercises: 0,
+        ungradedAssignments: 0,
+        todaySubmissions: 0
+    });
+
     useEffect(() => {
-        fetchUserProfile();
-        fetchUniversities();
-    }, []);
+        if (session?.user) {
+            fetchUserProfile();
+            fetchUniversities();
+            fetchStats();
+        }
+    }, [session]);
+
+    //api lấy danh sách bài nộp và bài kiểm tra
+    const fetchStats = async () => {
+        try {
+            // Check if user is teacher or student from user state or supabase
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (!authUser) return;
+
+            const { data: userData } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', authUser.id)
+                .single();
+
+            if (userData && String(userData.role) === "1") {
+                // Fetch teacher stats
+                const response = await fetch(`http://localhost:8080/api/stats/teacher/${authUser.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setTeacherStats(data);
+                }
+            } else {
+                // Fetch student stats
+                const [subRes, quizRes] = await Promise.all([
+                    fetch(`http://localhost:8080/api/submissions/user/${session.user.id}`),
+                    fetch(`http://localhost:8080/api/quiz-attempts/user/${session.user.id}`)
+                ]);
+
+                if (subRes.ok) {
+                    const subData = await subRes.json();
+                    setSubmissions(subData);
+                }
+                if (quizRes.ok) {
+                    const quizData = await quizRes.json();
+                    setQuizAttempts(quizData);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+        }
+    };
+
+    const calculateStats = () => {
+        // Count unique completed assignments (by postId)
+        const uniqueAssignments = new Set(submissions.map(s => s.postId));
+        const completedAssignments = uniqueAssignments.size;
+
+        // Count unique completed quizzes (by quizId)
+        const uniqueQuizzes = new Set(quizAttempts.map(a => a.quizId));
+        const completedQuizzes = uniqueQuizzes.size;
+
+        const totalCompleted = completedAssignments + completedQuizzes;
+
+        // Lấy điểm cao nhất cho từng bài tập khác nhau
+        const bestAssignmentScores = {};
+        submissions.forEach(s => {
+            if (s.score !== null && s.score !== undefined) {
+                const score = parseFloat(s.score);
+                if (!bestAssignmentScores[s.postId] || score > bestAssignmentScores[s.postId]) {
+                    bestAssignmentScores[s.postId] = score;
+                }
+            }
+        });
+        const assignmentScoreValues = Object.values(bestAssignmentScores);
+        const avgAssignmentScore = assignmentScoreValues.length > 0 
+            ? assignmentScoreValues.reduce((acc, score) => acc + score, 0) / assignmentScoreValues.length 
+            : 0;
+
+        // Lấy điểm cao nhất cho từng bài kiểm tra khác nhau
+        const bestQuizScores = {};
+        quizAttempts.forEach(a => {
+            if (a.score !== null && a.score !== undefined) {
+                const score = parseFloat(a.score);
+                if (!bestQuizScores[a.quizId] || score > bestQuizScores[a.quizId]) {
+                    bestQuizScores[a.quizId] = score;
+                }
+            }
+        });
+        const quizScoreValues = Object.values(bestQuizScores);
+        const avgQuizScore = quizScoreValues.length > 0
+            ? quizScoreValues.reduce((acc, score) => acc + score, 0) / quizScoreValues.length
+            : 0;
+
+        // Tính điểm trung bình (cộng trung bình Assignment và Quiz chia đôi)
+        let finalAvg = 0;
+        if (assignmentScoreValues.length > 0 && quizScoreValues.length > 0) {
+            finalAvg = (avgAssignmentScore + avgQuizScore) / 2;
+        } else if (assignmentScoreValues.length > 0) {
+            finalAvg = avgAssignmentScore;
+        } else if (quizScoreValues.length > 0) {
+            finalAvg = avgQuizScore;
+        }
+
+        const classification = finalAvg >= 8 ? 'Giỏi' : (finalAvg >= 5 ? 'Khá' : 'Trung bình');
+
+        return {
+            totalClasses: classes?.length || 0,
+            totalCompleted,
+            avgScore: finalAvg.toFixed(2),
+            classification
+        };
+    };
+
+    const stats = calculateStats();
 
     const handleAvatarUpload = async (e) => {
         const file = e.target.files[0];
@@ -228,67 +344,96 @@ const MainContent = () => {
                         <h2>Overview</h2>
                     </div>
                     <div className="overview-cards">
-                        <div className="overview-card">
-                            <div className="overview-card-icon"><FontAwesomeIcon icon={faBookOpen} /></div>
-                            <h3>8</h3>
-                            <p>Courses In Progress</p>
-                        </div>
-                        <div className="overview-card">
-                            <div className="overview-card-icon"><FontAwesomeIcon icon={faGraduationCap} /></div>
-                            <h3>14</h3>
-                            <p>Courses Completed</p>
-                        </div>
-                        <div className="overview-card">
-                            <div className="overview-card-icon"><FontAwesomeIcon icon={faBullseye} /></div>
-                            <h3>96</h3>
-                            <p>Average test results</p>
-                        </div>
-                        <div className="overview-card">
-                            <div className="overview-card-icon"><FontAwesomeIcon icon={faClock} /></div>
-                            <h3>1.2K</h3>
-                            <p>Hours in training</p>
-                        </div>
+                        {String(user?.role) === "1" ? (
+                            <>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faBookOpen} /></div>
+                                    <h3>{teacherStats.totalClasses}</h3>
+                                    <p>Tổng số lớp học của bạn</p>
+                                </div>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faGraduationCap} /></div>
+                                    <h3>{teacherStats.totalExercises}</h3>
+                                    <p>Tổng số bài tập đã tạo</p>
+                                </div>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faClipboardList} /></div>
+                                    <h3>{teacherStats.ungradedAssignments}</h3>
+                                    <p>Số bài tập chưa chấm</p>
+                                </div>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faCalendarCheck} /></div>
+                                    <h3>{teacherStats.todaySubmissions}</h3>
+                                    <p>Số lượt nộp bài hôm nay</p>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faBookOpen} /></div>
+                                    <h3>{stats.totalClasses}</h3>
+                                    <p>Tổng lớp học tham gia</p>
+                                </div>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faGraduationCap} /></div>
+                                    <h3>{stats.totalCompleted}</h3>
+                                    <p>Số bài tập hoàn thành</p>
+                                </div>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faBullseye} /></div>
+                                    <h3>{stats.avgScore}</h3>
+                                    <p>Tổng điểm trung bình</p>
+                                </div>
+                                <div className="overview-card">
+                                    <div className="overview-card-icon"><FontAwesomeIcon icon={faChartBar} /></div>
+                                    <h3>{stats.classification}</h3>
+                                    <p>Xếp loại học tập</p>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </section>
 
                 <section className="courses">
                     <div className="section-header">
-                        <h2>Courses</h2>
+                        <h2>Classes</h2>
                     </div>
                     <div className="courses-cards">
-                        <div className="course-card blue">
-                            <div className="course-icon"><FontAwesomeIcon icon={faChartBar} /></div>
-                            <h4>Data analysis</h4>
-                            <span>▷ Machine learning</span>
-                            <div className="course-progress">
-                                <span className="progress-info">12/40 lessons</span>
-                                <div className="progress-bar-bg">
-                                    <div className="progress-bar-fill" style={{ width: '30%' }}></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="course-card yellow">
-                            <div className="course-icon"><FontAwesomeIcon icon={faLightbulb} /></div>
-                            <h4>Design thinking</h4>
-                            <span>▷ Heuristics</span>
-                            <div className="course-progress">
-                                <span className="progress-info">20/32 lessons</span>
-                                <div className="progress-bar-bg">
-                                    <div className="progress-bar-fill" style={{ width: '60%' }}></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="course-card green">
-                            <div className="course-icon"><FontAwesomeIcon icon={faPalette} /></div>
-                            <h4>UI fundamentals</h4>
-                            <span>▷ Visual hierarchy</span>
-                            <div className="course-progress">
-                                <span className="progress-info">10/60 lessons</span>
-                                <div className="progress-bar-bg">
-                                    <div className="progress-bar-fill" style={{ width: '16%' }}></div>
-                                </div>
-                            </div>
-                        </div>
+                        {classes && classes.length > 0 ? (
+                            classes.map((cls, index) => {
+                                const colors = ['blue', 'yellow', 'green', 'purple', 'red'];
+                                const cardColor = colors[index % colors.length];
+                                return (
+                                    <div 
+                                        key={cls.id} 
+                                        className={`course-card ${cardColor}`}
+                                        onClick={() => {
+                                            setSelectedClass(cls);
+                                            setActiveTab('Classes');
+                                        }}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <div className="course-icon">
+                                            {cls.teacherAvatar ? (
+                                                <img src={cls.teacherAvatar} alt="teacher" style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                                            ) : (
+                                                <FontAwesomeIcon icon={faGraduationCap} />
+                                            )}
+                                        </div>
+                                        <h4>{cls.name}</h4>
+                                        <span>▷ {cls.teacherName || "Giảng viên"}</span>
+                                        <div className="course-progress">
+                                            <span className="progress-info">Mã lớp: {cls.joinCode}</span>
+                                            <div className="progress-bar-bg">
+                                                <div className="progress-bar-fill" style={{ width: '100%' }}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <p>Bạn chưa tham gia lớp học nào.</p>
+                        )}
                     </div>
                 </section>
 
