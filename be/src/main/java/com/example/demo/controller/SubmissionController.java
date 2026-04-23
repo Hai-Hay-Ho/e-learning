@@ -39,6 +39,11 @@ public class SubmissionController {
         return ResponseEntity.ok(submissionService.getSubmissionByPostAndUser(postId, userId));
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<SubmissionDTO>> getByUser(@PathVariable UUID userId) {
+        return ResponseEntity.ok(submissionService.getSubmissionsByStudent(userId));
+    }
+
     @PutMapping("/{id}/grade")
     public ResponseEntity<SubmissionDTO> grade(@PathVariable UUID id, @RequestBody GradeRequest gradeRequest) {
         return ResponseEntity.ok(submissionService.gradeSubmission(id, gradeRequest.getGrade(), gradeRequest.getComment()));

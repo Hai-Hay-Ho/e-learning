@@ -6,24 +6,20 @@ import AssignmentDetail from './AssignmentDetail';
 import { 
     faPlus, 
     faSignInAlt, 
-    faUsers, 
-    faIdBadge, 
+    faUsers,  
     faCalendarAlt,
     faEllipsisH,
     faCopy,
-    faShareAlt,
     faBullhorn,
     faFileAlt,
     faTasks,
-    faArrowLeft,
     faPaperclip,
     faTimes,
     faPaperPlane
 } from '@fortawesome/free-solid-svg-icons';
 
 const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setClasses }) => {
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [setLoading] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showJoinModal, setShowJoinModal] = useState(false);
     const [className, setClassName] = useState('');

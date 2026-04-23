@@ -18,6 +18,7 @@ function App() {
   const [pendingConversation, setPendingConversation] = useState(null);
   const [classes, setClasses] = useState([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
+  const [selectedClass, setSelectedClass] = useState(null);
 
   useEffect(() => {
     // Kiểm tra session hiện tại
@@ -117,7 +118,12 @@ function App() {
 
         {session ? (
           activeTab === 'Dashboard' ? (
-            <MainContent session={session} />
+            <MainContent 
+                session={session} 
+                classes={classes} 
+                setActiveTab={setActiveTab} 
+                setSelectedClass={setSelectedClass} 
+            />
           ) : activeTab === 'Classes' ? (
             <ClassPage 
               session={session} 
@@ -125,6 +131,8 @@ function App() {
               userData={userData}
               classes={classes}
               setClasses={setClasses}
+              selectedClass={selectedClass} //sử dụng lớp học chọn từ Dashboard
+              setSelectedClass={setSelectedClass}
               onSwitchToMessages={handleSwitchToMessages}
             />
           ) : activeTab === 'Messages' ? (
@@ -137,7 +145,12 @@ function App() {
               isLoadingClasses={isLoadingClasses}
             />
           ) : (
-            <MainContent session={session} />
+            <MainContent 
+                session={session} 
+                classes={classes} 
+                setActiveTab={setActiveTab} 
+                setSelectedClass={setSelectedClass}
+            />
           )
         ) : (
           <div style={{ padding: '20px', textAlign: 'center' }}>

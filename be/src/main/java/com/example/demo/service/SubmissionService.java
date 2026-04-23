@@ -122,6 +122,12 @@ public class SubmissionService {
                 .orElse(null);
     }
 
+    public List<SubmissionDTO> getSubmissionsByStudent(UUID studentId) {
+        return submissionRepository.findByStudentId(studentId).stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
     public SubmissionDTO getSubmissionById(UUID id) {
         return submissionRepository.findById(id).map(this::mapToDTO).orElse(null);
     }

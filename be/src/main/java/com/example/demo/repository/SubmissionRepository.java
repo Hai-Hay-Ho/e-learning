@@ -13,4 +13,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
 
     @EntityGraph(attributePaths = {"student", "files"})
     Optional<Submission> findByPostIdAndStudentId(UUID postId, UUID studentId);
+
+    @EntityGraph(attributePaths = {"student", "files"})
+    List<Submission> findByStudentId(UUID studentId);
 }
