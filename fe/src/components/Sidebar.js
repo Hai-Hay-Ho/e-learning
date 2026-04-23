@@ -10,7 +10,7 @@ import {
     faLayerGroup
 } from '@fortawesome/free-solid-svg-icons';
 
-const Sidebar = ({ userRole, activeTab, setActiveTab }) => {
+const Sidebar = ({ userRole, activeTab, setActiveTab, unreadCount }) => {
     // role "0" là Student, "1" là Teacher (dựa trên backend model User.java)
     const isTeacher = userRole === "1";
 
@@ -57,7 +57,11 @@ const Sidebar = ({ userRole, activeTab, setActiveTab }) => {
                     onClick={() => setActiveTab('Messages')}
                     style={{ cursor: 'pointer' }}
                 >
-                    <span className="icon"><FontAwesomeIcon icon={faEnvelope} /></span> Messages
+                    <span className="icon"><FontAwesomeIcon icon={faEnvelope} /></span> 
+                    Messages 
+                    {unreadCount > 0 && (
+                        <span className="unread-badge">{unreadCount}</span>
+                    )}
                 </div>
             </nav>
 

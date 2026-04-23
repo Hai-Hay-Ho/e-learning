@@ -19,6 +19,7 @@ function App() {
   const [classes, setClasses] = useState([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     // Kiểm tra session hiện tại
@@ -26,6 +27,7 @@ function App() {
       setSession(session);
       if (session) {
         fetchUserData(session.user);
+        fetchUnreadCount(session.user.id);
       }
     });
 
@@ -34,14 +36,39 @@ function App() {
       if (session) {
         setShowLogin(false);
         fetchUserData(session.user);
+        fetchUnreadCount(session.user.id);
       } else {
         setUserRole(null);
         setUserData(null);
+        setUnreadCount(0);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Fetch unread count periodically
+  useEffect(() => {
+    let interval;
+    if (session) {
+      interval = setInterval(() => {
+        fetchUnreadCount(session.user.id);
+      }, 10000); // Mỗi 10 giây
+    }
+    return () => clearInterval(interval);
+  }, [session]);
+
+  const fetchUnreadCount = async (userId) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/chat/unread-count/${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadCount(data.unreadCount);
+      }
+    } catch (err) {
+      console.error("Error fetching unread count:", err);
+    }
+  };
 
   const fetchUserData = async (user) => {
     try {
@@ -102,7 +129,7 @@ function App() {
       {!session && showLogin && <Login onClose={() => setShowLogin(false)} />}
       
       {/* Sidebar based on role */}
-      <Sidebar userRole={userRole} activeTab={activeTab} setActiveTab={(tab) => {
+      <Sidebar userRole={userRole} activeTab={activeTab} unreadCount={unreadCount} setActiveTab={(tab) => {
         // Nếu chưa đăng nhập và cố click vào tab khác, về Dashboard
         if (!session && tab !== 'Dashboard') {
           setActiveTab('Dashboard');
@@ -136,7 +163,12 @@ function App() {
               onSwitchToMessages={handleSwitchToMessages}
             />
           ) : activeTab === 'Messages' ? (
-            <Chat session={session} userData={userData} pendingConversation={pendingConversation} />
+            <Chat 
+              session={session} 
+              userData={userData} 
+              pendingConversation={pendingConversation} 
+              refreshUnreadCount={() => fetchUnreadCount(session.user.id)} 
+            />
           ) : activeTab === 'Quizzes' ? (
             <EQuizz 
               session={session} 

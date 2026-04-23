@@ -2,17 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Chat.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-    faSearch, 
-    faPhone, 
-    faVideo, 
-    faEllipsisV, 
+    faSearch,  
     faPaperclip, 
     faMicrophone, 
     faPaperPlane
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../supabaseClient';
 
-const Chat = ({ session, userData, pendingConversation }) => {
+const Chat = ({ session, userData, pendingConversation, refreshUnreadCount }) => {
     const [selectedConversation, setSelectedConversation] = useState(null);
     const [messages, setMessages] = useState([]);
     const [conversations, setConversations] = useState([]);
@@ -28,7 +25,7 @@ const Chat = ({ session, userData, pendingConversation }) => {
     const [editingContent, setEditingContent] = useState('');
     const [detailMessageId, setDetailMessageId] = useState(null);
     const [messageEdits, setMessageEdits] = useState({});
-    const [recallLimitExceeded, setRecallLimitExceeded] = useState({});
+    const [, setRecallLimitExceeded] = useState({});
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -70,6 +67,7 @@ const Chat = ({ session, userData, pendingConversation }) => {
     useEffect(() => {
         if (selectedConversation) {
             fetchMessages(selectedConversation.id);
+            markAsRead(selectedConversation.id);
 
             const msgSubscription = supabase
                 .channel(`public:messages:conversation_id=eq.${selectedConversation.id}`)
@@ -79,12 +77,18 @@ const Chat = ({ session, userData, pendingConversation }) => {
                     table: 'messages',
                     filter: `conversation_id=eq.${selectedConversation.id}`
                 }, (payload) => {
-                    setMessages(prev => [...prev, payload.new]);
+                    const msg = payload.new;
+                    setMessages(prev => [...prev, msg]);
                     // cap nhật last message cho conversation này
                     setConversationLastMessages(prev => ({
                         ...prev,
-                        [selectedConversation.id]: payload.new
+                        [selectedConversation.id]: msg
                     }));
+                    
+                    // Nếu tin nhắn đến từ người khác trong khi đang mở chat này, mark as read ngay
+                    if (msg.sender_id !== session.user.id) {
+                        markAsRead(selectedConversation.id);
+                    }
                 })
                 .subscribe();
 
@@ -109,6 +113,38 @@ const Chat = ({ session, userData, pendingConversation }) => {
             }
         }
     }, [pendingConversation, conversations]);
+
+    const markAsRead = async (conversationId) => {
+        try {
+            const response = await fetch('http://localhost:8080/api/chat/mark-as-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    conversationId: conversationId,
+                    userId: session.user.id
+                }),
+            });
+            
+            if (response.ok) {
+                // Refresh local unread state
+                setConversationLastMessages(prev => {
+                    const lastMsg = prev[conversationId];
+                    if (lastMsg && lastMsg.sender_id !== session.user.id && !lastMsg.read_at) {
+                        return {
+                            ...prev,
+                            [conversationId]: { ...lastMsg, read_at: new Date().toISOString() }
+                        };
+                    }
+                    return prev;
+                });
+                if (refreshUnreadCount) refreshUnreadCount();
+            }
+        } catch (err) {
+            console.error("Error marking messages as read:", err);
+        }
+    };
 
     const fetchConversations = async () => {
         const { data, error } = await supabase
@@ -460,14 +496,18 @@ const Chat = ({ session, userData, pendingConversation }) => {
                     <div className="chat-list-label">ALL MESSAGES</div>
                     {conversations.map(conv => {
                         const otherUser = getOtherUser(conv);
+                        const lastMsg = conversationLastMessages[conv.id];
+                        const isUnread = lastMsg && lastMsg.sender_id !== session.user.id && !lastMsg.read_at;
+
                         return (
                             <div 
                                 key={conv.id} 
-                                className={`chat-list-item ${selectedConversation?.id === conv.id ? 'active' : ''}`}
+                                className={`chat-list-item ${selectedConversation?.id === conv.id ? 'active' : ''} ${isUnread ? 'unread' : ''}`}
                                 onClick={() => setSelectedConversation({...conv, otherUser})}
                             >
                                 <div className="chat-avatar">
                                     <img src={otherUser?.avatar_url} alt={otherUser?.full_name} />
+                                    {isUnread && <div className="unread-dot"></div>}
                                 </div>
                                 <div className="chat-info">
                                     <div className="chat-name-row">
@@ -692,8 +732,8 @@ const Chat = ({ session, userData, pendingConversation }) => {
                 ) : (
                     <div className="no-chat-selected">
                         <div className="no-chat-content">
-                            <h3>Select a conversation to start chatting</h3>
-                            <p>Search for people to start a new chat</p>
+                            <h3>Bắt đầu nhắn tin</h3>
+                            <p>Hãy tìm hoặc chọn một người để bắt đầu cuộc trò chuyện</p>
                         </div>
                     </div>
                 )}

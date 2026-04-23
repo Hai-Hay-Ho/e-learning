@@ -70,4 +70,16 @@ public class ChatController {
         chatService.recallMessage(messageId);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/unread-count/{userId}")
+    public ResponseEntity<Map<String, Long>> getUnreadCount(@PathVariable UUID userId) {
+        long count = chatService.countUnreadMessages(userId);
+        return ResponseEntity.ok(Map.of("unreadCount", count));
+    }
+
+    @PostMapping("/mark-as-read")
+    public ResponseEntity<Void> markAsRead(@RequestBody Map<String, UUID> payload) {
+        chatService.markAsRead(payload.get("conversationId"), payload.get("userId"));
+        return ResponseEntity.ok().build();
+    }
 }
