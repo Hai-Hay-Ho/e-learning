@@ -7,8 +7,6 @@ import {
     faBullseye, 
     faChartBar,
     faFont,
-    faHome,
-    faImage,
     faEllipsisH,
     faCamera,
     faClipboardList,
@@ -38,6 +36,10 @@ const MainContent = ({ session, classes, setActiveTab, setSelectedClass }) => {
         todaySubmissions: 0
     });
 
+    const [allAssignments, setAllAssignments] = useState([]);
+    const [allQuizzes, setAllQuizzes] = useState([]);
+    const [selectedDate, setSelectedDate] = useState(new Date());
+
     useEffect(() => {
         if (session?.user) {
             fetchUserProfile();
@@ -45,6 +47,51 @@ const MainContent = ({ session, classes, setActiveTab, setSelectedClass }) => {
             fetchStats();
         }
     }, [session]);
+
+    useEffect(() => {
+        const fetchClassData = async () => {
+            if (!classes || classes.length === 0) return;
+            try {
+                const assignmentPromises = classes.map(cls => 
+                    fetch(`http://localhost:8080/api/posts/class/${cls.id}`).then(res => res.json())
+                );
+                const quizPromises = classes.map(cls => 
+                    fetch(`http://localhost:8080/api/quizzes/class/${cls.id}`).then(res => res.json())
+                );
+
+                const assignmentsResults = await Promise.all(assignmentPromises);
+                const quizzesResults = await Promise.all(quizPromises);
+
+                let assignments = [];
+                assignmentsResults.forEach((res, index) => {
+                    if (Array.isArray(res)) {
+                        const filtered = res.filter(p => p.type === 'assignment').map(p => ({
+                            ...p,
+                            className: classes[index].name
+                        }));
+                        assignments = assignments.concat(filtered);
+                    }
+                });
+
+                let quizzes = [];
+                quizzesResults.forEach((res, index) => {
+                    if (Array.isArray(res)) {
+                        const mapped = res.map(q => ({
+                            ...q,
+                            className: classes[index].name
+                        }));
+                        quizzes = quizzes.concat(mapped);
+                    }
+                });
+
+                setAllAssignments(assignments);
+                setAllQuizzes(quizzes);
+            } catch (error) {
+                console.error('Error fetching class data:', error);
+            }
+        };
+        fetchClassData();
+    }, [classes]);
 
     //api lấy danh sách bài nộp và bài kiểm tra
     const fetchStats = async () => {
@@ -327,13 +374,58 @@ const MainContent = ({ session, classes, setActiveTab, setSelectedClass }) => {
         days.push(<span key={`empty-${i}`} className="day-cell empty"></span>);
     }
     for (let i = 1; i <= daysInMonth(year, month); i++) {
-        const isActive = isCurrentMonth && today.getDate() === i;
+        const dateObj = new Date(year, month, i);
+        const isActive = selectedDate.getFullYear() === year && 
+                         selectedDate.getMonth() === month && 
+                         selectedDate.getDate() === i;
         days.push(
-            <span key={i} className={`day-cell ${isActive ? 'active' : ''}`}>
+            <span 
+                key={i} 
+                className={`day-cell ${isActive ? 'active' : ''}`}
+                onClick={() => setSelectedDate(dateObj)}
+                style={{ cursor: 'pointer' }}
+            >
                 {i}
             </span>
         );
     }
+
+    const isSameDay = (d1, d2) => {
+        if (!d1 || !d2) return false;
+        const date1 = new Date(d1);
+        const date2 = new Date(d2);
+        return date1.getFullYear() === date2.getFullYear() &&
+               date1.getMonth() === date2.getMonth() &&
+               date1.getDate() === date2.getDate();
+    };
+
+    const scheduleItems = [];
+    allAssignments.forEach(a => {
+        if (isSameDay(a.dueAt, selectedDate)) {
+            scheduleItems.push({
+                id: a.id,
+                type: 'assignment',
+                title: a.title,
+                time: new Date(a.dueAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                color: 'blue'
+            });
+        }
+    });
+    allQuizzes.forEach(q => {
+        if (isSameDay(q.deadline, selectedDate)) {
+            scheduleItems.push({
+                id: q.id,
+                type: 'quiz',
+                title: q.title,
+                time: new Date(q.deadline).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                color: 'purple'
+            });
+        }
+    });
+
+    const pendingAssignments = allAssignments.filter(a => {
+        return !submissions.some(s => s.postId === a.id);
+    });
 
     return (
         <main className="main-content-area">
@@ -437,46 +529,30 @@ const MainContent = ({ session, classes, setActiveTab, setSelectedClass }) => {
                     </div>
                 </section>
 
-                <section className="assignments">
-                    <div className="section-header">
-                        <h2>Assignments</h2>
-                    </div>
-                    <div className="assignments-list">
-                        <div className="assignment-item">
-                            <div className="assignment-info">
-                                <div className="assignment-icon"><FontAwesomeIcon icon={faFont} /></div>
-                                <div className="assignment-text">
-                                    <h5>Typography test</h5>
-                                    <p>Today, 2:30 PM</p>
-                                </div>
-                            </div>
-                            <div className="assignment-grade">--/100</div>
-                            <div className="assignment-status">Upcoming</div>
+                {String(user?.role) !== "1" && (
+                    <section className="assignments">
+                        <div className="section-header">
+                            <h2>Assignments</h2>
                         </div>
-                        <div className="assignment-item">
-                            <div className="assignment-info">
-                                <div className="assignment-icon"><FontAwesomeIcon icon={faHome} /></div>
-                                <div className="assignment-text">
-                                    <h5>3D house model</h5>
-                                    <p>Today, 3:15 PM</p>
+                        <div className="assignments-list">
+                            {pendingAssignments.length > 0 ? pendingAssignments.map(a => (
+                                <div className="assignment-item" key={a.id}>
+                                    <div className="assignment-info">
+                                        <div className="assignment-icon"><FontAwesomeIcon icon={faFont} /></div>
+                                        <div className="assignment-text">
+                                            <h5>{a.title}</h5>
+                                            <p>{a.className}</p>
+                                        </div>
+                                    </div>
+                                    <div className="assignment-grade">--/10</div>
+                                    <div className="assignment-status">Upcoming</div>
                                 </div>
-                            </div>
-                            <div className="assignment-grade">--/100</div>
-                            <div className="assignment-status">Upcoming</div>
+                            )) : (
+                                <p style={{ color: '#666' }}>Không có bài tập nào chưa làm.</p>
+                            )}
                         </div>
-                        <div className="assignment-item">
-                            <div className="assignment-info">
-                                <div className="assignment-icon"><FontAwesomeIcon icon={faImage} /></div>
-                                <div className="assignment-text">
-                                    <h5>Visual hierarchy</h5>
-                                    <p>Today, 4:30 PM</p>
-                                </div>
-                            </div>
-                            <div className="assignment-grade">92/100</div>
-                            <div className="assignment-status">Completed</div>
-                        </div>
-                    </div>
-                </section>
+                    </section>
+                )}
             </div>
 
             {/* PHẢI: Phần lịch biểu và thông tin bên phải */}
@@ -493,30 +569,22 @@ const MainContent = ({ session, classes, setActiveTab, setSelectedClass }) => {
                     </div>
                 </div>
 
-                <div className="schedule-container">
-                    <h4>Schedule</h4>
-                    <div className="schedule-item blue">
-                        <div className="schedule-header">
-                            <h5>User pain points</h5>
-                            <FontAwesomeIcon icon={faEllipsisH} className="more-options" />
-                        </div>
-                        <p>9:00 - 10:00 AM</p>
+                {String(user?.role) !== "1" && (
+                    <div className="schedule-container">
+                        <h4>Schedule</h4>
+                        {scheduleItems.length > 0 ? scheduleItems.map((item, index) => (
+                            <div className={`schedule-item ${item.color}`} key={`${item.id}-${index}`}>
+                                <div className="schedule-header">
+                                    <h5>{item.title}</h5>
+                                    <FontAwesomeIcon icon={faEllipsisH} className="more-options" />
+                                </div>
+                                <p>{item.time}</p>
+                            </div>
+                        )) : (
+                            <p style={{ color: '#666', marginTop: '10px' }}>Không có deadline</p>
+                        )}
                     </div>
-                    <div className="schedule-item purple">
-                        <div className="schedule-header">
-                            <h5>Bias theory</h5>
-                            <FontAwesomeIcon icon={faEllipsisH} className="more-options" />
-                        </div>
-                        <p>10:30 - 11:30 AM</p>
-                    </div>
-                    <div className="schedule-item yellow">
-                        <div className="schedule-header">
-                            <h5>Typography</h5>
-                            <FontAwesomeIcon icon={faEllipsisH} className="more-options" />
-                        </div>
-                        <p>12:30 - 2:30 PM</p>
-                    </div>
-                </div>
+                )}
 
                 <div className="user-profile-card">
                     <div className="avatar-wrapper">
