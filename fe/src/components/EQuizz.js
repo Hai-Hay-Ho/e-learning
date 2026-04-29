@@ -65,6 +65,11 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
     const [attempts, setAttempts] = useState([]);
     const [isReviewing, setIsReviewing] = useState(false);
 
+    // AI Generation State
+    const [aiFile, setAiFile] = useState(null);
+    const [numberOfQuestions, setNumberOfQuestions] = useState(5);
+    const [aiTopic, setAiTopic] = useState('');
+
     const isTeacher = userRole === "1";
 
     useEffect(() => {
@@ -96,17 +101,6 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
                     },
                     (payload) => {
                         console.log('Realtime update received:', payload);
-                        fetchQuizzes(selectedClass.id);
-                    }
-                )
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'questions'
-                    },
-                    () => {
                         fetchQuizzes(selectedClass.id);
                     }
                 )
@@ -470,6 +464,73 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setAiFile(file);
+        }
+    };
+
+    const handleGenerateQuestionsAI = async () => {
+        if (!aiFile) {
+            alert("Vui lòng chọn file!");
+            return;
+        }
+
+        if (numberOfQuestions <= 0) {
+            alert("Số câu hỏi phải lớn hơn 0!");
+            return;
+        }
+
+        setIsGenerating(true);
+        try {
+            // Đọc file content
+            const fileContent = await aiFile.text();
+
+            const response = await fetch('http://localhost:8080/api/quizzes/generate-questions-ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fileContent: fileContent,
+                    numberOfQuestions: numberOfQuestions,
+                    topic: aiTopic || null
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Lỗi khi generate câu hỏi");
+            }
+
+            const data = await response.json();
+            
+            // Chuyển đổi kết quả từ API thành format phù hợp
+            const generatedQuestions = data.questions.map((q, idx) => ({
+                id: Date.now() + idx,
+                content: q.content,
+                answers: q.answers.map((ans, ansIdx) => ({
+                    content: ans,
+                    isCorrect: ansIdx === q.answers.length - 1 // Đáp án cuối cùng là đúng
+                })),
+                isExpanded: true
+            }));
+
+            // Thay thế questions hoặc thêm vào
+            setQuestions(generatedQuestions);
+            
+            // Reset file
+            setAiFile(null);
+            document.querySelector('.ai-file-input')?.setAttribute('value', '');
+            
+            alert(`Đã generate thành công ${generatedQuestions.length} câu hỏi!`);
+        } catch (err) {
+            console.error("Error generating questions:", err);
+            alert("Lỗi khi generate câu hỏi: " + err.message);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     return (
         <div className="equizz-container">
             {/* Sidebar */}
@@ -628,6 +689,60 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* AI Question Generation Section */}
+                            {!editingQuizId && (
+                                <div className="ai-generation-section">
+                                    <div className="ai-section-title">
+                                        <FontAwesomeIcon icon={faMagic} className="magic-icon" />
+                                        <span>Tạo câu hỏi bằng AI</span>
+                                    </div>
+                                    <div className="ai-controls-row">
+                                        <label htmlFor="aiFileInput" className="ai-file-input-wrapper">
+                                            <input 
+                                                id="aiFileInput"
+                                                type="file"
+                                                className="ai-file-input"
+                                                accept=".txt,.pdf,.doc,.docx"
+                                                onChange={handleFileUpload}
+                                                disabled={isGenerating}
+                                            />
+                                            <span className="ai-file-label">
+                                                {aiFile ? `📄 ${aiFile.name}` : "Chọn file (TXT, PDF, Word)"}
+                                            </span>
+                                        </label>
+                                        <div className="ai-number-input-wrapper">
+                                            <input 
+                                                type="number"
+                                                className="ai-number-input"
+                                                min="1"
+                                                max="50"
+                                                value={numberOfQuestions}
+                                                onChange={(e) => setNumberOfQuestions(parseInt(e.target.value) || 1)}
+                                                placeholder="Số câu hỏi"
+                                                disabled={isGenerating}
+                                            />
+                                            <span>câu</span>
+                                        </div>
+                                        <input 
+                                            type="text"
+                                            className="ai-topic-input"
+                                            placeholder="Chủ đề (tùy chọn)"
+                                            value={aiTopic}
+                                            onChange={(e) => setAiTopic(e.target.value)}
+                                            disabled={isGenerating}
+                                        />
+                                        <button 
+                                            className="ai-generate-btn"
+                                            onClick={handleGenerateQuestionsAI}
+                                            disabled={isGenerating || !aiFile}
+                                        >
+                                            <FontAwesomeIcon icon={isGenerating ? faBolt : faMagic} className={isGenerating ? "fa-spin" : ""} />
+                                            <span>{isGenerating ? "Đang tạo..." : "Tạo câu hỏi"}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Question List */}
                             {questions.map((q, index) => (
