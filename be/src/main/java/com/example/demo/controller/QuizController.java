@@ -1,10 +1,13 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.QuizCreateRequest;
+import com.example.demo.dto.AIGenerateQuestionsRequest;
+import com.example.demo.dto.AIGeneratedQuestionsResponse;
 import com.example.demo.model.Answer;
 import com.example.demo.model.Question;
 import com.example.demo.model.Quiz;
 import com.example.demo.repository.QuizRepository;
+import com.example.demo.service.AIQuestionGeneratorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +30,9 @@ public class QuizController {
 
     @Autowired
     private com.example.demo.repository.UserRepository userRepository;
+
+    @Autowired
+    private AIQuestionGeneratorService aiQuestionGeneratorService;
 
     @PostMapping
     public ResponseEntity<?> createQuiz(@RequestBody QuizCreateRequest request) {
@@ -124,6 +130,26 @@ public class QuizController {
             }
 
             Quiz updatedQuiz = quizRepository.save(existingQuiz);
+
+            // Gửi thông báo email khi cập nhật quiz
+            try {
+                List<String> studentEmails = userRepository.findEmailsByClassId(updatedQuiz.getClassId());
+                com.example.demo.model.User teacher = userRepository.findById(updatedQuiz.getCreatedBy()).orElse(null);
+                String teacherName = teacher != null ? teacher.getFullName() : "Giảng viên";
+                
+                String directLink = "http://localhost:3000/?tab=Quizzes&id=" + updatedQuiz.getId();
+                emailService.sendNotification(
+                    studentEmails, 
+                    "[Thông báo] Giảng viên đã cập nhật một bộ câu hỏi", 
+                    teacherName, 
+                    "vừa cập nhật một bộ câu hỏi", 
+                    updatedQuiz.getTitle(), 
+                    directLink
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to trigger quiz update notification: " + e.getMessage());
+            }
+
             return ResponseEntity.ok(updatedQuiz);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
@@ -133,5 +159,42 @@ public class QuizController {
     @GetMapping("/class/{classId}")
     public ResponseEntity<List<Quiz>> getQuizzesByClass(@PathVariable UUID classId) {
         return ResponseEntity.ok(quizRepository.findByClassId(classId));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteQuiz(@PathVariable UUID id) {
+        try {
+            Quiz quiz = quizRepository.findById(id).orElse(null);
+            if (quiz == null) return ResponseEntity.notFound().build();
+
+            quizRepository.deleteById(id);
+            return ResponseEntity.ok("Quiz deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/generate-questions-ai")
+    public ResponseEntity<?> generateQuestionsWithAI(@RequestBody AIGenerateQuestionsRequest request) {
+        try {
+            if (request.getFileContent() == null || request.getFileContent().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("File content is required");
+            }
+            if (request.getNumberOfQuestions() == null || request.getNumberOfQuestions() <= 0) {
+                return ResponseEntity.badRequest().body("Number of questions must be greater than 0");
+            }
+
+            AIGeneratedQuestionsResponse response = aiQuestionGeneratorService.generateQuestions(
+                request.getFileContent(),
+                request.getNumberOfQuestions(),
+                request.getTopic()
+            );
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body("Configuration error: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error generating questions: " + e.getMessage());
+        }
     }
 }
