@@ -41,28 +41,31 @@ public class AIQuestionGeneratorService {
 
     private String createPrompt(String fileContent, Integer numberOfQuestions, String topic) {
         StringBuilder prompt = new StringBuilder();
-        prompt.append("Dựa trên nội dung sau, hãy tạo ").append(numberOfQuestions)
-              .append(" câu hỏi trắc nghiệm với 4 đáp án cho mỗi câu.\n\n");
+        
+        // Giới hạn input
+        if (fileContent.length() > 1500) {
+            fileContent = fileContent.substring(0, 1500);
+        }
+
+        prompt.append("Tạo ").append(numberOfQuestions).append(" câu hỏi trắc nghiệm từ nội dung sau.\n\n");
 
         if (topic != null && !topic.isEmpty()) {
             prompt.append("Chủ đề: ").append(topic).append("\n\n");
         }
 
-        prompt.append("Nội dung:\n").append(fileContent).append("\n\n");
+        prompt.append(fileContent).append("\n\n");
 
-        prompt.append("Yêu cầu:\n")
-              .append("1. Mỗi câu hỏi phải có 4 đáp án\n")
-              .append("2. Đáp án cuối cùng (đáp án 4) PHẢI là đáp án đúng\n")
-              .append("3. Ba đáp án đầu tiên là đáp án sai (nhưng hợp lý)\n")
-              .append("4. Trả về kết quả dưới dạng JSON array như sau:\n")
-              .append("[\n")
-              .append("  {\n")
-              .append("    \"content\": \"Nội dung câu hỏi\",\n")
-              .append("    \"answers\": [\"Đáp án sai 1\", \"Đáp án sai 2\", \"Đáp án sai 3\", \"Đáp án đúng\"]\n")
-              .append("  },\n")
-              .append("  ...\n")
-              .append("]\n\n")
-              .append("Chỉ trả về JSON array, không trả về nội dung khác.");
+        prompt.append("Format mỗi câu (bắt buộc):\n")
+              .append("Câu 1: [Câu hỏi]\n")
+              .append("A. [Đáp án 1]\n")
+              .append("B. [Đáp án 2]\n")
+              .append("C. [Đáp án 3]\n")
+              .append("D. [Đáp án đúng]\n\n")
+              .append("Câu 2: [Câu hỏi]\n")
+              .append("A. [Đáp án 1]\n")
+              .append("...\n\n")
+              .append("QUAN TRỌNG: CHỈ TRẢ VỀ DANH SÁCH CÂU HỎI. KHÔNG CẦN GIỚI THIỆU, GHI CHÚ HAY PHẦN KHÁC.");
+
 
         return prompt.toString();
     }
@@ -128,10 +131,6 @@ public class AIQuestionGeneratorService {
                     .get("content")
                     .getAsString();
             
-            System.out.println("=== GROQ RAW RESPONSE ===");
-            System.out.println(content);
-            System.out.println("=== END ===");
-            
             return content;
         } catch (Exception e) {
             System.err.println("Failed to parse Groq response: " + response.toString());
@@ -141,91 +140,11 @@ public class AIQuestionGeneratorService {
 
     private AIGeneratedQuestionsResponse parseResponse(String responseContent, Integer numberOfQuestions) throws Exception {
         AIGeneratedQuestionsResponse response = new AIGeneratedQuestionsResponse();
-        List<AIGeneratedQuestionsResponse.GeneratedQuestion> questions = new ArrayList<>();
-
-        try {
-            // Nếu response không phải JSON array, return mock questions
-            if (!responseContent.trim().startsWith("[")) {
-                // Placeholder response - return mock data
-                for (int i = 1; i <= numberOfQuestions; i++) {
-                    AIGeneratedQuestionsResponse.GeneratedQuestion q = new AIGeneratedQuestionsResponse.GeneratedQuestion();
-                    q.setContent("Câu hỏi " + i + ": Đây là câu hỏi mẫu từ AI");
-                    q.setQuestionOrder(i);
-                    
-                    List<String> answers = new ArrayList<>();
-                    answers.add("Đáp án A sai");
-                    answers.add("Đáp án B sai");
-                    answers.add("Đáp án C sai");
-                    answers.add("Đáp án D đúng");
-                    
-                    q.setAnswers(answers);
-                    questions.add(q);
-                }
-                response.setQuestions(questions);
-                return response;
-            }
-
-            // Parse JSON array từ response
-            String cleanContent = responseContent.trim();
-            if (cleanContent.startsWith("```json")) {
-                cleanContent = cleanContent.substring(7);
-            } else if (cleanContent.startsWith("```")) {
-                cleanContent = cleanContent.substring(3);
-            }
-            if (cleanContent.endsWith("```")) {
-                cleanContent = cleanContent.substring(0, cleanContent.length() - 3);
-            }
-            cleanContent = cleanContent.trim();
-
-            int startIdx = cleanContent.indexOf("[{");
-            int endIdx = cleanContent.lastIndexOf("}]");
-            if (startIdx >= 0 && endIdx >= 0) {
-                cleanContent = cleanContent.substring(startIdx, endIdx + 2);
-            }
-
-            JsonArray jsonArray = gson.fromJson(cleanContent, JsonArray.class);
-            
-            for (int i = 0; i < jsonArray.size() && i < numberOfQuestions; i++) {
-                JsonObject qObj = jsonArray.get(i).getAsJsonObject();
-                
-                AIGeneratedQuestionsResponse.GeneratedQuestion q = new AIGeneratedQuestionsResponse.GeneratedQuestion();
-                q.setContent(qObj.get("content").getAsString());
-                q.setQuestionOrder(i + 1);
-
-                List<String> answers = new ArrayList<>();
-                JsonArray ansArray = qObj.getAsJsonArray("answers");
-                for (int j = 0; j < ansArray.size(); j++) {
-                    answers.add(ansArray.get(j).getAsString());
-                }
-                
-                while (answers.size() < 4) {
-                    answers.add("Đáp án " + (answers.size() + 1));
-                }
-                if (answers.size() > 4) {
-                    answers = answers.subList(0, 4);
-                }
-                
-                q.setAnswers(answers);
-                questions.add(q);
-            }
-        } catch (Exception e) {
-            System.err.println("Parse error, returning mock data: " + e.getMessage());
-            // Return mock data on error
-            for (int i = 1; i <= numberOfQuestions; i++) {
-                AIGeneratedQuestionsResponse.GeneratedQuestion q = new AIGeneratedQuestionsResponse.GeneratedQuestion();
-                q.setContent("Câu hỏi " + i);
-                q.setQuestionOrder(i);
-                List<String> answers = new ArrayList<>();
-                answers.add("A");
-                answers.add("B");
-                answers.add("C");
-                answers.add("D");
-                q.setAnswers(answers);
-                questions.add(q);
-            }
-        }
-
-        response.setQuestions(questions);
+        
+        // Simply return the raw text content from AI
+        response.setRawContent(responseContent);
+        response.setQuestions(new ArrayList<>());  // Keep empty for backward compatibility
+        
         return response;
     }
 }

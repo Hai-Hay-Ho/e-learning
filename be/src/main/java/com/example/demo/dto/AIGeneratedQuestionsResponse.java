@@ -6,6 +6,7 @@ import java.util.List;
 @Data
 public class AIGeneratedQuestionsResponse {
     private List<GeneratedQuestion> questions;
+    private String rawContent;  // Plain text content from AI
 
     @Data
     public static class GeneratedQuestion {

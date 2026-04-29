@@ -100,7 +100,6 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
                         filter: `class_id=eq.${selectedClass.id}`
                     },
                     (payload) => {
-                        console.log('Realtime update received:', payload);
                         fetchQuizzes(selectedClass.id);
                     }
                 )
@@ -504,16 +503,11 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
 
             const data = await response.json();
             
-            // Chuyển đổi kết quả từ API thành format phù hợp
-            const generatedQuestions = data.questions.map((q, idx) => ({
-                id: Date.now() + idx,
-                content: q.content,
-                answers: q.answers.map((ans, ansIdx) => ({
-                    content: ans,
-                    isCorrect: ansIdx === q.answers.length - 1 // Đáp án cuối cùng là đúng
-                })),
-                isExpanded: true
-            }));
+            
+            // Parse raw text content từ AI
+            const rawContent = data.rawContent || '';
+            const generatedQuestions = parseAITextResponse(rawContent, numberOfQuestions);
+
 
             // Thay thế questions hoặc thêm vào
             setQuestions(generatedQuestions);
@@ -529,6 +523,90 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
         } finally {
             setIsGenerating(false);
         }
+    };
+
+    // Parse AI text response to structured questions
+    const parseAITextResponse = (rawContent, expectedCount) => {
+        const questions = [];
+    
+        
+        // Split by lines
+        const lines = rawContent.split('\n');
+        
+        let currentQuestion = null;
+        let currentAnswers = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            
+            // Check for "Câu..." patterns - match any text after "Câu" containing digits
+            // Try multiple patterns
+            let questionMatch = line.match(/^Câu\s+[\w\s]*?(\d+):\s*(.+)$/);
+            if (!questionMatch) {
+                questionMatch = line.match(/^Câu.*?(\d+):\s*(.+)$/);
+            }
+            if (!questionMatch) {
+                questionMatch = line.match(/Câu.*?(\d+):\s*(.+)$/);
+            }
+            
+            if (questionMatch) {
+                
+                // Save previous question if exists
+                if (currentQuestion && currentAnswers.length > 0) {
+                    while (currentAnswers.length < 4) {
+                        currentAnswers.push(`Option ${String.fromCharCode(65 + currentAnswers.length)}`);
+                    }
+                    if (currentAnswers.length > 4) {
+                        currentAnswers = currentAnswers.slice(0, 4);
+                    }
+                    
+                    questions.push({
+                        id: Date.now() + questions.length,
+                        content: currentQuestion,
+                        answers: currentAnswers.map((ans, idx) => ({
+                            content: ans,
+                            isCorrect: idx === 3
+                        })),
+                        isExpanded: true
+                    });
+                }
+                
+                currentQuestion = questionMatch[2];
+                currentAnswers = [];
+            } 
+            // Check for answers: "A. ", "B. ", "C. ", "D. "
+            else if (currentQuestion) {
+                const ansMatch = line.match(/^[A-D]\.\s+(.+)$/);
+                if (ansMatch) {
+                    currentAnswers.push(ansMatch[1]);
+                }
+            }
+        }
+        
+        // Don't forget the last question
+        if (currentQuestion && currentAnswers.length > 0) {
+            while (currentAnswers.length < 4) {
+                currentAnswers.push(`Option ${String.fromCharCode(65 + currentAnswers.length)}`);
+            }
+            if (currentAnswers.length > 4) {
+                currentAnswers = currentAnswers.slice(0, 4);
+            }
+            
+            questions.push({
+                id: Date.now() + questions.length,
+                content: currentQuestion,
+                answers: currentAnswers.map((ans, idx) => ({
+                    content: ans,
+                    isCorrect: idx === 3
+                })),
+                isExpanded: true
+            });
+        }
+        
+        
+        return questions;
     };
 
     return (
@@ -724,14 +802,6 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
                                             />
                                             <span>câu</span>
                                         </div>
-                                        <input 
-                                            type="text"
-                                            className="ai-topic-input"
-                                            placeholder="Chủ đề (tùy chọn)"
-                                            value={aiTopic}
-                                            onChange={(e) => setAiTopic(e.target.value)}
-                                            disabled={isGenerating}
-                                        />
                                         <button 
                                             className="ai-generate-btn"
                                             onClick={handleGenerateQuestionsAI}
