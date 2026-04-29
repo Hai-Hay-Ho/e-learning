@@ -223,6 +223,37 @@ public class PostService {
             attachmentRepository.saveAll(attachments);
         }
 
+        // Gửi thông báo email khi cập nhật bài đăng
+        try {
+            List<String> studentEmails = userRepository.findEmailsByClassId(post.getClassId());
+            User author = userRepository.findById(post.getAuthorId()).orElse(null);
+            String teacherName = author != null ? author.getFullName() : "Giảng viên";
+            String directLink = "http://localhost:3000/?tab=Classes&id=" + post.getClassId();
+            
+            // Xác định nhãn thông báo dựa trên loại bài đăng
+            String actionLabel = "vừa cập nhật một thông báo";
+            String emailSubject = "[Thông báo] Giảng viên đã cập nhật một thông báo";
+            
+            if ("assignment".equals(post.getType())) {
+                actionLabel = "vừa cập nhật một bài tập";
+                emailSubject = "[Thông báo] Giảng viên đã cập nhật một bài tập";
+            } else if ("material".equals(post.getType())) {
+                actionLabel = "vừa cập nhật một tài liệu";
+                emailSubject = "[Thông báo] Giảng viên đã cập nhật một tài liệu";
+            }
+            
+            emailService.sendNotification(
+                studentEmails, 
+                emailSubject, 
+                teacherName, 
+                actionLabel, 
+                post.getTitle(), 
+                directLink
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to trigger post update notification: " + e.getMessage());
+        }
+
         return getPostDTO(post);
     }
 

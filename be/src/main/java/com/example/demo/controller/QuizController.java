@@ -130,6 +130,26 @@ public class QuizController {
             }
 
             Quiz updatedQuiz = quizRepository.save(existingQuiz);
+
+            // Gửi thông báo email khi cập nhật quiz
+            try {
+                List<String> studentEmails = userRepository.findEmailsByClassId(updatedQuiz.getClassId());
+                com.example.demo.model.User teacher = userRepository.findById(updatedQuiz.getCreatedBy()).orElse(null);
+                String teacherName = teacher != null ? teacher.getFullName() : "Giảng viên";
+                
+                String directLink = "http://localhost:3000/?tab=Quizzes&id=" + updatedQuiz.getId();
+                emailService.sendNotification(
+                    studentEmails, 
+                    "[Thông báo] Giảng viên đã cập nhật một bộ câu hỏi", 
+                    teacherName, 
+                    "vừa cập nhật một bộ câu hỏi", 
+                    updatedQuiz.getTitle(), 
+                    directLink
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to trigger quiz update notification: " + e.getMessage());
+            }
+
             return ResponseEntity.ok(updatedQuiz);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
@@ -139,6 +159,19 @@ public class QuizController {
     @GetMapping("/class/{classId}")
     public ResponseEntity<List<Quiz>> getQuizzesByClass(@PathVariable UUID classId) {
         return ResponseEntity.ok(quizRepository.findByClassId(classId));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteQuiz(@PathVariable UUID id) {
+        try {
+            Quiz quiz = quizRepository.findById(id).orElse(null);
+            if (quiz == null) return ResponseEntity.notFound().build();
+
+            quizRepository.deleteById(id);
+            return ResponseEntity.ok("Quiz deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
     }
 
     @PostMapping("/generate-questions-ai")

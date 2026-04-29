@@ -956,6 +956,46 @@
     border-color: #1e293b;
 }
 
+.quiz-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.delete-quiz-btn {
+    width: 44px;
+    height: 44px;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    color: #dc2626;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.quiz-summary-card:hover .delete-quiz-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.delete-quiz-btn:hover {
+    background: #fca5a5;
+    border-color: #f87171;
+    color: #991b1b;
+    transform: scale(1.05);
+}
+
+.delete-quiz-btn:active {
+    transform: scale(0.95);
+}
+
 /* Empty State */
 .no-quizzes-state {
     grid-column: 1 / -1;

@@ -392,6 +392,31 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
         }
     };
 
+    const handleDeleteQuiz = async (quizId) => {
+        const confirmDelete = window.confirm("Bạn có chắc chắn muốn xóa bộ câu hỏi này không?");
+        if (!confirmDelete) return;
+
+        setLoading(true);
+        try {
+            const response = await fetch(`http://localhost:8080/api/quizzes/${quizId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                alert("Đã xóa bộ câu hỏi thành công!");
+                fetchQuizzes(selectedClass.id);
+            } else {
+                const errorData = await response.json();
+                alert("Lỗi khi xóa: " + (errorData.message || "Unknown error"));
+            }
+        } catch (err) {
+            console.error("Error deleting quiz:", err);
+            alert("Đã xảy ra lỗi khi xóa!");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSubmitQuiz = async () => {
         if (isReviewing) {
             stopQuiz();
@@ -529,7 +554,6 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
     const parseAITextResponse = (rawContent, expectedCount) => {
         const questions = [];
     
-        
         // Split by lines
         const lines = rawContent.split('\n');
         
@@ -540,9 +564,7 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
             const line = lines[i].trim();
             if (!line) continue;
             
-            
             // Check for "Câu..." patterns - match any text after "Câu" containing digits
-            // Try multiple patterns
             let questionMatch = line.match(/^Câu\s+[\w\s]*?(\d+):\s*(.+)$/);
             if (!questionMatch) {
                 questionMatch = line.match(/^Câu.*?(\d+):\s*(.+)$/);
@@ -552,22 +574,30 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
             }
             
             if (questionMatch) {
-                
                 // Save previous question if exists
-                if (currentQuestion && currentAnswers.length > 0) {
-                    while (currentAnswers.length < 4) {
-                        currentAnswers.push(`Option ${String.fromCharCode(65 + currentAnswers.length)}`);
+                if (currentQuestion) {
+                    // Ensure we have at least 3 answers, then rearrange to have correct answer at position 3
+                    while (currentAnswers.length < 3) {
+                        currentAnswers.push(`Tùy chọn ${String.fromCharCode(65 + currentAnswers.length)}`);
                     }
+                    
+                    // If we have more than 4, slice to 4
                     if (currentAnswers.length > 4) {
                         currentAnswers = currentAnswers.slice(0, 4);
+                    }
+                    
+                    // Always have exactly 4 answers - move last answer to position 3 (correct answer)
+                    let answersToSave = [...currentAnswers];
+                    while (answersToSave.length < 4) {
+                        answersToSave.push(`Tùy chọn ${String.fromCharCode(65 + answersToSave.length)}`);
                     }
                     
                     questions.push({
                         id: Date.now() + questions.length,
                         content: currentQuestion,
-                        answers: currentAnswers.map((ans, idx) => ({
+                        answers: answersToSave.map((ans, idx) => ({
                             content: ans,
-                            isCorrect: idx === 3
+                            isCorrect: idx === 3  // Last position is always correct answer
                         })),
                         isExpanded: true
                     });
@@ -586,25 +616,33 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
         }
         
         // Don't forget the last question
-        if (currentQuestion && currentAnswers.length > 0) {
-            while (currentAnswers.length < 4) {
-                currentAnswers.push(`Option ${String.fromCharCode(65 + currentAnswers.length)}`);
+        if (currentQuestion) {
+            // Ensure we have at least 3 answers, then rearrange to have correct answer at position 3
+            while (currentAnswers.length < 3) {
+                currentAnswers.push(`Tùy chọn ${String.fromCharCode(65 + currentAnswers.length)}`);
             }
+            
+            // If we have more than 4, slice to 4
             if (currentAnswers.length > 4) {
                 currentAnswers = currentAnswers.slice(0, 4);
+            }
+            
+            // Always have exactly 4 answers - move last answer to position 3 (correct answer)
+            let answersToSave = [...currentAnswers];
+            while (answersToSave.length < 4) {
+                answersToSave.push(`Tùy chọn ${String.fromCharCode(65 + answersToSave.length)}`);
             }
             
             questions.push({
                 id: Date.now() + questions.length,
                 content: currentQuestion,
-                answers: currentAnswers.map((ans, idx) => ({
+                answers: answersToSave.map((ans, idx) => ({
                     content: ans,
-                    isCorrect: idx === 3
+                    isCorrect: idx === 3  // Last position is always correct answer
                 })),
                 isExpanded: true
             });
         }
-        
         
         return questions;
     };
@@ -956,21 +994,32 @@ const EQuizz = ({ session, userRole, classes, isLoadingClasses }) => {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <button 
-                                                    className={`start-quiz-btn ${(!canStart && !isTeacher && !attempt) ? 'disabled' : ''}`}
-                                                    onClick={() => {
-                                                        if (isTeacher) handleEditQuiz(quiz);
-                                                        else if (attempt) handleReviewQuiz(quiz, attempt);
-                                                        else if (!isOverdue) handleStartQuiz(quiz);
-                                                        else alert("Hết hạn làm bài!");
-                                                    }}
-                                                    disabled={!isTeacher && !attempt && isOverdue}
-                                                >
-                                                    <span>
-                                                        {isTeacher ? "Xem chi tiết" : (attempt ? "Xem lại bài làm" : (isOverdue ? "Đã hết hạn" : "Bắt đầu làm bài"))}
-                                                    </span>
-                                                    <FontAwesomeIcon icon={attempt ? faFileAlt : faBolt} />
-                                                </button>
+                                                <div className="quiz-card-actions">
+                                                    <button 
+                                                        className={`start-quiz-btn ${(!canStart && !isTeacher && !attempt) ? 'disabled' : ''}`}
+                                                        onClick={() => {
+                                                            if (isTeacher) handleEditQuiz(quiz);
+                                                            else if (attempt) handleReviewQuiz(quiz, attempt);
+                                                            else if (!isOverdue) handleStartQuiz(quiz);
+                                                            else alert("Hết hạn làm bài!");
+                                                        }}
+                                                        disabled={!isTeacher && !attempt && isOverdue}
+                                                    >
+                                                        <span>
+                                                            {isTeacher ? "Xem chi tiết" : (attempt ? "Xem lại bài làm" : (isOverdue ? "Đã hết hạn" : "Bắt đầu làm bài"))}
+                                                        </span>
+                                                        <FontAwesomeIcon icon={attempt ? faFileAlt : faBolt} />
+                                                    </button>
+                                                    {isTeacher && (
+                                                        <button 
+                                                            className="delete-quiz-btn"
+                                                            onClick={() => handleDeleteQuiz(quiz.id)}
+                                                            title="Xóa bộ câu hỏi"
+                                                        >
+                                                            <FontAwesomeIcon icon={faTrashAlt} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         );
                                     })
