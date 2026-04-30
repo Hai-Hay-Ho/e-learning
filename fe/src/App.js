@@ -7,6 +7,7 @@ import ClassPage from './components/Class';
 import Login from './auth/Login';
 import Chat from './components/Chat';
 import EQuizz from './components/EQuizz';
+import Analytics from './components/Analytics';
 import { supabase } from './supabaseClient';
 
 function App() {
@@ -138,8 +139,8 @@ function App() {
         }
       }} />
 
-      <div className={`main-wrapper ${activeTab === 'Messages' || activeTab === 'Classes' || activeTab === 'Quizzes' ? 'no-padding' : ''}`}>
-        {activeTab !== 'Messages' && activeTab !== 'Classes' && activeTab !== 'Quizzes' && (
+      <div className={`main-wrapper ${activeTab === 'Messages' || activeTab === 'Classes' || activeTab === 'Quizzes' || activeTab === 'Statistics' ? 'no-padding' : ''}`}>
+        {activeTab !== 'Messages' && activeTab !== 'Classes' && activeTab !== 'Quizzes' && activeTab !== 'Statistics' && (
           <Header session={session} userData={userData} onLoginClick={() => setShowLogin(true)} />
         )}
 
@@ -175,6 +176,11 @@ function App() {
               userRole={userRole} 
               classes={classes}
               isLoadingClasses={isLoadingClasses}
+            />
+          ) : activeTab === 'Statistics' ? (
+            <Analytics 
+              session={session}
+              classes={classes}
             />
           ) : (
             <MainContent 
