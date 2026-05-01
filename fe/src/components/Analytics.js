@@ -11,6 +11,8 @@ import {
     faChartPie
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../supabaseClient';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './Analytics.css';
 
 const Analytics = ({ session, classes, onSwitchToMessages }) => {
@@ -60,7 +62,56 @@ const Analytics = ({ session, classes, onSwitchToMessages }) => {
     });
 
     const handleExportPDF = () => {
-        alert('Đang xuất báo cáo PDF cho lớp ' + (currentClass?.name || ''));
+        const defaultName = `Bao_cao_${currentClass?.name?.replace(/\s+/g, '_') || 'lop_hoc'}`;
+        const fileName = window.prompt("Nhập tên file PDF:", defaultName);
+        
+        if (fileName === null) return; // Hủy bỏ
+        const finalFileName = fileName.trim() || defaultName;
+
+        const doc = new jsPDF();
+        
+        // Tiêu đề báo cáo
+        doc.setFontSize(22);
+        doc.setTextColor(40);
+        doc.text("BAO CAO PHAN TICH LOP HOC", 14, 20);
+        
+        doc.setFontSize(14);
+        doc.setTextColor(100);
+        doc.text(`Lop: ${currentClass?.name || 'N/A'}`, 14, 30);
+        doc.text(`Ngay xuat: ${new Date().toLocaleDateString()}`, 14, 37);
+
+        // Thông số tổng quan
+        doc.setDrawColor(200);
+        doc.line(14, 45, 196, 45);
+        
+        doc.setFontSize(12);
+        doc.setTextColor(0);
+        doc.text(`Tong so hoc sinh: ${stats.totalStudents}`, 14, 55);
+        doc.text(`Diem trung binh: ${stats.averageScore.toFixed(2)}`, 14, 62);
+        doc.text(`Ty le hoan thanh: ${stats.completionRate.toFixed(1)}%`, 14, 69);
+        doc.text(`Do lech chuan: ${stats.standardDeviation.toFixed(2)}`, 14, 76);
+
+        // Bảng danh sách học sinh
+        const tableColumn = ["STT", "Hoc sinh", "Email", "Diem", "Hoan thanh", "Canh bao"];
+        const tableRows = filteredStudents.map((student, index) => [
+            index + 1,
+            student.name,
+            student.email,
+            student.averageScore.toFixed(2),
+            `${student.completionPercentage}%`,
+            student.warningLevel
+        ]);
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 85,
+            theme: 'striped',
+            headStyles: { fillColor: [63, 81, 181] },
+            styles: { fontSize: 10, cellPadding: 3 }
+        });
+
+        doc.save(`${finalFileName}.pdf`);
     };
 
     const getScoreClass = (score) => {
