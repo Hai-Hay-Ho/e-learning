@@ -9,6 +9,7 @@ import com.example.demo.repository.ClassRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -85,5 +86,10 @@ public class ClassService {
                 .build();
     }
     
+    @Transactional
+    public void removeStudentFromClass(UUID studentId, UUID classId) {
+        classMemberRepository.deleteByStudentIdAndClassId(studentId, classId);
+    }
+
     // logic to join class can be expanded here with a class_members table
 }

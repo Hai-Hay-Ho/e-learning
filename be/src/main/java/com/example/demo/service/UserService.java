@@ -14,13 +14,14 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    public User processUserLogin(UUID id, String email, String fullName, String avatarUrl) {
+    public User processUserLogin(UUID id, String email, String fullName, String avatarUrl, java.time.OffsetDateTime lastSignInAt) {
         Optional<User> existingUser = userRepository.findById(id);
 
         if (existingUser.isPresent()) {
             User user = existingUser.get();
             user.setFullName(fullName);
             user.setEmail(email);
+            user.setLastSignInAt(lastSignInAt);
             
             // Chỉ cập nhật avatar từ Google nếu trong DB hiện đang trống hoặc chưa có avatar
             if (user.getAvatarUrl() == null || user.getAvatarUrl().isEmpty()) {
@@ -44,6 +45,7 @@ public class UserService {
                 .email(email)
                 .fullName(fullName)
                 .avatarUrl(avatarUrl)
+                .lastSignInAt(lastSignInAt)
                 .role(role)
                 .build();
 

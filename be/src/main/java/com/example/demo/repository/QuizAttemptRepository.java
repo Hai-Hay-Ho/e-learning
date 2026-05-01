@@ -12,4 +12,5 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, UUID> 
     List<QuizAttempt> findByUserId(UUID userId);
     List<QuizAttempt> findByQuizIdAndUserId(UUID quizId, UUID userId);
     long countByQuizIdInAndSubmittedAtAfter(List<UUID> quizIds, LocalDateTime date);
+    List<QuizAttempt> findByQuizIdIn(List<UUID> quizIds);
 }

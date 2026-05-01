@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.ClassStatsDTO;
 import com.example.demo.dto.TeacherStatsDTO;
 import com.example.demo.service.StatsService;
 import lombok.RequiredArgsConstructor;
@@ -18,5 +19,10 @@ public class StatsController {
     @GetMapping("/teacher/{teacherId}")
     public ResponseEntity<TeacherStatsDTO> getTeacherStats(@PathVariable UUID teacherId) {
         return ResponseEntity.ok(statsService.getTeacherStats(teacherId));
+    }
+
+    @GetMapping("/class/{classId}")
+    public ResponseEntity<ClassStatsDTO> getClassStats(@PathVariable UUID classId) {
+        return ResponseEntity.ok(statsService.getClassStats(classId));
     }
 }

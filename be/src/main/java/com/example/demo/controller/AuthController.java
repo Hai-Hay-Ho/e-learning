@@ -24,7 +24,8 @@ public class AuthController {
                 request.getId(),
                 request.getEmail(),
                 request.getFullName(),
-                request.getAvatarUrl()
+                request.getAvatarUrl(),
+                request.getLastSignInAt()
             );
             return ResponseEntity.ok(user);
         } catch (Exception e) {
@@ -38,5 +39,6 @@ public class AuthController {
         private String email;
         private String fullName;
         private String avatarUrl;
+        private java.time.OffsetDateTime lastSignInAt;
     }
 }

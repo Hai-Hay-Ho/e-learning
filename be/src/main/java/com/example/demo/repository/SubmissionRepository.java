@@ -20,4 +20,5 @@ public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
 
     long countByPostIdInAndScoreIsNull(List<UUID> postIds);
     long countByPostIdInAndCreatedAtAfter(List<UUID> postIds, LocalDateTime date);
+    List<Submission> findByPostIdIn(List<UUID> postIds);
 }

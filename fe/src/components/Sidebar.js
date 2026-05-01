@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faThLarge, 
     faChartLine, 
-    faBook, 
+    faQuestionCircle, 
     faEnvelope, 
     faCog,
     faLayerGroup
@@ -45,11 +45,15 @@ const Sidebar = ({ userRole, activeTab, setActiveTab, unreadCount }) => {
                     onClick={() => setActiveTab('Quizzes')}
                     style={{ cursor: 'pointer' }}
                 >
-                    <span className="icon"><FontAwesomeIcon icon={faChartLine} /></span> Quizzes
+                    <span className="icon"><FontAwesomeIcon icon={faQuestionCircle} /></span> Quizzes
                 </div>
                 {isTeacher && (
-                    <div className="menu-item">
-                        <span className="icon"><FontAwesomeIcon icon={faBook} /></span> Analytics
+                    <div 
+                        className={`menu-item ${activeTab === 'Statistics' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('Statistics')}
+                        style={{ cursor: 'pointer' }}
+                    >
+                        <span className="icon"><FontAwesomeIcon icon={faChartLine} /></span> Statistics
                     </div>
                 )}
                 <div 

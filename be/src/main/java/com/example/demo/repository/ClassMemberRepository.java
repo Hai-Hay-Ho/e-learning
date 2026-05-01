@@ -12,4 +12,7 @@ import java.util.UUID;
 public interface ClassMemberRepository extends JpaRepository<ClassMember, UUID> {
     List<ClassMember> findByStudentId(UUID studentId);
     Optional<ClassMember> findByStudentIdAndClassId(UUID studentId, UUID classId);
+    long countByClassId(UUID classId);
+    List<ClassMember> findByClassId(UUID classId);
+    void deleteByStudentIdAndClassId(UUID studentId, UUID classId);
 }
