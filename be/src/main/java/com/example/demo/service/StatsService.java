@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.UUID;
@@ -109,8 +108,10 @@ public class StatsService {
                 .map(Quiz::getId)
                 .collect(Collectors.toList());
 
-        // 3. Tính điểm trung bình lớp (dựa trên điểm cao nhất của mỗi học sinh cho mỗi bài tập)
-        List<Submission> allSubmissions = assignmentIds.isEmpty() ? List.of() : submissionRepository.findByPostIdIn(assignmentIds);
+        // 3. Tính điểm trung bình lớp (dựa trên điểm cao nhất của mỗi học sinh cho mỗi
+        // bài tập)
+        List<Submission> allSubmissions = assignmentIds.isEmpty() ? List.of()
+                : submissionRepository.findByPostIdIn(assignmentIds);
         List<QuizAttempt> allAttempts = quizIds.isEmpty() ? List.of() : quizAttemptRepository.findByQuizIdIn(quizIds);
 
         // Map<StudentId, Map<ItemId, MaxScore>>
@@ -135,7 +136,8 @@ public class StatsService {
             classTotalScore += scores.values().stream().mapToDouble(Double::doubleValue).sum();
         }
 
-        double averageScore = (totalStudents > 0 && totalItems > 0) ? classTotalScore / (totalStudents * totalItems) : 0.0;
+        double averageScore = (totalStudents > 0 && totalItems > 0) ? classTotalScore / (totalStudents * totalItems)
+                : 0.0;
 
         // 3.1 Tỷ lệ hoàn thành (tính số bài đã làm ít nhất 1 lần)
         long totalCompletedItemsCount = 0;
@@ -170,12 +172,31 @@ public class StatsService {
             double studentTotalScore = scores.values().stream().mapToDouble(Double::doubleValue).sum();
             double studentAverageScore = totalItems > 0 ? studentTotalScore / totalItems : 0.0;
 
-            int studentCompletionPercentage = totalItems > 0 ? (int) Math.round((double) scores.size() / totalItems * 100) : 0;
+            int studentCompletionPercentage = totalItems > 0
+                    ? (int) Math.round((double) scores.size() / totalItems * 100)
+                    : 0;
+
+            // Tìm thời gian hoạt động cuối cùng từ submissions và quiz attempts
+            List<Submission> studentSubmissions = finalSubmissionsByStudent.getOrDefault(s.getId(), List.of());
+            LocalDateTime latestSub = studentSubmissions.stream()
+                    .map(Submission::getSubmittedAt)
+                    .filter(Objects::nonNull)
+                    .max(LocalDateTime::compareTo)
+                    .orElse(null);
+
+            List<QuizAttempt> studentQuizzes = finalQuizAttemptsByStudent.getOrDefault(s.getId(), List.of());
+            LocalDateTime latestQuiz = studentQuizzes.stream()
+                    .map(QuizAttempt::getSubmittedAt)
+                    .filter(Objects::nonNull)
+                    .max(LocalDateTime::compareTo)
+                    .orElse(null);
 
             // Trạng thái (Warning level): >=8 Thấp, >=5 Trung bình, còn lại Cao
             String warningLevel = "Cao";
-            if (studentAverageScore >= 8) warningLevel = "Thấp";
-            else if (studentAverageScore >= 5) warningLevel = "Trung bình";
+            if (studentAverageScore >= 8)
+                warningLevel = "Thấp";
+            else if (studentAverageScore >= 5)
+                warningLevel = "Trung bình";
 
             return StudentStatsDTO.builder()
                     .id(s.getId())
@@ -183,7 +204,7 @@ public class StatsService {
                     .email(s.getEmail())
                     .averageScore(studentAverageScore)
                     .completionPercentage(studentCompletionPercentage)
-                    .lastActive(calculateLastActive(s.getLastSignInAt(), s.getCreatedAt()))
+                    .lastActive(calculateLastActive(s.getLastSignInAt(), s.getCreatedAt(), latestSub, latestQuiz))
                     .warningLevel(warningLevel)
                     .avatarUrl(s.getAvatarUrl())
                     .build();
@@ -198,18 +219,39 @@ public class StatsService {
                 .build();
     }
 
-    private String calculateLastActive(OffsetDateTime lastSignIn, OffsetDateTime createdAt) {
+    private String calculateLastActive(OffsetDateTime lastSignIn, OffsetDateTime createdAt, LocalDateTime lastSub,
+            LocalDateTime lastQuiz) {
         OffsetDateTime lastTime = lastSignIn != null ? lastSignIn : createdAt;
-        if (lastTime == null) return "Chưa từng";
-        
+
+        if (lastSub != null) {
+            OffsetDateTime subTime = lastSub.atOffset(java.time.OffsetDateTime.now().getOffset());
+            if (lastTime == null || subTime.isAfter(lastTime)) {
+                lastTime = subTime;
+            }
+        }
+
+        if (lastQuiz != null) {
+            OffsetDateTime quizTime = lastQuiz.atOffset(java.time.OffsetDateTime.now().getOffset());
+            if (lastTime == null || quizTime.isAfter(lastTime)) {
+                lastTime = quizTime;
+            }
+        }
+
+        if (lastTime == null)
+            return "Chưa từng";
+
         OffsetDateTime now = OffsetDateTime.now();
         long minutes = ChronoUnit.MINUTES.between(lastTime, now);
-        if (minutes < 1) return "Vừa xong";
-        if (minutes < 60) return minutes + " phút trước";
+        if (minutes < 1)
+            return "Vừa xong";
+        if (minutes < 60)
+            return minutes + " phút trước";
         long hours = ChronoUnit.HOURS.between(lastTime, now);
-        if (hours < 24) return hours + " giờ trước";
+        if (hours < 24)
+            return hours + " giờ trước";
         long days = ChronoUnit.DAYS.between(lastTime, now);
-        if (days < 30) return days + " ngày trước";
+        if (days < 30)
+            return days + " ngày trước";
         return "Lâu hơn 1 tháng";
     }
 }
