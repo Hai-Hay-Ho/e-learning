@@ -13,7 +13,6 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -211,8 +210,12 @@ public class StatsService {
         }).collect(Collectors.toList());
 
         // 5. Tính độ lệch chuẩn (Standard Deviation)
-        // Độ lệch chuẩn càng cao -> Điểm số phân bố rộng (có cả giỏi và yếu)
-        // Độ lệch chuẩn thấp -> Học sinh có lực học đồng đều
+        /*
+         * std <1.0 (Rất thấp - Rất đều)
+         * 1.0 <= std < 1.5 (Thấp - Khá đều)
+         * 1.5 <= std < 2.0 (Trung bình - Có sự phân hóa)
+         * std >= 2.0 (Cao - Phân hóa mạnh, có nhóm yếu/giỏi rõ rệt)
+         */
         double sumSquaredDiffs = 0;
         for (StudentStatsDTO sDto : studentStatsList) {
             double diff = sDto.getAverageScore() - averageScore;
