@@ -64,4 +64,13 @@ public class ClassController {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
+    @DeleteMapping("/{classId}/students/{studentId}")
+    public ResponseEntity<?> removeStudent(@PathVariable UUID classId, @PathVariable UUID studentId) {
+        try {
+            classService.removeStudentFromClass(studentId, classId);
+            return ResponseEntity.ok(Map.of("message", "Đã xóa học sinh ra khỏi lớp."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
 }

@@ -6,7 +6,6 @@ import {
     faCheckCircle, 
     faFilePdf, 
     faSearch, 
-    faArrowUp,
     faEllipsisV,
     faGraduationCap,
     faChartPie
@@ -24,6 +23,9 @@ const Analytics = ({ session, classes }) => {
         standardDeviation: 0,
         students: []
     });
+    const [activeStudentMenu, setActiveStudentMenu] = useState(null);
+
+    const currentClass = classes?.find(c => c.id === selectedClassId) || (classes && classes[0]);
 
     useEffect(() => {
         if (selectedClassId) {
@@ -44,7 +46,7 @@ const Analytics = ({ session, classes }) => {
     };
 
 
-    const currentClass = classes?.find(c => c.id === selectedClassId) || (classes && classes[0]);
+
 
     const filteredStudents = (stats.students || []).filter(student => {
         const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -69,6 +71,27 @@ const Analytics = ({ session, classes }) => {
         if (level === 'Thấp') return 'warning-low';
         if (level === 'Trung bình') return 'warning-mid';
         return 'warning-high';
+    };
+
+    const handleRemoveStudent = async (studentId) => {
+        if (!window.confirm("Bạn có chắc chắn muốn xóa học sinh này khỏi lớp?")) return;
+
+        try {
+            const response = await fetch(`http://localhost:8080/api/classes/${selectedClassId}/students/${studentId}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                fetchStats(selectedClassId);
+                setActiveStudentMenu(null);
+            } else {
+                const errorData = await response.json();
+                alert(errorData.message || "Lỗi khi xóa học sinh.");
+            }
+        } catch (err) {
+            console.error("Error removing student:", err);
+            alert("Lỗi kết nối máy chủ.");
+        }
     };
 
     return (
@@ -241,9 +264,47 @@ const Analytics = ({ session, classes }) => {
                                                 </span>
                                             </td>
                                             <td>
-                                                <button style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
-                                                    <FontAwesomeIcon icon={faEllipsisV} />
-                                                </button>
+                                                <div style={{ position: 'relative' }}>
+                                                    <button 
+                                                        onClick={() => setActiveStudentMenu(activeStudentMenu === student.id ? null : student.id)}
+                                                        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '8px' }}
+                                                    >
+                                                        <FontAwesomeIcon icon={faEllipsisV} />
+                                                    </button>
+                                                    
+                                                    {activeStudentMenu === student.id && (
+                                                        <div className="student-dropdown-menu" style={{ 
+                                                            position: 'absolute', 
+                                                            right: '100%', 
+                                                            top: '0', 
+                                                            backgroundColor: 'white', 
+                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)', 
+                                                            borderRadius: '8px', 
+                                                            zIndex: 100,
+                                                            width: '120px',
+                                                            padding: '8px 0',
+                                                            border: '1px solid #e2e8f0',
+                                                            marginRight: '8px'
+                                                        }}>
+                                                            <button 
+                                                                onClick={() => handleRemoveStudent(student.id)}
+                                                                style={{ 
+                                                                    width: '100%', 
+                                                                    padding: '8px 16px', 
+                                                                    textAlign: 'left', 
+                                                                    border: 'none', 
+                                                                    background: 'none', 
+                                                                    cursor: 'pointer', 
+                                                                    fontSize: '14px', 
+                                                                    color: '#ef4444',
+                                                                    fontWeight: '500'
+                                                                }}
+                                                            >
+                                                                Xóa khỏi lớp
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}

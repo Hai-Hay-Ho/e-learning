@@ -19,7 +19,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setClasses }) => {
-    const [setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showJoinModal, setShowJoinModal] = useState(false);
     const [className, setClassName] = useState('');
