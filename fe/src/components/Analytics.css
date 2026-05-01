@@ -380,7 +380,7 @@
     border-radius: 3px;
 }
 
-.status-chip {
+.warning-chip {
     padding: 4px 8px;
     border-radius: 6px;
     font-size: 11px;
@@ -388,5 +388,6 @@
     text-transform: uppercase;
 }
 
-.status-active { background: #e0f2fe; color: #0369a1; }
-.status-inactive { background: #f1f5f9; color: #64748b; }
+.warning-low { background: #e0f2fe; color: #0369a1; }
+.warning-mid { background: #fef3c7; color: #d97706; }
+.warning-high { background: #fee2e2; color: #ef4444; }

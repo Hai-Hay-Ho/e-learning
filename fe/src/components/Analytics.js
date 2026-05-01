@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faUsers, 
@@ -17,32 +17,43 @@ const Analytics = ({ session, classes }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [scoreFilter, setScoreFilter] = useState('all');
     const [selectedClassId, setSelectedClassId] = useState(classes && classes.length > 0 ? classes[0].id : null);
+    const [stats, setStats] = useState({
+        totalStudents: 0,
+        averageScore: 0,
+        completionRate: 0,
+        standardDeviation: 0,
+        students: []
+    });
 
-    // Mock data for analytics
-    const mockStudents = [
-        { id: 1, name: 'Nguyễn Văn A', email: 'vana@example.com', score: 9.5, completion: 100, lastActive: '2 giờ trước', status: 'Active', avatar: null },
-        { id: 2, name: 'Trần Thị B', email: 'thib@example.com', score: 8.0, completion: 90, lastActive: '5 giờ trước', status: 'Active', avatar: null },
-        { id: 3, name: 'Lê Văn C', email: 'vanc@example.com', score: 4.5, completion: 40, lastActive: '1 ngày trước', status: 'Inactive', avatar: null },
-        { id: 4, name: 'Phạm Minh D', email: 'minhd@example.com', score: 7.2, completion: 75, lastActive: '3 giờ trước', status: 'Active', avatar: null },
-        { id: 5, name: 'Hoàng Anh E', email: 'anhe@example.com', score: 6.8, completion: 60, lastActive: '12 giờ trước', status: 'Active', avatar: null },
-        { id: 6, name: 'Đặng Thu F', email: 'thuf@example.com', score: 8.5, completion: 95, lastActive: '45 phút trước', status: 'Active', avatar: null },
-        { id: 7, name: 'Bùi Gia G', email: 'giag@example.com', score: 3.2, completion: 20, lastActive: '3 ngày trước', status: 'Inactive', avatar: null },
-        { id: 8, name: 'Vũ Hải H', email: 'haih@example.com', score: 9.0, completion: 100, lastActive: '1 giờ trước', status: 'Active', avatar: null },
-    ];
+    useEffect(() => {
+        if (selectedClassId) {
+            fetchStats(selectedClassId);
+        }
+    }, [selectedClassId]);
+
+    const fetchStats = async (classId) => {
+        try {
+            const response = await fetch(`http://localhost:8080/api/stats/class/${classId}`);
+            if (response.ok) {
+                const data = await response.json();
+                setStats(data);
+            }
+        } catch (error) {
+            console.error('Error fetching class stats:', error);
+        }
+    };
+
 
     const currentClass = classes?.find(c => c.id === selectedClassId) || (classes && classes[0]);
 
-    const filteredStudents = mockStudents.filter(student => {
+    const filteredStudents = (stats.students || []).filter(student => {
         const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesScore = scoreFilter === 'all' 
-            || (scoreFilter === 'high' && student.score >= 8)
-            || (scoreFilter === 'mid' && student.score >= 5 && student.score < 8)
-            || (scoreFilter === 'low' && student.score < 5);
+            || (scoreFilter === 'high' && student.averageScore >= 8)
+            || (scoreFilter === 'mid' && student.averageScore >= 5 && student.averageScore < 8)
+            || (scoreFilter === 'low' && student.averageScore < 5);
         return matchesSearch && matchesScore;
     });
-
-    const avgScore = (mockStudents.reduce((acc, s) => acc + s.score, 0) / mockStudents.length).toFixed(1);
-    const completionRate = (mockStudents.reduce((acc, s) => acc + s.completion, 0) / mockStudents.length).toFixed(0);
 
     const handleExportPDF = () => {
         alert('Đang xuất báo cáo PDF cho lớp ' + (currentClass?.name || ''));
@@ -52,6 +63,12 @@ const Analytics = ({ session, classes }) => {
         if (score >= 8) return 'score-high';
         if (score >= 5) return 'score-mid';
         return 'score-low';
+    };
+
+    const getWarningClass = (level) => {
+        if (level === 'Thấp') return 'warning-low';
+        if (level === 'Trung bình') return 'warning-mid';
+        return 'warning-high';
     };
 
     return (
@@ -116,29 +133,29 @@ const Analytics = ({ session, classes }) => {
                             <div className="card-icon icon-blue">
                                 <FontAwesomeIcon icon={faUsers} />
                             </div>
-                            <div className="card-value">{mockStudents.length}</div>
+                            <div className="card-value">{stats.totalStudents}</div>
                             <div className="card-label">Tổng số học sinh</div>
                         </div>
                         <div className="analytics-card">
                             <div className="card-icon icon-purple">
                                 <FontAwesomeIcon icon={faStar} />
                             </div>
-                            <div className="card-value">{avgScore}</div>
+                            <div className="card-value">{stats.averageScore.toFixed(1)}</div>
                             <div className="card-label">Điểm trung bình</div>
                         </div>
                         <div className="analytics-card">
                             <div className="card-icon icon-green">
                                 <FontAwesomeIcon icon={faCheckCircle} />
                             </div>
-                            <div className="card-value">{completionRate}%</div>
+                            <div className="card-value">{stats.completionRate.toFixed(0)}%</div>
                             <div className="card-label">Tỷ lệ hoàn thành</div>
                         </div>
                         <div className="analytics-card">
                             <div className="card-icon icon-orange">
-                                <FontAwesomeIcon icon={faArrowUp} />
+                                <FontAwesomeIcon icon={faChartPie} />
                             </div>
-                            <div className="card-value">12%</div>
-                            <div className="card-label">Tăng trưởng</div>
+                            <div className="card-value">{stats.standardDeviation.toFixed(1)}</div>
+                            <div className="card-label">Độ lệch chuẩn</div>
                         </div>
                     </div>
 
@@ -178,7 +195,7 @@ const Analytics = ({ session, classes }) => {
                                         <th>Điểm số</th>
                                         <th>Hoàn thành</th>
                                         <th>Hoạt động cuối</th>
-                                        <th>Trạng thái</th>
+                                        <th>Cảnh báo</th>
                                         <th></th>
                                     </tr>
                                 </thead>
@@ -188,7 +205,7 @@ const Analytics = ({ session, classes }) => {
                                             <td>
                                                 <div className="student-info">
                                                     <div className="student-avatar">
-                                                        {student.avatar ? <img src={student.avatar} alt="" /> : student.name.charAt(0)}
+                                                        {student.avatarUrl ? <img src={student.avatarUrl} alt="" /> : student.name.charAt(0)}
                                                     </div>
                                                     <div>
                                                         <span className="student-name">{student.name}</span>
@@ -197,8 +214,8 @@ const Analytics = ({ session, classes }) => {
                                                 </div>
                                             </td>
                                             <td>
-                                                <span className={`score-badge ${getScoreClass(student.score)}`}>
-                                                    {student.score.toFixed(1)}
+                                                <span className={`score-badge ${getScoreClass(student.averageScore)}`}>
+                                                    {student.averageScore.toFixed(1)}
                                                 </span>
                                             </td>
                                             <td>
@@ -207,20 +224,20 @@ const Analytics = ({ session, classes }) => {
                                                         <div 
                                                             className="completion-bar-fill" 
                                                             style={{ 
-                                                                width: `${student.completion}%`,
-                                                                background: student.completion > 80 ? '#22c55e' : (student.completion > 50 ? '#f59e0b' : '#ef4444')
+                                                                width: `${student.completionPercentage}%`,
+                                                                background: student.completionPercentage > 80 ? '#22c55e' : (student.completionPercentage > 50 ? '#f59e0b' : '#ef4444')
                                                             }}
                                                         ></div>
                                                     </div>
-                                                    <span style={{ fontSize: '12px', fontWeight: '600' }}>{student.completion}%</span>
+                                                    <span style={{ fontSize: '12px', fontWeight: '600' }}>{student.completionPercentage}%</span>
                                                 </div>
                                             </td>
                                             <td style={{ color: '#64748b', fontSize: '14px' }}>
                                                 {student.lastActive}
                                             </td>
                                             <td>
-                                                <span className={`status-chip ${student.status === 'Active' ? 'status-active' : 'status-inactive'}`}>
-                                                    {student.status}
+                                                <span className={`warning-chip ${getWarningClass(student.warningLevel)}`}>
+                                                    {student.warningLevel}
                                                 </span>
                                             </td>
                                             <td>

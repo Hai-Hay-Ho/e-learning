@@ -175,15 +175,10 @@ const MainContent = ({ session, classes, setActiveTab, setSelectedClass }) => {
             ? quizScoreValues.reduce((acc, score) => acc + score, 0) / quizScoreValues.length
             : 0;
 
-        // Tính điểm trung bình (cộng trung bình Assignment và Quiz chia đôi)
-        let finalAvg = 0;
-        if (assignmentScoreValues.length > 0 && quizScoreValues.length > 0) {
-            finalAvg = (avgAssignmentScore + avgQuizScore) / 2;
-        } else if (assignmentScoreValues.length > 0) {
-            finalAvg = avgAssignmentScore;
-        } else if (quizScoreValues.length > 0) {
-            finalAvg = avgQuizScore;
-        }
+        const totalItemsInClasses = allAssignments.length + allQuizzes.length;
+        const sumOfBestScores = assignmentScoreValues.reduce((acc, s) => acc + s, 0) + quizScoreValues.reduce((acc, s) => acc + s, 0);
+        
+        const finalAvg = totalItemsInClasses > 0 ? sumOfBestScores / totalItemsInClasses : 0;
 
         const classification = finalAvg >= 8 ? 'Giỏi' : (finalAvg >= 5 ? 'Khá' : 'Trung bình');
 
