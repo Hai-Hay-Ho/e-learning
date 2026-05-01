@@ -83,6 +83,7 @@ function App() {
           email: user.email,
           fullName: user.user_metadata.full_name || user.user_metadata.name,
           avatarUrl: user.user_metadata.avatar_url,
+          lastSignInAt: user.last_sign_in_at,
         }),
       });
       

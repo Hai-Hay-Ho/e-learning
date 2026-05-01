@@ -210,11 +210,21 @@ public class StatsService {
                     .build();
         }).collect(Collectors.toList());
 
+        // 5. Tính độ lệch chuẩn (Standard Deviation)
+        // Độ lệch chuẩn càng cao -> Điểm số phân bố rộng (có cả giỏi và yếu)
+        // Độ lệch chuẩn thấp -> Học sinh có lực học đồng đều
+        double sumSquaredDiffs = 0;
+        for (StudentStatsDTO sDto : studentStatsList) {
+            double diff = sDto.getAverageScore() - averageScore;
+            sumSquaredDiffs += diff * diff;
+        }
+        double standardDeviation = totalStudents > 0 ? Math.sqrt(sumSquaredDiffs / totalStudents) : 0.0;
+
         return ClassStatsDTO.builder()
                 .totalStudents(totalStudents)
                 .averageScore(averageScore)
                 .completionRate(completionRate)
-                .standardDeviation(0.0) // placeholder
+                .standardDeviation(standardDeviation)
                 .students(studentStatsList)
                 .build();
     }
