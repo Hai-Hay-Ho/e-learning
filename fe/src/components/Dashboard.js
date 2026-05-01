@@ -310,7 +310,6 @@ const MainContent = ({ session, classes, setActiveTab, setSelectedClass }) => {
                 }
             }
         } catch (error) {
-            console.error('Error fetching user profile:', error);
         } finally {
             setLoading(false);
         }

@@ -181,6 +181,7 @@ function App() {
             <Analytics 
               session={session}
               classes={classes}
+              onSwitchToMessages={handleSwitchToMessages}
             />
           ) : (
             <MainContent 

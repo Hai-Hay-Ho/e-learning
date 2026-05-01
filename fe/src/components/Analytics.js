@@ -10,9 +10,10 @@ import {
     faGraduationCap,
     faChartPie
 } from '@fortawesome/free-solid-svg-icons';
+import { supabase } from '../supabaseClient';
 import './Analytics.css';
 
-const Analytics = ({ session, classes }) => {
+const Analytics = ({ session, classes, onSwitchToMessages }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [scoreFilter, setScoreFilter] = useState('all');
     const [selectedClassId, setSelectedClassId] = useState(classes && classes.length > 0 ? classes[0].id : null);
@@ -26,6 +27,7 @@ const Analytics = ({ session, classes }) => {
     const [activeStudentMenu, setActiveStudentMenu] = useState(null);
 
     const currentClass = classes?.find(c => c.id === selectedClassId) || (classes && classes[0]);
+    const isTeacher = currentClass && session?.user?.id === currentClass.teacherId;
 
     useEffect(() => {
         if (selectedClassId) {
@@ -91,6 +93,50 @@ const Analytics = ({ session, classes }) => {
         } catch (err) {
             console.error("Error removing student:", err);
             alert("Lỗi kết nối máy chủ.");
+        }
+    };
+
+    const handleMessageStudent = async (student) => {
+        if (!onSwitchToMessages) return;
+
+        try {
+            const otherUser = {
+                id: student.id,
+                full_name: student.name,
+                avatar_url: student.avatarUrl,
+                email: student.email
+            };
+
+            const user1_id = session.user.id < otherUser.id ? session.user.id : otherUser.id;
+            const user2_id = session.user.id < otherUser.id ? otherUser.id : session.user.id;
+
+            // Kiểm tra xem đã có conversation chưa
+            let { data: existingConv } = await supabase
+                .from('conversations')
+                .select('*')
+                .or(`and(user1_id.eq.${user1_id},user2_id.eq.${user2_id})`)
+                .maybeSingle();
+
+            if (existingConv) {
+                onSwitchToMessages(existingConv.id, otherUser);
+                return;
+            }
+
+            // Tạo conversation mới
+            const { data: newConv, error: createError } = await supabase
+                .from('conversations')
+                .insert([{ user1_id, user2_id }])
+                .select()
+                .single();
+
+            if (createError) {
+                console.error('Error creating conversation:', createError);
+                alert('Lỗi tạo cuộc trò chuyện.');
+            } else {
+                onSwitchToMessages(newConv.id, otherUser);
+            }
+        } catch (err) {
+            console.error("Error starting message:", err);
         }
     };
 
@@ -264,47 +310,68 @@ const Analytics = ({ session, classes }) => {
                                                 </span>
                                             </td>
                                             <td>
-                                                <div style={{ position: 'relative' }}>
-                                                    <button 
-                                                        onClick={() => setActiveStudentMenu(activeStudentMenu === student.id ? null : student.id)}
-                                                        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '8px' }}
-                                                    >
-                                                        <FontAwesomeIcon icon={faEllipsisV} />
-                                                    </button>
-                                                    
-                                                    {activeStudentMenu === student.id && (
-                                                        <div className="student-dropdown-menu" style={{ 
-                                                            position: 'absolute', 
-                                                            right: '100%', 
-                                                            top: '0', 
-                                                            backgroundColor: 'white', 
-                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)', 
-                                                            borderRadius: '8px', 
-                                                            zIndex: 100,
-                                                            width: '120px',
-                                                            padding: '8px 0',
-                                                            border: '1px solid #e2e8f0',
-                                                            marginRight: '8px'
-                                                        }}>
-                                                            <button 
-                                                                onClick={() => handleRemoveStudent(student.id)}
-                                                                style={{ 
-                                                                    width: '100%', 
-                                                                    padding: '8px 16px', 
-                                                                    textAlign: 'left', 
-                                                                    border: 'none', 
-                                                                    background: 'none', 
-                                                                    cursor: 'pointer', 
-                                                                    fontSize: '14px', 
-                                                                    color: '#ef4444',
-                                                                    fontWeight: '500'
-                                                                }}
-                                                            >
-                                                                Xóa khỏi lớp
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                {student.id !== session?.user?.id && (
+                                                    <div style={{ position: 'relative' }}>
+                                                        <button 
+                                                            onClick={() => setActiveStudentMenu(activeStudentMenu === student.id ? null : student.id)}
+                                                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '8px' }}
+                                                        >
+                                                            <FontAwesomeIcon icon={faEllipsisV} />
+                                                        </button>
+                                                        
+                                                        {activeStudentMenu === student.id && (
+                                                            <div className="student-dropdown-menu" style={{ 
+                                                                position: 'absolute', 
+                                                                right: '100%', 
+                                                                top: '0', 
+                                                                backgroundColor: 'white', 
+                                                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)', 
+                                                                borderRadius: '8px', 
+                                                                zIndex: 100,
+                                                                width: '120px',
+                                                                padding: '8px 0',
+                                                                border: '1px solid #e2e8f0',
+                                                                marginRight: '8px'
+                                                            }}>
+                                                                <button 
+                                                                    onClick={() => handleMessageStudent(student)}
+                                                                    style={{ 
+                                                                        width: '100%', 
+                                                                        padding: '8px 16px', 
+                                                                        textAlign: 'left', 
+                                                                        border: 'none', 
+                                                                        background: 'none', 
+                                                                        cursor: 'pointer', 
+                                                                        fontSize: '14px', 
+                                                                        color: '#0f172a',
+                                                                        fontWeight: '500',
+                                                                        borderBottom: isTeacher ? '1px solid #f1f5f9' : 'none'
+                                                                                                        }}
+                                                                >
+                                                                    Nhắn tin
+                                                                </button>
+                                                                {isTeacher && (
+                                                                    <button 
+                                                                        onClick={() => handleRemoveStudent(student.id)}
+                                                                        style={{ 
+                                                                            width: '100%', 
+                                                                            padding: '8px 16px', 
+                                                                            textAlign: 'left', 
+                                                                            border: 'none', 
+                                                                            background: 'none', 
+                                                                            cursor: 'pointer', 
+                                                                            fontSize: '14px', 
+                                                                            color: '#ef4444',
+                                                                            fontWeight: '500'
+                                                                        }}
+                                                                    >
+                                                                        Xóa khỏi lớp
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
