@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import MainContent from './components/Dashboard';
 import ClassPage from './components/Class';
 import Login from './auth/Login';
 import Chat from './components/Chat';
 import EQuizz from './components/EQuizz';
 import Analytics from './components/Analytics';
+import TeacherDashboard from './components/TeacherDashboard';
+import StudentDashboard from './components/StudentDashboard';
 import { supabase } from './supabaseClient';
 
 function App() {
@@ -147,12 +148,25 @@ function App() {
 
         {session ? (
           activeTab === 'Dashboard' ? (
-            <MainContent 
+            userRole === "1" ? (
+              <TeacherDashboard 
                 session={session} 
                 classes={classes} 
                 setActiveTab={setActiveTab} 
-                setSelectedClass={setSelectedClass} 
-            />
+                setSelectedClass={setSelectedClass}
+                userData={userData}
+                onProfileUpdate={() => fetchUserData(session.user)}
+              />
+            ) : (
+              <StudentDashboard 
+                session={session} 
+                classes={classes} 
+                setActiveTab={setActiveTab} 
+                setSelectedClass={setSelectedClass}
+                userData={userData}
+                onProfileUpdate={() => fetchUserData(session.user)}
+              />
+            )
           ) : activeTab === 'Classes' ? (
             <ClassPage 
               session={session} 
@@ -185,12 +199,25 @@ function App() {
               onSwitchToMessages={handleSwitchToMessages}
             />
           ) : (
-            <MainContent 
+            userRole === "1" ? (
+              <TeacherDashboard 
                 session={session} 
                 classes={classes} 
                 setActiveTab={setActiveTab} 
                 setSelectedClass={setSelectedClass}
-            />
+                userData={userData}
+                onProfileUpdate={() => fetchUserData(session.user)}
+              />
+            ) : (
+              <StudentDashboard 
+                session={session} 
+                classes={classes} 
+                setActiveTab={setActiveTab} 
+                setSelectedClass={setSelectedClass}
+                userData={userData}
+                onProfileUpdate={() => fetchUserData(session.user)}
+              />
+            )
           )
         ) : (
           <div style={{ padding: '20px', textAlign: 'center' }}>
