@@ -37,10 +37,10 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
     const [targetClassIds, setTargetClassIds] = useState([]);
     const [showClassSelector, setShowClassSelector] = useState(false);
     
-    // States for Editing Post
     const [editingPost, setEditingPost] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
     const [activeMenu, setActiveMenu] = useState(null);
+    const [loadingPosts, setLoadingPosts] = useState(false);
 
     // Assignment Detail view
     const [selectedAssignment, setSelectedAssignment] = useState(null);
@@ -90,24 +90,25 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
                         table: 'comments'
                     },
                     (payload) => {
-                        fetchPosts(selectedClass.id); // Tải lại posts để lấy recentComments mới nhất
+                        fetchPosts(selectedClass.id, false); // Tải lại posts để lấy recentComments mới nhất
                     }
                 )
                 .subscribe();
 
             // Realtime cho bảng tệp đính kèm (Để cập nhật khi upload/xóa file)
-            const attachmentChannelName = `class-attachments-${selectedClass.id}`;
-            attachmentSubscription = supabase
-                .channel(attachmentChannelName)
+            const attachmentSubscription = supabase
+                .channel(`class-attachments-${selectedClass.id}`)
                 .on(
                     'postgres_changes',
                     {
                         event: '*',
                         schema: 'public',
                         table: 'post_attachments'
+                        // No easy filter for class_id here without extra column, 
+                        // but channel name helps isolate it if we use filters on the server side
                     },
                     () => {
-                        fetchPosts(selectedClass.id);
+                        fetchPosts(selectedClass.id, false); // Don't show full loading for background refresh
                     }
                 )
                 .subscribe();
@@ -135,7 +136,8 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
         }
     };
 
-    const fetchPosts = async (classId) => {
+    const fetchPosts = async (classId, showLoading = true) => {
+        if (showLoading) setLoadingPosts(true);
         try {
             const response = await fetch(`http://localhost:8080/api/posts/class/${classId}`);
             if (response.ok) {
@@ -144,6 +146,8 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
             }
         } catch (err) {
             console.error("Error fetching posts:", err);
+        } finally {
+            if (showLoading) setLoadingPosts(false);
         }
     };
 
@@ -516,7 +520,18 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
                                     )}
 
                                     <div className="posts-feed">
-                                        {posts.length === 0 ? (
+                                        {loadingPosts ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                {[1, 2, 3].map(i => (
+                                                    <div key={i} className="post-item skeleton-post" style={{ padding: '20px', height: '150px', background: 'white', border: '1px solid #dadce0', borderRadius: '8px', position: 'relative', overflow: 'hidden' }}>
+                                                        <div className="skeleton-line" style={{ width: '40%', height: '20px', background: '#f0f0f0', marginBottom: '12px' }}></div>
+                                                        <div className="skeleton-line" style={{ width: '90%', height: '14px', background: '#f0f0f0', marginBottom: '8px' }}></div>
+                                                        <div className="skeleton-line" style={{ width: '70%', height: '14px', background: '#f0f0f0' }}></div>
+                                                        <div className="skeleton-shimmer"></div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : posts.length === 0 ? (
                                             <div style={{ textAlign: 'center', padding: '40px', color: '#5f6368', background: 'white', border: '1px solid #dadce0', borderRadius: '8px' }}>
                                                 <FontAwesomeIcon icon={faBullhorn} size="2x" style={{ opacity: 0.2, marginBottom: '16px' }} />
                                                 <p>Chưa có bài đăng nào.</p>

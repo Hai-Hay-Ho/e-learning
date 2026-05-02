@@ -200,19 +200,7 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
         try {
             const response = await fetch(`http://localhost:8080/api/submissions/post/${post.id}`);
             if (response.ok) {
-                let data = await response.json();
-                data = await Promise.all(data.map(async (sub) => {
-                    try {
-                        const filesRes = await fetch(`http://localhost:8080/api/submissions/${sub.id}/files`);
-                        if (filesRes.ok) {
-                            const files = await filesRes.json();
-                            return { ...sub, attachments: files };
-                        }
-                    } catch (err) {
-                        console.error(`Error fetching files for submission ${sub.id}:`, err);
-                    }
-                    return sub;
-                }));
+                const data = await response.json();
                 setSubmissions(data);
                 if (!isTeacher) {
                     const mine = data.find(s => s.studentId === session.user.id);

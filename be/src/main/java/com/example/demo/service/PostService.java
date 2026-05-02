@@ -102,6 +102,7 @@ public class PostService {
         return createdPosts;
     }
 
+    @Transactional(readOnly = true)
     public List<PostDTO> getPostsByClassId(UUID classId) {
         List<PostEntity> posts = postRepository.findByClassIdOrderByCreatedAtDesc(classId);
         if (posts.isEmpty()) return Collections.emptyList();
@@ -119,16 +120,26 @@ public class PostService {
         Map<UUID, AssignmentDeadline> deadlinesMap = assignmentDeadlineRepository.findAllByPostIdIn(postIds).stream()
                 .collect(Collectors.toMap(AssignmentDeadline::getPostId, d -> d));
 
-        // For counts and recent comments, we still do a bit of processing but much faster than before
+        // For counts and recent comments, we use batch fetching
+        List<Object[]> countsData = commentRepository.countByPostIdIn(postIds);
+        Map<UUID, Long> commentCountsMap = countsData.stream()
+                .collect(Collectors.toMap(d -> (UUID) d[0], d -> ((Number) d[1]).longValue()));
+
+        List<Comment> allRecentComments = commentRepository.findByPostIdInOrderByCreatedAtAsc(postIds);
+        Map<UUID, List<Comment>> commentsMap = allRecentComments.stream()
+                .collect(Collectors.groupingBy(c -> c.getPost().getId()));
+
         return posts.stream().map(post -> {
             User author = authorsMap.get(post.getAuthorId());
             List<PostAttachment> attachments = attachmentsMap.getOrDefault(post.getId(), Collections.emptyList());
             AssignmentDeadline deadline = deadlinesMap.get(post.getId());
             
-            // Still fetching comments count - could be further optimized with a DB View or complex query
-            // but these batch fetches should already bring the 30s down to < 1s.
-            long commentCount = commentRepository.countByPostId(post.getId());
-            List<Comment> recentComments = commentRepository.findByPostIdOrderByCreatedAtAsc(post.getId(), PageRequest.of(0, 2));
+            long commentCount = commentCountsMap.getOrDefault(post.getId(), 0L);
+            List<Comment> recentComments = commentsMap.getOrDefault(post.getId(), Collections.emptyList());
+            // Limit to 2 recent comments
+            if (recentComments.size() > 2) {
+                recentComments = recentComments.subList(0, 2);
+            }
 
             return convertToDTO(post, author, attachments, deadline, recentComments, commentCount);
         }).collect(Collectors.toList());
