@@ -53,6 +53,7 @@ const StudentDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
                     if (Array.isArray(res)) {
                         assignments = assignments.concat(res.filter(p => p.type === 'assignment').map(p => ({
                             ...p,
+                            classId: classes[index].id,
                             className: classes[index].name
                         })));
                     }
@@ -63,6 +64,7 @@ const StudentDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
                     if (Array.isArray(res)) {
                         quizzes = quizzes.concat(res.map(q => ({
                             ...q,
+                            classId: classes[index].id,
                             className: classes[index].name
                         })));
                     }
@@ -133,6 +135,24 @@ const StudentDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
 
     const stats = calculateStats();
 
+    const getClassProgress = (classId) => {
+        const classAssignments = allAssignments.filter(a => a.classId === classId);
+        const classQuizzes = allQuizzes.filter(q => q.classId === classId);
+        
+        const totalItems = classAssignments.length + classQuizzes.length;
+        if (totalItems === 0) return { completed: 0, total: 0, percentage: 0 };
+
+        const completedAssgn = classAssignments.filter(a => submissions.some(s => s.postId === a.id)).length;
+        const completedQuiz = classQuizzes.filter(q => quizAttempts.some(qa => qa.quizId === q.id)).length;
+
+        const totalCompleted = completedAssgn + completedQuiz;
+        return {
+            completed: totalCompleted,
+            total: totalItems,
+            percentage: Math.round((totalCompleted / totalItems) * 100)
+        };
+    };
+
     const handleAvatarUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -171,15 +191,23 @@ const StudentDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const startDay = (firstDayOfMonth(y, m) + 6) % 7;
 
+    const isSameDay = (d1, d2) => d1 && d2 && new Date(d1).toDateString() === new Date(d2).toDateString();
+    
+    // Kiểm tra xem ngày có deadline hay không
+    const hasDeadlineOnDate = (date) => {
+        return allAssignments.some(a => isSameDay(a.dueAt, date)) || 
+               allQuizzes.some(q => isSameDay(q.deadline, date));
+    };
+
     const days = [];
     for (let i = 0; i < startDay; i++) days.push(<span key={`empty-${i}`} className="day-cell empty"></span>);
     for (let i = 1; i <= daysInMonth(y, m); i++) {
         const dateObj = new Date(y, m, i);
         const isActive = selectedDate.toDateString() === dateObj.toDateString();
-        days.push(<span key={i} className={`day-cell ${isActive ? 'active' : ''}`} onClick={() => setSelectedDate(dateObj)} style={{ cursor: 'pointer' }}>{i}</span>);
+        const hasDeadline = hasDeadlineOnDate(dateObj);
+        days.push(<span key={i} className={`day-cell ${isActive ? 'active' : ''} ${hasDeadline ? 'has-deadline' : ''}`} onClick={() => setSelectedDate(dateObj)} style={{ cursor: 'pointer' }}>{i}</span>);
     }
-
-    const isSameDay = (d1, d2) => d1 && d2 && new Date(d1).toDateString() === new Date(d2).toDateString();
+    
     const scheduleItems = [];
     allAssignments.forEach(a => { if (isSameDay(a.dueAt, selectedDate)) scheduleItems.push({ id: a.id, title: a.title, time: new Date(a.dueAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), color: 'blue' }); });
     allQuizzes.forEach(q => { if (isSameDay(q.deadline, selectedDate)) scheduleItems.push({ id: q.id, title: q.title, time: new Date(q.deadline).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), color: 'purple' }); });
@@ -202,13 +230,18 @@ const StudentDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
                 <section className="courses">
                     <div className="section-header"><h2>Classes</h2></div>
                     <div className="courses-cards">
-                        {classes?.length > 0 ? classes.map((cls, idx) => (
+                        {classes?.length > 0 ? classes.map((cls, idx) => {
+                            const progress = getClassProgress(cls.id);
+                            return (
                             <div key={cls.id} className={`course-card ${['blue', 'yellow', 'green', 'purple', 'red'][idx % 5]}`} onClick={() => { setSelectedClass(cls); setActiveTab('Classes'); }} style={{ cursor: 'pointer' }}>
                                 <div className="course-icon">{cls.teacherAvatar ? <img src={cls.teacherAvatar} alt="t" style={{ width: '100%', height: '100%', borderRadius: '50%' }} /> : <FontAwesomeIcon icon={faGraduationCap} />}</div>
                                 <h4>{cls.name}</h4><span>▷ {cls.teacherName || "Giảng viên"}</span>
-                                <div className="course-progress"><span className="progress-info">Mã: {cls.joinCode}</span><div className="progress-bar-bg"><div className="progress-bar-fill" style={{ width: '100%' }}></div></div></div>
+                                <div className="course-progress">
+                                    <span className="progress-info">{progress.completed}/{progress.total} bài tập</span>
+                                    <div className="progress-bar-bg"><div className="progress-bar-fill" style={{ width: `${progress.percentage}%` }}></div></div>
+                                </div>
                             </div>
-                        )) : <p>Bạn chưa tham gia lớp học nào.</p>}
+                        )}) : <p>Bạn chưa tham gia lớp học nào.</p>}
                     </div>
                 </section>
 
