@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faSearch,  
     faPaperclip, 
-    faMicrophone, 
+    faSmile,
     faPaperPlane
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../supabaseClient';
@@ -27,10 +27,35 @@ const Chat = ({ session, userData, pendingConversation, refreshUnreadCount }) =>
     const [messageEdits, setMessageEdits] = useState({});
     const [, setRecallLimitExceeded] = useState({});
     const messagesEndRef = useRef(null);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const emojiInputRef = useRef(null);
+
+    // Danh sách emoji
+    const emojis = [
+        '😀', '😁', '😂', '😃', '😄', '😅',
+        '😆', '😉', '😊', '😋', '😌', '😍',
+        '😘', '😗', '😙', '😚', '😜', '😝',
+        '😞', '😟', '😠', '😡', '😢', '😣',
+        '😥', '😦', '😧', '😨', '😯', '😰',
+        '😱', '😲', '😳', '😴', '😵', '😶',
+        '😷', '😈', '😺', '😻', '😼', '🙀',
+        '🙄', '😭', '😪', '😓', '😔', '😕',
+        '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎',
+        '👍', '👎', '👏', '🙌', '👋', '✌', '🤞', '🤘', '🤟', '🤚',
+        '🎉', '🎊', '🎈', '🎁', '💝', '🌟', '✨', '⭐', '🔥', '💯',
+        '📊', '📈', '📉', '💼', '💻', '📱', '🎓', '📚', '✏️', '📝',
+        '🚀', '✈️', '🚗', '🚙', '🏠', '🏫', '🏢', '⚽', '🏀', '🎮'
+    ];
+
+    const insertEmoji = (emoji) => {
+        setNewMessage(newMessage + emoji);
+        setShowEmojiPicker(false);
+        emojiInputRef.current?.focus();
+    };
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+    };
 
     useEffect(() => {
         scrollToBottom();
@@ -715,13 +740,36 @@ const Chat = ({ session, userData, pendingConversation, refreshUnreadCount }) =>
                         <form className="chat-input-area" onSubmit={sendMessage}>
                             <div className="input-container">
                                 <input 
+                                    ref={emojiInputRef}
                                     type="text" 
                                     placeholder="Type message..." 
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
                                 />
-                                <button type="button" className="input-aux-btn"><FontAwesomeIcon icon={faMicrophone} /></button>
-                                <button type="button" className="input-aux-btn"><FontAwesomeIcon icon={faPaperclip} /></button>
+                                <button type="button" className="input-aux-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
+                                    <FontAwesomeIcon icon={faSmile} />
+                                </button>
+                                
+                                {/* Emoji Picker */}
+                                {showEmojiPicker && (
+                                    <div className="emoji-picker">
+                                        <div className="emoji-grid">
+                                            {emojis.map((emoji, index) => (
+                                                <button
+                                                    key={index}
+                                                    type="button"
+                                                    className="emoji-btn"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        insertEmoji(emoji);
+                                                    }}
+                                                >
+                                                    {emoji}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <button type="submit" className="send-btn">
                                 <span>Send</span>
