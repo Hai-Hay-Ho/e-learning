@@ -688,6 +688,11 @@ body {
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
 }
 
+.day-cell.has-deadline {
+  color: #ef4444;
+  font-weight: 600;
+}
+
 /* Schedule */
 .schedule-container h4 {
   margin: 0 0 16px;

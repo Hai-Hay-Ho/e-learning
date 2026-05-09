@@ -191,15 +191,23 @@ const StudentDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const startDay = (firstDayOfMonth(y, m) + 6) % 7;
 
+    const isSameDay = (d1, d2) => d1 && d2 && new Date(d1).toDateString() === new Date(d2).toDateString();
+    
+    // Kiểm tra xem ngày có deadline hay không
+    const hasDeadlineOnDate = (date) => {
+        return allAssignments.some(a => isSameDay(a.dueAt, date)) || 
+               allQuizzes.some(q => isSameDay(q.deadline, date));
+    };
+
     const days = [];
     for (let i = 0; i < startDay; i++) days.push(<span key={`empty-${i}`} className="day-cell empty"></span>);
     for (let i = 1; i <= daysInMonth(y, m); i++) {
         const dateObj = new Date(y, m, i);
         const isActive = selectedDate.toDateString() === dateObj.toDateString();
-        days.push(<span key={i} className={`day-cell ${isActive ? 'active' : ''}`} onClick={() => setSelectedDate(dateObj)} style={{ cursor: 'pointer' }}>{i}</span>);
+        const hasDeadline = hasDeadlineOnDate(dateObj);
+        days.push(<span key={i} className={`day-cell ${isActive ? 'active' : ''} ${hasDeadline ? 'has-deadline' : ''}`} onClick={() => setSelectedDate(dateObj)} style={{ cursor: 'pointer' }}>{i}</span>);
     }
-
-    const isSameDay = (d1, d2) => d1 && d2 && new Date(d1).toDateString() === new Date(d2).toDateString();
+    
     const scheduleItems = [];
     allAssignments.forEach(a => { if (isSameDay(a.dueAt, selectedDate)) scheduleItems.push({ id: a.id, title: a.title, time: new Date(a.dueAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), color: 'blue' }); });
     allQuizzes.forEach(q => { if (isSameDay(q.deadline, selectedDate)) scheduleItems.push({ id: q.id, title: q.title, time: new Date(q.deadline).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), color: 'purple' }); });
