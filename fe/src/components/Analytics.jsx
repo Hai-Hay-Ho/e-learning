@@ -4,15 +4,14 @@ import {
     faUsers, 
     faStar, 
     faCheckCircle, 
-    faFilePdf, 
+    faFileExcel,
     faSearch, 
     faEllipsisV,
     faGraduationCap,
     faChartPie
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../supabaseClient';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import ExcelJS from 'exceljs';
 import './Analytics.css';
 
 const Analytics = ({ session, classes, onSwitchToMessages }) => {
@@ -61,57 +60,130 @@ const Analytics = ({ session, classes, onSwitchToMessages }) => {
         return matchesSearch && matchesScore;
     });
 
-    const handleExportPDF = () => {
+    const handleExportExcel = async () => {
         const defaultName = `Bao_cao_${currentClass?.name?.replace(/\s+/g, '_') || 'lop_hoc'}`;
-        const fileName = window.prompt("Nhập tên file PDF:", defaultName);
+        const fileName = window.prompt("Nhập tên file Excel:", defaultName);
         
-        if (fileName === null) return; // Hủy bỏ
+        if (fileName === null) return;
         const finalFileName = fileName.trim() || defaultName;
 
-        const doc = new jsPDF();
-        
-        // Tiêu đề báo cáo
-        doc.setFontSize(22);
-        doc.setTextColor(40);
-        doc.text("BAO CAO PHAN TICH LOP HOC", 14, 20);
-        
-        doc.setFontSize(14);
-        doc.setTextColor(100);
-        doc.text(`Lop: ${currentClass?.name || 'N/A'}`, 14, 30);
-        doc.text(`Ngay xuat: ${new Date().toLocaleDateString()}`, 14, 37);
+        const workbook = new ExcelJS.Workbook();
 
-        // Thông số tổng quan
-        doc.setDrawColor(200);
-        doc.line(14, 45, 196, 45);
-        
-        doc.setFontSize(12);
-        doc.setTextColor(0);
-        doc.text(`Tong so hoc sinh: ${stats.totalStudents}`, 14, 55);
-        doc.text(`Diem trung binh: ${stats.averageScore.toFixed(2)}`, 14, 62);
-        doc.text(`Ty le hoan thanh: ${stats.completionRate.toFixed(1)}%`, 14, 69);
-        doc.text(`Do lech chuan: ${stats.standardDeviation.toFixed(2)}`, 14, 76);
-
-        // Bảng danh sách học sinh
-        const tableColumn = ["STT", "Hoc sinh", "Email", "Diem", "Hoan thanh", "Canh bao"];
-        const tableRows = filteredStudents.map((student, index) => [
-            index + 1,
-            student.name,
-            student.email,
-            student.averageScore.toFixed(2),
-            `${student.completionPercentage}%`,
-            student.warningLevel
-        ]);
-
-        autoTable(doc, {
-            head: [tableColumn],
-            body: tableRows,
-            startY: 85,
-            theme: 'striped',
-            headStyles: { fillColor: [63, 81, 181] },
-            styles: { fontSize: 10, cellPadding: 3 }
+        // ===== SHEET 1: TỔNG QUAN =====
+        const summarySheet = workbook.addWorksheet("Tổng Quan", { 
+            pageSetup: { paperSize: 9, orientation: 'portrait' } 
         });
 
-        doc.save(`${finalFileName}.pdf`);
+        // Tiêu đề
+        const titleRow = summarySheet.addRow(["BÁO CÁO PHÂN TÍCH LỚP HỌC"]);
+        titleRow.font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
+        titleRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4472C4" } };
+        titleRow.alignment = { horizontal: "center", vertical: "center" };
+        summarySheet.mergeCells("A1:B1");
+        summarySheet.getRow(1).height = 28;
+
+        // Dòng trống
+        summarySheet.addRow([]);
+
+        // Thông tin lớp
+        const classRow = summarySheet.addRow(["Lớp", currentClass?.name || "N/A"]);
+        classRow.getCell(1).font = { bold: true };
+        classRow.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE7E6E6" } };
+
+        // Ngày xuất
+        const dateRow = summarySheet.addRow(["Ngày xuất", new Date().toLocaleDateString('vi-VN')]);
+        dateRow.getCell(1).font = { bold: true };
+        dateRow.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE7E6E6" } };
+
+        // Dòng trống
+        summarySheet.addRow([]);
+
+        // Thống kê
+        const stats1Row = summarySheet.addRow(["Tổng số học sinh", stats.totalStudents]);
+        stats1Row.getCell(1).font = { bold: true };
+        stats1Row.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE7E6E6" } };
+        stats1Row.getCell(2).number = stats.totalStudents;
+
+        const stats2Row = summarySheet.addRow(["Điểm trung bình", parseFloat(stats.averageScore.toFixed(1))]);
+        stats2Row.getCell(1).font = { bold: true };
+        stats2Row.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE7E6E6" } };
+        stats2Row.getCell(2).numFmt = '0.0';
+
+        const stats3Row = summarySheet.addRow(["Tỷ lệ hoàn thành (%)", parseFloat(stats.completionRate.toFixed(1))]);
+        stats3Row.getCell(1).font = { bold: true };
+        stats3Row.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE7E6E6" } };
+        stats3Row.getCell(2).numFmt = '0.0';
+
+        const stats4Row = summarySheet.addRow(["Phân bố học lực", getDistributionLabel(stats.standardDeviation)]);
+        stats4Row.getCell(1).font = { bold: true };
+        stats4Row.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE7E6E6" } };
+
+        summarySheet.columns = [
+            { width: 25 },
+            { width: 35 }
+        ];
+
+        // ===== SHEET 2: DANH SÁCH HỌC SINH =====
+        const studentSheet = workbook.addWorksheet("Danh Sách Học Sinh");
+
+        // Header row
+        const headerRow = studentSheet.addRow([
+            "STT", "Họ tên", "Email", "Điểm số", "Hoàn thành (%)", "Cảnh báo"
+        ]);
+        
+        headerRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+        headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4472C4" } };
+        headerRow.alignment = { horizontal: "center", vertical: "center" };
+        studentSheet.getRow(1).height = 22;
+
+        // Dữ liệu học sinh
+        filteredStudents.forEach((student, index) => {
+            const row = studentSheet.addRow([
+                index + 1,
+                student.name,
+                student.email,
+                parseFloat(student.averageScore.toFixed(1)),
+                parseFloat(student.completionPercentage.toFixed(1)),
+                student.warningLevel
+            ]);
+
+            // Border và alignment
+            row.eachCell({ includeEmpty: true }, (cell) => {
+                cell.border = {
+                    top: { style: "thin", color: { argb: "FFD3D3D3" } },
+                    left: { style: "thin", color: { argb: "FFD3D3D3" } },
+                    bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+                    right: { style: "thin", color: { argb: "FFD3D3D3" } }
+                };
+                cell.alignment = { horizontal: "center", vertical: "center" };
+            });
+
+            // Number formatting
+            row.getCell(4).numFmt = '0.0';  // Điểm số
+            row.getCell(5).numFmt = '0.0';  // Hoàn thành
+        });
+
+        // Column widths
+        studentSheet.columns = [
+            { width: 6 },
+            { width: 22 },
+            { width: 28 },
+            { width: 12 },
+            { width: 15 },
+            { width: 14 }
+        ];
+
+        // Tải file
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { 
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${finalFileName}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
     };
 
     const getScoreClass = (score) => {
@@ -124,6 +196,14 @@ const Analytics = ({ session, classes, onSwitchToMessages }) => {
         if (level === 'Thấp') return 'warning-low';
         if (level === 'Trung bình') return 'warning-mid';
         return 'warning-high';
+    };
+
+    const getDistributionLabel = (standardDeviation) => {
+        if (standardDeviation < 1) return 'Rất đều';
+        if (standardDeviation < 1.5) return 'Khá đều';
+        if (standardDeviation < 2) return 'Bình thường';
+        if (standardDeviation < 3) return 'Lệch cao';
+        return 'Lệch rất cao';
     };
 
     const handleRemoveStudent = async (studentId) => {
@@ -239,9 +319,9 @@ const Analytics = ({ session, classes, onSwitchToMessages }) => {
                         </div>
                     </div>
                     <div className="analytics-actions">
-                        <button className="btn-export" onClick={handleExportPDF}>
-                            <FontAwesomeIcon icon={faFilePdf} />
-                            Xuất PDF
+                        <button className="btn-export" onClick={handleExportExcel}>
+                            <FontAwesomeIcon icon={faFileExcel} />
+                            Xuất Excel
                         </button>
                     </div>
                 </header>
@@ -274,8 +354,8 @@ const Analytics = ({ session, classes, onSwitchToMessages }) => {
                             <div className="card-icon icon-orange">
                                 <FontAwesomeIcon icon={faChartPie} />
                             </div>
-                            <div className="card-value">{stats.standardDeviation.toFixed(1)}</div>
-                            <div className="card-label">Độ lệch chuẩn</div>
+                            <div className="card-value">{getDistributionLabel(stats.standardDeviation)}</div>
+                            <div className="card-label">Phân bố học lực</div>
                         </div>
                     </div>
 
