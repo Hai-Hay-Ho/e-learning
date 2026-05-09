@@ -4,6 +4,7 @@ Một nền tảng E-Learning hiện đại hỗ trợ quản lý lớp học, k
 Hệ thống được xây dựng theo mô hình Fullstack với Backend sử dụng Spring Boot và Frontend sử dụng React.
 
 🚀 Tính năng chính
+
 1. 🔐 Xác thực & Phân quyền
 Đăng ký / đăng nhập tài khoản
 JWT Authentication
@@ -11,6 +12,7 @@ Phân quyền:
 Admin
 Teacher
 Student
+
 2. 🏫 Quản lý lớp học
 Giáo viên tạo lớp học
 Sinh mã tham gia lớp
@@ -18,6 +20,7 @@ Học sinh tham gia lớp bằng code
 Quản lý thành viên lớp
 Danh sách lớp đã tham gia
 Phân quyền giáo viên / học sinh trong lớp
+
 3. 📝 Bài tập & Bài đăng
 Bài đăng lớp học
 Tạo bài đăng thông báo
@@ -29,6 +32,7 @@ Deadline bài tập
 Nộp bài online
 Chấm điểm bài tập
 Upload file bài làm
+
 4. 🤖 Kiểm tra trực tuyến + AI sinh câu hỏi
 Kiểm tra trực tuyến
 Tạo bài kiểm tra
@@ -38,6 +42,7 @@ Giới hạn thời gian
 Theo dõi trạng thái làm bài realtime
 AI sinh câu hỏi
 Sinh câu hỏi tự động từ file txt dạng câu hỏi trắc nghiệm
+
 5. 💬 Hệ thống nhắn tin
 Nhắn tin realtime bằng WebSocket
 Tạo cuộc trò chuyện
@@ -52,6 +57,7 @@ Phân tích tiến độ học tập
 Theo dõi hiệu suất lớp học
 Thống kê bài kiểm tra
 Dashboard quản trị
+
 7. 🔥 Streak (Theo dõi kiên trì)
 Theo dõi số ngày học liên tiếp
 Reset streak khi không hoạt động
@@ -63,6 +69,7 @@ Export Excel
 Xuất danh sách điểm
 Xuất thống kê lớp học
 Xuất kết quả kiểm tra
+
 🛠 Yêu cầu hệ thống
 Thành phần	Phiên bản
 Java	17+
@@ -86,45 +93,7 @@ Socket.io / WebSocket Client
 Database & Services
 Supabase
 Cloud Storage
-📂 Cấu trúc dự án
-elearning-platform/
-│
-├── backend/
-│   ├── src/main/java/com/example/
-│   │   ├── config/
-│   │   ├── controller/
-│   │   ├── service/
-│   │   ├── repository/
-│   │   ├── model/
-│   │   ├── dto/
-│   │   
-│   │  
-│   │   
-│   │
-│   ├── src/main/resources/
-│   │   ├── application.properties
-│   │   └── static/
-│   │
-│   └── pom.xml
-│
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── assets/
-│   │   ├── components/
-│   │   ├── auth/
-│   │   ├── constants/
-│   │   ├── App.jsx
-│   │   ├── App.css
-│   │   ├── index.jsx
-│   │   └── supabaseClient.jsx
-│   │ 
-│   └── package.json
-│
-│  
-│   
-│
-└── README.md
+
 🧩 Hướng dẫn cài đặt
 1. Clone project
 git clone https://github.com/your-username/elearning-platform.git
