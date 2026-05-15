@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import userAvatar from '../assets/img/user.jpg';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faFire } from '@fortawesome/free-solid-svg-icons';
+import { faFire, faShieldAlt } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../supabaseClient';
 
-const Header = ({ session, userData, onLoginClick }) => {
+const Header = ({ session, userData, onLoginClick, onSwitchToAdmin }) => {
     const userDefaultAvatar = userData?.avatarUrl || session?.user?.user_metadata?.avatar_url || userAvatar;
     const userName = userData?.fullName || session?.user?.user_metadata?.full_name || 'Bạn';
     const [streak, setStreak] = useState(0);
@@ -91,12 +91,34 @@ const Header = ({ session, userData, onLoginClick }) => {
         <header className="header">
             <h1>{session ? `Chào, ${userName}!` : ''}</h1>
             <div className="header-right">
+                {session ? (
+                    <div className="header-user-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        {userData?.role === "2" && (
+                            <button 
+                                onClick={onSwitchToAdmin}
+                                style={{
+                                    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '8px 16px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    fontWeight: '600',
+                                    fontSize: '13px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    boxShadow: '0 2px 4px rgba(79, 70, 229, 0.2)'
+                                }}
+                            >
+                                <FontAwesomeIcon icon={faShieldAlt} /> Admin
+                            </button>
+                        )}
                 <span className="header-icon" title="Streak" style={{ display: 'flex', alignItems: 'center',width: '100%', gap: '5px', color: isActiveToday ? '#ff9800' : '#9e9e9e', fontWeight: 'bold' }}>
                     {streak} <FontAwesomeIcon icon={faFire} />
                 </span>
                 
-                {session ? (
-                    <div className="header-user-wrapper">
+                
                         <div className="user-avatar-container">
                             <img 
                                 src={userDefaultAvatar}
