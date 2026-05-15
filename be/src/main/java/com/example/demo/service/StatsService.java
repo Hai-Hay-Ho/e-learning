@@ -1,11 +1,16 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.ClassStatsDTO;
+import com.example.demo.dto.RecentUserDTO;
 import com.example.demo.dto.StudentStatsDTO;
+import com.example.demo.dto.SystemActivityDTO;
+import com.example.demo.dto.SystemStatsDTO;
 import com.example.demo.dto.TeacherStatsDTO;
 import com.example.demo.model.*;
 import com.example.demo.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -25,6 +30,7 @@ public class StatsService {
     private final QuizAttemptRepository quizAttemptRepository;
     private final ClassMemberRepository classMemberRepository;
     private final UserRepository userRepository;
+    private final CommentRepository commentRepository;
 
     public TeacherStatsDTO getTeacherStats(UUID teacherId) {
         // tổng classes
@@ -266,5 +272,178 @@ public class StatsService {
         if (days < 30)
             return days + " ngày trước";
         return "Lâu hơn 1 tháng";
+    }
+
+    public SystemStatsDTO getSystemStats() {
+        long totalUsers = userRepository.count();
+        long totalStudents = userRepository.countByRole("0");
+        long totalTeachers = userRepository.countByRole("1");
+        long totalClasses = classRepository.count();
+        long totalPosts = postRepository.count();
+        long totalQuizzes = quizRepository.count();
+        long totalSubmissions = submissionRepository.count();
+
+        // Tính số người dùng hoạt động hôm nay
+        LocalDateTime startOfDay = LocalDateTime.now().with(LocalTime.MIN);
+        long activeUsersToday = userRepository.countByLastSignInAtAfter(
+                startOfDay.atOffset(java.time.OffsetDateTime.now().getOffset())
+        );
+
+        return SystemStatsDTO.builder()
+                .totalUsers(totalUsers)
+                .totalStudents(totalStudents)
+                .totalTeachers(totalTeachers)
+                .totalClasses(totalClasses)
+                .totalPosts(totalPosts)
+                .totalQuizzes(totalQuizzes)
+                .totalSubmissions(totalSubmissions)
+                .activeUsersToday(activeUsersToday)
+                .build();
+    }
+
+    public List<RecentUserDTO> getRecentUsers() {
+        Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE);
+        return userRepository.findRecentUsers(pageable).stream()
+                .map(u -> RecentUserDTO.builder()
+                        .id(u.getId())
+                        .fullName(u.getFullName())
+                        .email(u.getEmail())
+                        .role(u.getRole())
+                        .avatarUrl(u.getAvatarUrl())
+                        .createdAt(u.getCreatedAt())
+                        .lastSignInAt(u.getLastSignInAt())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    public List<SystemActivityDTO> getSystemActivity() {
+        List<SystemActivityDTO> activities = new ArrayList<>();
+        
+        // Lấy 3 user được tạo gần đây
+        Pageable pageable = PageRequest.of(0, 10);
+        List<User> recentUsers = userRepository.findRecentUsers(pageable);
+        for (User user : recentUsers) {
+            if (user.getCreatedAt() != null) {
+                activities.add(SystemActivityDTO.builder()
+                        .description(user.getFullName() + " joined as " + ("1".equals(user.getRole()) ? "Teacher" : "Student"))
+                        .type("user_created")
+                        .timestamp(user.getCreatedAt())
+                        .actorName(user.getFullName())
+                        .icon("user-plus")
+                        .build());
+            }
+        }
+        
+        // Lấy classes được tạo gần đây
+        List<ClassEntity> recentClasses = classRepository.findAll().stream()
+                .sorted((a, b) -> {
+                    if (a.getCreatedAt() == null) return 1;
+                    if (b.getCreatedAt() == null) return -1;
+                    return b.getCreatedAt().compareTo(a.getCreatedAt());
+                })
+                .limit(10)
+                .collect(Collectors.toList());
+        
+        for (ClassEntity classEntity : recentClasses) {
+            if (classEntity.getCreatedAt() != null) {
+                User teacher = userRepository.findById(classEntity.getTeacherId()).orElse(null);
+                String teacherName = teacher != null ? teacher.getFullName() : "Unknown";
+                activities.add(SystemActivityDTO.builder()
+                        .description(teacherName + " created class \"" + classEntity.getName() + "\"")
+                        .type("class_created")
+                        .timestamp(classEntity.getCreatedAt().atOffset(java.time.OffsetDateTime.now().getOffset()))
+                        .actorName(teacherName)
+                        .icon("book")
+                        .build());
+            }
+        }
+        
+        // Lấy posts được tạo gần đây
+        List<PostEntity> recentPosts = postRepository.findAll().stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .limit(10)
+                .collect(Collectors.toList());
+        
+        for (PostEntity post : recentPosts) {
+            if (post.getCreatedAt() != null) {
+                User author = userRepository.findById(post.getAuthorId()).orElse(null);
+                String authorName = author != null ? author.getFullName() : "Unknown";
+                activities.add(SystemActivityDTO.builder()
+                        .description(authorName + " created post \"" + post.getTitle() + "\"")
+                        .type("post_created")
+                        .timestamp(post.getCreatedAt().atOffset(java.time.OffsetDateTime.now().getOffset()))
+                        .actorName(authorName)
+                        .icon("file-text")
+                        .build());
+            }
+        }
+        
+        // Lấy quizzes được tạo gần đây
+        List<Quiz> recentQuizzes = quizRepository.findAll().stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .limit(10)
+                .collect(Collectors.toList());
+        
+        for (Quiz quiz : recentQuizzes) {
+            if (quiz.getCreatedAt() != null) {
+                User creator = userRepository.findById(quiz.getCreatedBy()).orElse(null);
+                String creatorName = creator != null ? creator.getFullName() : "Unknown";
+                activities.add(SystemActivityDTO.builder()
+                        .description(creatorName + " created quiz \"" + quiz.getTitle() + "\"")
+                        .type("quiz_created")
+                        .timestamp(quiz.getCreatedAt().atOffset(java.time.OffsetDateTime.now().getOffset()))
+                        .actorName(creatorName)
+                        .icon("help-circle")
+                        .build());
+            }
+        }
+        
+        // Lấy submissions gần đây
+        List<Submission> recentSubmissions = submissionRepository.findAll().stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .limit(10)
+                .collect(Collectors.toList());
+        
+        for (Submission submission : recentSubmissions) {
+            if (submission.getCreatedAt() != null) {
+                User student = userRepository.findById(submission.getStudentId()).orElse(null);
+                String studentName = student != null ? student.getFullName() : "Unknown";
+                activities.add(SystemActivityDTO.builder()
+                        .description(studentName + " submitted an assignment")
+                        .type("submission_created")
+                        .timestamp(submission.getCreatedAt().atOffset(java.time.OffsetDateTime.now().getOffset()))
+                        .actorName(studentName)
+                        .icon("check-circle")
+                        .build());
+            }
+        }
+        
+        // Lấy comments gần đây
+        List<Comment> recentComments = commentRepository.findAll().stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .limit(10)
+                .collect(Collectors.toList());
+        
+        for (Comment comment : recentComments) {
+            if (comment.getCreatedAt() != null && comment.getUser() != null) {
+                activities.add(SystemActivityDTO.builder()
+                        .description(comment.getUser().getFullName() + " commented on a post")
+                        .type("comment_created")
+                        .timestamp(comment.getCreatedAt().atOffset(java.time.OffsetDateTime.now().getOffset()))
+                        .actorName(comment.getUser().getFullName())
+                        .icon("message-circle")
+                        .build());
+            }
+        }
+        
+        // Sắp xếp theo timestamp descending và lấy 3 mới nhất
+        return activities.stream()
+                .sorted((a, b) -> {
+                    if (a.getTimestamp() == null) return 1;
+                    if (b.getTimestamp() == null) return -1;
+                    return b.getTimestamp().compareTo(a.getTimestamp());
+                })
+                .limit(3)
+                .collect(Collectors.toList());
     }
 }

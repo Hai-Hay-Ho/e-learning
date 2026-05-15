@@ -9,6 +9,7 @@ import EQuizz from './components/EQuizz';
 import Analytics from './components/Analytics';
 import TeacherDashboard from './components/TeacherDashboard';
 import StudentDashboard from './components/StudentDashboard';
+import AdminDashboard from './components/AdminDashboard';
 import { supabase } from './supabaseClient';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [adminViewMode, setAdminViewMode] = useState('admin'); // 'admin' or 'student'
 
   useEffect(() => {
     // Kiểm tra session hiện tại
@@ -127,6 +129,16 @@ function App() {
     }
   }, [session, activeTab]);
 
+  if (session && userRole === "2" && adminViewMode === 'admin') {
+    return (
+      <AdminDashboard 
+        session={session} 
+        userData={userData} 
+        onSwitchToStudent={() => setAdminViewMode('student')} 
+      />
+    );
+  }
+
   return (
     <div className="dashboard-container">
       {!session && showLogin && <Login onClose={() => setShowLogin(false)} />}
@@ -143,7 +155,12 @@ function App() {
 
       <div className={`main-wrapper ${activeTab === 'Messages' || activeTab === 'Classes' || activeTab === 'Quizzes' || activeTab === 'Statistics' ? 'no-padding' : ''}`}>
         {activeTab !== 'Messages' && activeTab !== 'Classes' && activeTab !== 'Quizzes' && activeTab !== 'Statistics' && (
-          <Header session={session} userData={userData} onLoginClick={() => setShowLogin(true)} />
+          <Header 
+            session={session} 
+            userData={userData} 
+            onLoginClick={() => setShowLogin(true)} 
+            onSwitchToAdmin={() => setAdminViewMode('admin')}
+          />
         )}
 
         {session ? (
