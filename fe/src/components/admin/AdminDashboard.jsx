@@ -78,13 +78,10 @@ const AdminDashboard = ({ session, userData, onSwitchToStudent }) => {
                         <span className="icon"><FontAwesomeIcon icon={faUsers} /></span> Manage Users
                     </div>
                     <div className={`admin-menu-item ${activeTab === 'Courses' ? 'active' : ''}`} onClick={() => setActiveTab('Courses')}>
-                        <span className="icon"><FontAwesomeIcon icon={faBookOpen} /></span> Manage Courses
+                        <span className="icon"><FontAwesomeIcon icon={faBookOpen} /></span> Manage Classes
                     </div>
                     <div className={`admin-menu-item ${activeTab === 'Keywords' ? 'active' : ''}`} onClick={() => setActiveTab('Keywords')}>
                         <span className="icon"><FontAwesomeIcon icon={faBan} /></span> Banned Keywords
-                    </div>
-                    <div className={`admin-menu-item ${activeTab === 'Settings' ? 'active' : ''}`} onClick={() => setActiveTab('Settings')}>
-                        <span className="icon"><FontAwesomeIcon icon={faCog} /></span> System Settings
                     </div>
                 </div>
             </aside>
