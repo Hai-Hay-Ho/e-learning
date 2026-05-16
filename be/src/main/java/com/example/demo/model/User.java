@@ -38,4 +38,7 @@ public class User {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
+
+    @Column(name = "status", nullable = false)
+    private Integer status; // 0 = Active, 1 = Locked
 }

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Chat.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import BannedKeywordWarning from './BannedKeywordWarning';
+import { fetchBannedKeywords, checkBannedKeywords } from '../utils/bannedKeywordChecker';
 import { 
     faSearch,  
     faPaperclip, 
@@ -28,6 +30,11 @@ const Chat = ({ session, userData, pendingConversation, refreshUnreadCount }) =>
     const [, setRecallLimitExceeded] = useState({});
     const messagesEndRef = useRef(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    
+    // Banned Keywords
+    const [bannedKeywords, setBannedKeywords] = useState([]);
+    const [showBannedKeywordWarning, setShowBannedKeywordWarning] = useState(false);
+    const [foundBannedKeywords, setFoundBannedKeywords] = useState([]);
     const emojiInputRef = useRef(null);
 
     // Danh sách emoji
@@ -60,6 +67,15 @@ const Chat = ({ session, userData, pendingConversation, refreshUnreadCount }) =>
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    // Fetch banned keywords on mount
+    useEffect(() => {
+        const loadBannedKeywords = async () => {
+            const keywords = await fetchBannedKeywords();
+            setBannedKeywords(keywords);
+        };
+        loadBannedKeywords();
+    }, []);
 
     useEffect(() => {
         if (session?.user?.id) {
@@ -286,6 +302,21 @@ const Chat = ({ session, userData, pendingConversation, refreshUnreadCount }) =>
         e.preventDefault();
         if (!newMessage.trim() || !selectedConversation) return;
 
+        // Check for banned keywords
+        const foundKeywords = checkBannedKeywords(newMessage, bannedKeywords);
+        
+        if (foundKeywords.length > 0) {
+            // Show warning modal
+            setFoundBannedKeywords(foundKeywords);
+            setShowBannedKeywordWarning(true);
+            return;
+        }
+
+        // Send message directly if no banned keywords
+        await sendMessageToServer();
+    };
+
+    const sendMessageToServer = async () => {
         const messageData = { 
             conversation_id: selectedConversation.id, 
             sender_id: session.user.id, 
@@ -309,6 +340,17 @@ const Chat = ({ session, userData, pendingConversation, refreshUnreadCount }) =>
                 }));
             }
         }
+    };
+
+    const handleConfirmMessageWithWarning = () => {
+        sendMessageToServer();
+        setShowBannedKeywordWarning(false);
+        setFoundBannedKeywords([]);
+    };
+
+    const handleCancelMessage = () => {
+        setShowBannedKeywordWarning(false);
+        setFoundBannedKeywords([]);
     };
 
     const getOtherUser = (conv) => {
@@ -786,6 +828,14 @@ const Chat = ({ session, userData, pendingConversation, refreshUnreadCount }) =>
                     </div>
                 )}
             </div>
+
+            {showBannedKeywordWarning && (
+                <BannedKeywordWarning 
+                    bannedKeywords={foundBannedKeywords}
+                    onConfirm={handleConfirmMessageWithWarning}
+                    onCancel={handleCancelMessage}
+                />
+            )}
         </div>
     );
 };

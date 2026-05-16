@@ -6,7 +6,10 @@ import {
     faGraduationCap, 
     faClipboardList,
     faCalendarCheck,
-    faCamera
+    faCamera,
+    faTrash,
+    faEyeSlash,
+    faEye
 } from '@fortawesome/free-solid-svg-icons';
 import { UNIVERSITIES } from '../constants/universities';
 
@@ -26,6 +29,8 @@ const TeacherDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
         full_name: userData?.full_name || userData?.fullName || '',
         school: userData?.school || ''
     });
+    const [confirmModal, setConfirmModal] = useState(null);
+    
 
     useEffect(() => {
         if (session?.user?.id) {
@@ -82,6 +87,57 @@ const TeacherDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
         } finally {
             setUploading(false);
         }
+    };
+
+    const handleDeleteClass = (cls) => {
+        setConfirmModal({
+            title: 'Xóa lớp học',
+            message: `Bạn có chắc chắn muốn xóa lớp "${cls.name}" không? Thao tác này không thể hoàn tác.`,
+            confirmText: 'Có, xóa',
+            isDanger: true,
+            onConfirm: async () => {
+                try {
+                    const response = await fetch(`http://localhost:8080/api/classes/${cls.id}`, {
+                        method: 'DELETE',
+                    });
+
+                    if (response.ok) {
+                        alert('Đã xóa lớp học thành công!');
+                        setConfirmModal(null);
+                        if (onProfileUpdate) onProfileUpdate();
+                    }
+                } catch (error) {
+                    console.error('Error deleting class:', error);
+                    alert('Lỗi xóa lớp: ' + error.message);
+                }
+            }
+        });
+    };
+
+    const handleToggleHideClass = (cls) => {
+        setConfirmModal({
+            title: cls.isHidden ? 'Hiển thị lớp học' : 'Ẩn lớp học',
+            message: cls.isHidden 
+                ? `Bạn có chắc chắn muốn hiển thị lớp "${cls.name}" không?`
+                : `Bạn có chắc chắn muốn ẩn lớp "${cls.name}" không? Học sinh sẽ không thấy lớp này.`,
+            confirmText: cls.isHidden ? 'Có, hiển thị' : 'Có, ẩn',
+            onConfirm: async () => {
+                try {
+                    const response = await fetch(`http://localhost:8080/api/classes/${cls.id}/toggle-hidden`, {
+                        method: 'PUT',
+                    });
+
+                    if (response.ok) {
+                        alert(cls.isHidden ? 'Đã hiển thị lớp học!' : 'Đã ẩn lớp học!');
+                        setConfirmModal(null);
+                        if (onProfileUpdate) onProfileUpdate();
+                    }
+                } catch (error) {
+                    console.error('Error toggling hidden status:', error);
+                    alert('Lỗi: ' + error.message);
+                }
+            }
+        });
     };
 
     const handleSaveProfile = async () => {
@@ -176,13 +232,30 @@ const TeacherDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
                                 return (
                                     <div 
                                         key={cls.id} 
-                                        className={`course-card ${cardColor}`}
+                                        className={`course-card ${cardColor}${cls.isHidden ? ' hidden-class' : ''}`}
                                         onClick={() => {
                                             setSelectedClass(cls);
                                             setActiveTab('Classes');
                                         }}
-                                        style={{ cursor: 'pointer' }}
+                                        style={{ cursor: 'pointer', opacity: cls.isHidden ? 0.6 : 1, position: 'relative' }}
                                     >
+                                        {cls.isHidden && <div className="hidden-class-badge">Ẩn</div>}
+                                        <div className="class-action-buttons">
+                                            <button 
+                                                className="class-action-btn hide-btn"
+                                                onClick={(e) => { e.stopPropagation(); handleToggleHideClass(cls); }}
+                                                title={cls.isHidden ? 'Hiển thị lớp' : 'Ẩn lớp'}
+                                            >
+                                                <FontAwesomeIcon icon={cls.isHidden ? faEye : faEyeSlash} />
+                                            </button>
+                                            <button 
+                                                className="class-action-btn delete-btn"
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteClass(cls); }}
+                                                title="Xóa lớp"
+                                            >
+                                                <FontAwesomeIcon icon={faTrash} />
+                                            </button>
+                                        </div>
                                         <div className="course-icon">
                                             {cls.teacherAvatar ? (
                                                 <img src={cls.teacherAvatar} alt="teacher" style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
@@ -298,6 +371,30 @@ const TeacherDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
                     )}
                 </div>
             </aside>
+
+            {/* Confirm Modal */}
+            {confirmModal && (
+                <div className="modal-overlay" onClick={() => setConfirmModal(null)}>
+                    <div className="modal-content confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3>{confirmModal.title}</h3>
+                        <p>{confirmModal.message}</p>
+                        <div className="modal-actions">
+                            <button 
+                                className="btn-cancel"
+                                onClick={() => setConfirmModal(null)}
+                            >
+                                Hủy
+                            </button>
+                            <button 
+                                className={`btn-confirm ${confirmModal.isDanger ? 'danger' : ''}`}
+                                onClick={confirmModal.onConfirm}
+                            >
+                                {confirmModal.confirmText}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 };

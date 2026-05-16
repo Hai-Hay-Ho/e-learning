@@ -47,6 +47,7 @@ public class ClassService {
                 .teacherName(name)
                 .teacherAvatar(avatar)
                 .joinCode(c.getJoinCode())
+                .isHidden(c.getIsHidden())
                 .createdAt(c.getCreatedAt())
                 .build()).collect(Collectors.toList());
     }
@@ -59,11 +60,16 @@ public class ClassService {
         List<UUID> classIds = memberships.stream().map(ClassMember::getClassId).collect(Collectors.toList());
         List<ClassEntity> classes = classRepository.findAllById(classIds);
         
-        List<UUID> teacherIds = classes.stream().map(ClassEntity::getTeacherId).distinct().collect(Collectors.toList());
+        // Lọc ra các lớp không bị ẩn
+        List<ClassEntity> visibleClasses = classes.stream()
+                .filter(c -> !Boolean.TRUE.equals(c.getIsHidden()))
+                .collect(Collectors.toList());
+        
+        List<UUID> teacherIds = visibleClasses.stream().map(ClassEntity::getTeacherId).distinct().collect(Collectors.toList());
         Map<UUID, User> teachersMap = userRepository.findAllById(teacherIds).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
         
-        return classes.stream().map(c -> {
+        return visibleClasses.stream().map(c -> {
             User teacher = teachersMap.get(c.getTeacherId());
             return ClassDTO.builder()
                 .id(c.getId())
@@ -72,6 +78,7 @@ public class ClassService {
                 .teacherName(teacher != null ? teacher.getFullName() : "Unknown")
                 .teacherAvatar(teacher != null ? teacher.getAvatarUrl() : null)
                 .joinCode(c.getJoinCode())
+                .isHidden(c.getIsHidden())
                 .createdAt(c.getCreatedAt())
                 .build();
         }).collect(Collectors.toList());
@@ -112,6 +119,7 @@ public class ClassService {
                 .teacherName(teacherName)
                 .teacherAvatar(teacherAvatar)
                 .joinCode(entity.getJoinCode())
+                .isHidden(entity.getIsHidden())
                 .createdAt(entity.getCreatedAt())
                 .build();
     }
@@ -119,6 +127,54 @@ public class ClassService {
     @Transactional
     public void removeStudentFromClass(UUID studentId, UUID classId) {
         classMemberRepository.deleteByStudentIdAndClassId(studentId, classId);
+    }
+
+    @Transactional
+    public void toggleHideClass(UUID classId) {
+        ClassEntity classEntity = classRepository.findById(classId)
+                .orElseThrow(() -> new RuntimeException("Lớp học không tồn tại"));
+        classEntity.setIsHidden(!classEntity.getIsHidden());
+        classRepository.save(classEntity);
+    }
+
+    @Transactional
+    public void deleteClass(UUID classId) {
+        // Xóa tất cả thành viên lớp
+        List<ClassMember> members = classMemberRepository.findByClassId(classId);
+        classMemberRepository.deleteAll(members);
+        
+        // Xóa lớp
+        classRepository.deleteById(classId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<User> getClassMembers(UUID classId) {
+        List<ClassMember> members = classMemberRepository.findByClassId(classId);
+        List<UUID> studentIds = members.stream().map(ClassMember::getStudentId).collect(Collectors.toList());
+        return userRepository.findAllById(studentIds);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClassDTO> getAllClasses() {
+        List<ClassEntity> allClasses = classRepository.findAll();
+        
+        List<UUID> teacherIds = allClasses.stream().map(ClassEntity::getTeacherId).distinct().collect(Collectors.toList());
+        Map<UUID, User> teachersMap = userRepository.findAllById(teacherIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+        
+        return allClasses.stream().map(c -> {
+            User teacher = teachersMap.get(c.getTeacherId());
+            return ClassDTO.builder()
+                .id(c.getId())
+                .name(c.getName())
+                .teacherId(c.getTeacherId())
+                .teacherName(teacher != null ? teacher.getFullName() : "Unknown")
+                .teacherAvatar(teacher != null ? teacher.getAvatarUrl() : null)
+                .joinCode(c.getJoinCode())
+                .isHidden(c.getIsHidden())
+                .createdAt(c.getCreatedAt())
+                .build();
+        }).collect(Collectors.toList());
     }
 
     // logic to join class can be expanded here with a class_members table

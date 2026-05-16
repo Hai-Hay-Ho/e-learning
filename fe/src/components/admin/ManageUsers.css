@@ -1,0 +1,230 @@
+.manage-users-container {
+    padding: 20px;
+    background-color: #f8fafc;
+    border-radius: 12px;
+    min-height: 500px;
+}
+
+.manage-users-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.manage-users-header h2 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.search-input {
+    padding: 10px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    width: 300px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.table-wrapper {
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.users-table thead {
+    background-color: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.users-table th {
+    padding: 16px 12px;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.users-table tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+    transition: background-color 0.2s ease;
+}
+
+.users-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.users-table tbody tr.user-locked-row {
+    background-color: #fef2f2;
+}
+
+.users-table td {
+    padding: 16px 12px;
+    color: #475569;
+    font-size: 14px;
+}
+
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+}
+
+.user-cell img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e2e8f0;
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.role-badge.teacher {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.role-badge.student {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-badge.status-active {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+
+.status-badge.status-locked {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.actions-cell {
+    position: relative;
+    padding: 12px;
+}
+
+.action-menu {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    color: white;
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-btn:disabled:hover {
+    transform: none;
+}
+
+.action-btn.view-btn {
+    background-color: #3b82f6;
+}
+
+.action-btn.view-btn:hover:not(:disabled) {
+    background-color: #2563eb;
+    transform: scale(1.1);
+}
+
+.action-btn.lock-btn {
+    background-color: #ef4444;
+}
+
+.action-btn.lock-btn:hover:not(:disabled) {
+    background-color: #dc2626;
+    transform: scale(1.1);
+}
+
+.action-btn.promote-btn {
+    background-color: #10b981;
+}
+
+.action-btn.promote-btn:hover:not(:disabled) {
+    background-color: #059669;
+    transform: scale(1.1);
+}
+
+.action-btn.demote-btn {
+    background-color: #f59e0b;
+}
+
+.action-btn.demote-btn:hover:not(:disabled) {
+    background-color: #d97706;
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .manage-users-header {
+        flex-direction: column;
+    }
+
+    .search-input {
+        width: 100%;
+    }
+
+    .users-table {
+        font-size: 12px;
+    }
+
+    .users-table th,
+    .users-table td {
+        padding: 12px 8px;
+    }
+
+    .user-cell img {
+        width: 32px;
+        height: 32px;
+    }
+}

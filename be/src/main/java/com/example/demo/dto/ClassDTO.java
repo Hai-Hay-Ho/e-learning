@@ -18,5 +18,6 @@ public class ClassDTO {
     private String teacherName;
     private String teacherAvatar;
     private String joinCode;
+    private Boolean isHidden;
     private LocalDateTime createdAt;
 }

@@ -310,6 +310,7 @@ public class StatsService {
                         .email(u.getEmail())
                         .role(u.getRole())
                         .avatarUrl(u.getAvatarUrl())
+                        .status(u.getStatus())
                         .createdAt(u.getCreatedAt())
                         .lastSignInAt(u.getLastSignInAt())
                         .build())

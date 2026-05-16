@@ -233,7 +233,12 @@ const StudentDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
                         {classes?.length > 0 ? classes.map((cls, idx) => {
                             const progress = getClassProgress(cls.id);
                             return (
-                            <div key={cls.id} className={`course-card ${['blue', 'yellow', 'green', 'purple', 'red'][idx % 5]}`} onClick={() => { setSelectedClass(cls); setActiveTab('Classes'); }} style={{ cursor: 'pointer' }}>
+                            <div 
+                                key={cls.id} 
+                                className={`course-card ${['blue', 'yellow', 'green', 'purple', 'red'][idx % 5]}`} 
+                                onClick={() => { setSelectedClass(cls); setActiveTab('Classes'); }} 
+                                style={{ cursor: 'pointer' }}
+                            >
                                 <div className="course-icon">{cls.teacherAvatar ? <img src={cls.teacherAvatar} alt="t" style={{ width: '100%', height: '100%', borderRadius: '50%' }} /> : <FontAwesomeIcon icon={faGraduationCap} />}</div>
                                 <h4>{cls.name}</h4><span>▷ {cls.teacherName || "Giảng viên"}</span>
                                 <div className="course-progress">
