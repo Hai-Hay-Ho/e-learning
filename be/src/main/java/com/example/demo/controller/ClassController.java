@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.ClassDTO;
 import com.example.demo.model.ClassEntity;
+import com.example.demo.model.User;
 import com.example.demo.service.ClassService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -64,11 +65,56 @@ public class ClassController {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
+    
     @DeleteMapping("/{classId}/students/{studentId}")
     public ResponseEntity<?> removeStudent(@PathVariable UUID classId, @PathVariable UUID studentId) {
         try {
             classService.removeStudentFromClass(studentId, classId);
             return ResponseEntity.ok(Map.of("message", "Đã xóa học sinh ra khỏi lớp."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // Quản lý lớp - Toggle hidden status
+    @PutMapping("/{classId}/toggle-hidden")
+    public ResponseEntity<?> toggleHideClass(@PathVariable UUID classId) {
+        try {
+            classService.toggleHideClass(classId);
+            return ResponseEntity.ok(Map.of("message", "Đã cập nhật trạng thái lớp."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // Quản lý lớp - Xóa lớp
+    @DeleteMapping("/{classId}")
+    public ResponseEntity<?> deleteClass(@PathVariable UUID classId) {
+        try {
+            classService.deleteClass(classId);
+            return ResponseEntity.ok(Map.of("message", "Đã xóa lớp học."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // Quản lý lớp - Lấy danh sách thành viên lớp
+    @GetMapping("/{classId}/members")
+    public ResponseEntity<?> getClassMembers(@PathVariable UUID classId) {
+        try {
+            List<User> members = classService.getClassMembers(classId);
+            return ResponseEntity.ok(members);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // Quản lý lớp - Lấy tất cả lớp (dành cho admin)
+    @GetMapping("/admin/all")
+    public ResponseEntity<?> getAllClasses() {
+        try {
+            List<ClassDTO> allClasses = classService.getAllClasses();
+            return ResponseEntity.ok(allClasses);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

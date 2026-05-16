@@ -4,12 +4,14 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faUsers, faBookOpen, faCog, faChartPie, 
     faSearch, faExchangeAlt, faSignOutAlt, faBell,
-    faUserGraduate, faChalkboardTeacher, faUserPlus, faFileAlt, faQuestionCircle, faCheckCircle, faComments
+    faUserGraduate, faChalkboardTeacher, faUserPlus, faFileAlt, faQuestionCircle, faCheckCircle, faComments, faBan
 } from '@fortawesome/free-solid-svg-icons';
 import logoImg from '../../assets/img/logo.jpg';
 import userAvatar from '../../assets/img/user.jpg';
 import { supabase } from '../../supabaseClient';
 import ManageUsers from './ManageUsers';
+import ManageCourses from './ManageCourses';
+import ManageBannedKeywords from './ManageBannedKeywords';
 
 const AdminDashboard = ({ session, userData, onSwitchToStudent }) => {
     const [activeTab, setActiveTab] = useState('Overview');
@@ -77,6 +79,9 @@ const AdminDashboard = ({ session, userData, onSwitchToStudent }) => {
                     </div>
                     <div className={`admin-menu-item ${activeTab === 'Courses' ? 'active' : ''}`} onClick={() => setActiveTab('Courses')}>
                         <span className="icon"><FontAwesomeIcon icon={faBookOpen} /></span> Manage Courses
+                    </div>
+                    <div className={`admin-menu-item ${activeTab === 'Keywords' ? 'active' : ''}`} onClick={() => setActiveTab('Keywords')}>
+                        <span className="icon"><FontAwesomeIcon icon={faBan} /></span> Banned Keywords
                     </div>
                     <div className={`admin-menu-item ${activeTab === 'Settings' ? 'active' : ''}`} onClick={() => setActiveTab('Settings')}>
                         <span className="icon"><FontAwesomeIcon icon={faCog} /></span> System Settings
@@ -255,7 +260,15 @@ const AdminDashboard = ({ session, userData, onSwitchToStudent }) => {
                         <ManageUsers />
                     )}
 
-                    {activeTab !== 'Overview' && activeTab !== 'Users' && (
+                    {activeTab === 'Courses' && (
+                        <ManageCourses />
+                    )}
+
+                    {activeTab === 'Keywords' && (
+                        <ManageBannedKeywords />
+                    )}
+
+                    {activeTab !== 'Overview' && activeTab !== 'Users' && activeTab !== 'Courses' && activeTab !== 'Keywords' && (
                         <div className="admin-panel" style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
                             <h3>Module "{activeTab}" is under development</h3>
                         </div>

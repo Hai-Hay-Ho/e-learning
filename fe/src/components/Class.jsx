@@ -360,7 +360,8 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
         const newClass = {
             name: className,
             teacherId: session.user.id, 
-            joinCode: generateJoinCode() 
+            joinCode: generateJoinCode(),
+            isHidden: false
         };
 
         try {

@@ -1,0 +1,30 @@
+                                <option value="">Chọn trường đại học</option>
+                                {UNIVERSITIES.map((uni, index) => (
+                                    <option key={index} value={uni}>{uni}</option>
+                                ))}
+                            </select>
+                        ) : (
+                            <p className="profile-school">{userData?.school || 'Chưa cập nhật'}</p>
+                        )}
+                    </div>
+                
+                    <button 
+                        onClick={() => {
+                            if (isEditing) handleSaveProfile();
+                            else setIsEditing(true);
+                        }}
+                        disabled={isSaving}
+                        className="save-profile-btn"
+                    >
+                        {isSaving ? 'Đang lưu...' : (isEditing ? 'Lưu thông tin' : 'Chỉnh sửa')}
+                    </button>
+                    {isEditing && (
+                        <button onClick={() => setIsEditing(false)} className="cancel-edit-btn">Hủy</button>
+                    )}
+                </div>
+            </aside>
+        </main>
+    );
+};
+
+export default TeacherDashboard;
