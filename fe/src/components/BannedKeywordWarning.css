@@ -1,0 +1,196 @@
+.banned-keyword-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.banned-keyword-modal {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.banned-keyword-header {
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.warning-icon {
+    color: #ff9800;
+    font-size: 24px;
+}
+
+.header-title h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.banned-keyword-content {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.warning-message {
+    margin: 0 0 15px 0;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.banned-keywords-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.banned-keyword-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: #fff3cd;
+    border-left: 4px solid #ff9800;
+    border-radius: 6px;
+}
+
+.keyword-badge {
+    background: #ff9800;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.keyword-description {
+    color: #666;
+    font-size: 13px;
+    flex: 1;
+}
+
+.info-message {
+    margin: 10px 0 0 0;
+    padding: 10px;
+    background: #f0f8ff;
+    border-left: 4px solid #2196f3;
+    border-radius: 4px;
+    color: #0066cc;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.banned-keyword-footer {
+    padding: 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn-cancel {
+    padding: 10px 20px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #333;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+    background: #f5f5f5;
+    border-color: #999;
+}
+
+.btn-continue {
+    padding: 10px 20px;
+    background: #ff9800;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-continue:hover {
+    background: #f57c00;
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
+.btn-continue:active {
+    transform: scale(0.98);
+}

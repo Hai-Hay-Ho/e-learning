@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import './AssignmentDetail.css';
+import BannedKeywordWarning from './BannedKeywordWarning';
+import { fetchBannedKeywords, checkBannedKeywords } from '../utils/bannedKeywordChecker';
 import {
     faArrowLeft,
     faClock,
@@ -32,6 +34,12 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(false);
+    
+    // Banned Keywords
+    const [bannedKeywords, setBannedKeywords] = useState([]);
+    const [showBannedKeywordWarning, setShowBannedKeywordWarning] = useState(false);
+    const [foundBannedKeywords, setFoundBannedKeywords] = useState([]);
+    
     const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'submitted', 'late', 'graded'
     const [isGradingModalOpen, setIsGradingModalOpen] = useState(false);
     const [submissionForGrading, setSubmissionForGrading] = useState(null);
@@ -160,6 +168,15 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
         };
     }, [post.id]);
 
+    // Fetch banned keywords on mount
+    useEffect(() => {
+        const loadBannedKeywords = async () => {
+            const keywords = await fetchBannedKeywords();
+            setBannedKeywords(keywords);
+        };
+        loadBannedKeywords();
+    }, []);
+
     const fetchComments = async () => {
         try {
             const response = await fetch(`http://localhost:8080/api/comments/post/${post.id}`);
@@ -174,6 +191,22 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
 
     const submitComment = async () => {
         if (!newComment.trim()) return;
+        
+        // Check for banned keywords
+        const foundKeywords = checkBannedKeywords(newComment, bannedKeywords);
+        
+        if (foundKeywords.length > 0) {
+            // Show warning modal
+            setFoundBannedKeywords(foundKeywords);
+            setShowBannedKeywordWarning(true);
+            return;
+        }
+
+        // Send comment directly if no banned keywords
+        await sendCommentToServer();
+    };
+
+    const sendCommentToServer = async () => {
         setLoading(true);
         try {
             const response = await fetch('http://localhost:8080/api/comments', {
@@ -187,12 +220,24 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
             });
             if (response.ok) {
                 setNewComment('');
+                fetchComments(); // Refresh comments
             }
         } catch (err) {
             console.error('Error submitting comment:', err);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleConfirmCommentWithWarning = () => {
+        sendCommentToServer();
+        setShowBannedKeywordWarning(false);
+        setFoundBannedKeywords([]);
+    };
+
+    const handleCancelComment = () => {
+        setShowBannedKeywordWarning(false);
+        setFoundBannedKeywords([]);
     };
 
     const fetchSubmissions = async () => {
@@ -580,6 +625,14 @@ const AssignmentDetail = ({ post, session, userRole, onBack, selectedClass, user
                         setGradeComment={setTempGradeComment}
                         handleGrade={handleModalGradeSubmit}
                         isGrading={isGradingSubmitting}
+                    />
+                )}
+
+                {showBannedKeywordWarning && (
+                    <BannedKeywordWarning 
+                        bannedKeywords={foundBannedKeywords}
+                        onConfirm={handleConfirmCommentWithWarning}
+                        onCancel={handleCancelComment}
                     />
                 )}
             </div>

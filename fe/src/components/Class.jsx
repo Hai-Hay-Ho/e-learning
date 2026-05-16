@@ -3,6 +3,8 @@ import { supabase } from '../supabaseClient';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import './Class.css';
 import AssignmentDetail from './AssignmentDetail';
+import BannedKeywordWarning from './BannedKeywordWarning';
+import { fetchBannedKeywords, checkBannedKeywords } from '../utils/bannedKeywordChecker';
 import { 
     faPlus, 
     faSignInAlt, 
@@ -44,6 +46,12 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
 
     // Assignment Detail view
     const [selectedAssignment, setSelectedAssignment] = useState(null);
+
+    // Banned Keywords
+    const [bannedKeywords, setBannedKeywords] = useState([]);
+    const [showBannedKeywordWarning, setShowBannedKeywordWarning] = useState(false);
+    const [pendingComment, setPendingComment] = useState(null);
+    const [foundBannedKeywords, setFoundBannedKeywords] = useState([]);
 
     const isTeacher = userRole === "1";
 
@@ -120,6 +128,15 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
         };
     }, [selectedClass]);
 
+    // Fetch banned keywords on mount
+    useEffect(() => {
+        const loadBannedKeywords = async () => {
+            const keywords = await fetchBannedKeywords();
+            setBannedKeywords(keywords);
+        };
+        loadBannedKeywords();
+    }, []);
+
     const fetchClassesLocal = async () => {
         setLoading(true);
         try {
@@ -159,6 +176,22 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
         const content = commentTexts[postId];
         if (!content?.trim()) return;
 
+        // Check for banned keywords
+        const foundKeywords = checkBannedKeywords(content, bannedKeywords);
+        
+        if (foundKeywords.length > 0) {
+            // Show warning modal
+            setFoundBannedKeywords(foundKeywords);
+            setPendingComment({ postId, content });
+            setShowBannedKeywordWarning(true);
+            return;
+        }
+
+        // Send comment directly if no banned keywords
+        await sendCommentToServer(postId, content);
+    };
+
+    const sendCommentToServer = async (postId, content) => {
         try {
             const response = await fetch('http://localhost:8080/api/comments', {
                 method: 'POST',
@@ -179,6 +212,21 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
         } catch (err) {
             console.error("Error submitting comment:", err);
         }
+    };
+
+    const handleConfirmCommentWithWarning = () => {
+        if (pendingComment) {
+            sendCommentToServer(pendingComment.postId, pendingComment.content);
+        }
+        setShowBannedKeywordWarning(false);
+        setFoundBannedKeywords([]);
+        setPendingComment(null);
+    };
+
+    const handleCancelComment = () => {
+        setShowBannedKeywordWarning(false);
+        setFoundBannedKeywords([]);
+        setPendingComment(null);
     };
 
     const handleFileChange = async (e) => {
@@ -1113,6 +1161,14 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
                         </form>
                     </div>
                 </div>
+            )}
+
+            {showBannedKeywordWarning && (
+                <BannedKeywordWarning 
+                    bannedKeywords={foundBannedKeywords}
+                    onConfirm={handleConfirmCommentWithWarning}
+                    onCancel={handleCancelComment}
+                />
             )}
         </div>
     );

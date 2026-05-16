@@ -111,7 +111,7 @@ const ManageBannedKeywords = () => {
             <div className="keywords-header">
                 <div>
                     <h2>Quản lý Từ khóa bị cấm</h2>
-                    <p>Những từ khóa này sẽ không được phép dùng khi tạo tên lớp học</p>
+                    <p>Những từ khóa này sẽ không được phép dùng khi tương tác</p>
                 </div>
                 <button 
                     className="add-keyword-btn"
@@ -169,9 +169,7 @@ const ManageBannedKeywords = () => {
                                 {keyword.description && (
                                     <div className="keyword-description">{keyword.description}</div>
                                 )}
-                                <div className="keyword-date">
-                                    Thêm: {new Date(keyword.created_at).toLocaleDateString('vi-VN')}
-                                </div>
+                            
                             </div>
                             <button
                                 className="delete-keyword-btn"
