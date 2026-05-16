@@ -6,9 +6,10 @@ import {
     faSearch, faExchangeAlt, faSignOutAlt, faBell,
     faUserGraduate, faChalkboardTeacher, faUserPlus, faFileAlt, faQuestionCircle, faCheckCircle, faComments
 } from '@fortawesome/free-solid-svg-icons';
-import logoImg from '../assets/img/logo.jpg';
-import userAvatar from '../assets/img/user.jpg';
-import { supabase } from '../supabaseClient';
+import logoImg from '../../assets/img/logo.jpg';
+import userAvatar from '../../assets/img/user.jpg';
+import { supabase } from '../../supabaseClient';
+import ManageUsers from './ManageUsers';
 
 const AdminDashboard = ({ session, userData, onSwitchToStudent }) => {
     const [activeTab, setActiveTab] = useState('Overview');
@@ -107,8 +108,6 @@ const AdminDashboard = ({ session, userData, onSwitchToStudent }) => {
                 </header>
 
                 <div className="admin-content">
-                    <h2 className="admin-page-title">{activeTab}</h2>
-                    
                     {activeTab === 'Overview' && (
                         <>
                             {/* Stats */}
@@ -252,7 +251,11 @@ const AdminDashboard = ({ session, userData, onSwitchToStudent }) => {
                         </>
                     )}
 
-                    {activeTab !== 'Overview' && (
+                    {activeTab === 'Users' && (
+                        <ManageUsers />
+                    )}
+
+                    {activeTab !== 'Overview' && activeTab !== 'Users' && (
                         <div className="admin-panel" style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
                             <h3>Module "{activeTab}" is under development</h3>
                         </div>

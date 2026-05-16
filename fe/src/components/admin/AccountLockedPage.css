@@ -1,0 +1,119 @@
+.account-locked-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+}
+
+.locked-card {
+    background-color: white;
+    border-radius: 12px;
+    padding: 40px;
+    max-width: 500px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.locked-icon {
+    width: 80px;
+    height: 80px;
+    background-color: #fee2e2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    font-size: 40px;
+    color: #991b1b;
+}
+
+.locked-card h1 {
+    margin: 0 0 16px 0;
+    color: #1e293b;
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.locked-message {
+    margin: 0 0 24px 0;
+    color: #475569;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.locked-info {
+    background-color: #f8fafc;
+    border-left: 4px solid #ef4444;
+    padding: 16px;
+    margin-bottom: 24px;
+    border-radius: 6px;
+    text-align: left;
+}
+
+.locked-info p {
+    margin: 8px 0;
+    color: #475569;
+    font-size: 14px;
+}
+
+.locked-info strong {
+    color: #1e293b;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.logout-btn {
+    padding: 12px 32px;
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.logout-btn:hover {
+    background-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.logout-btn:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 480px) {
+    .locked-card {
+        padding: 24px;
+    }
+
+    .locked-card h1 {
+        font-size: 24px;
+    }
+
+    .locked-message {
+        font-size: 14px;
+    }
+
+    .logout-btn {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+}

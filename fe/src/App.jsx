@@ -9,7 +9,8 @@ import EQuizz from './components/EQuizz';
 import Analytics from './components/Analytics';
 import TeacherDashboard from './components/TeacherDashboard';
 import StudentDashboard from './components/StudentDashboard';
-import AdminDashboard from './components/AdminDashboard';
+import AdminDashboard from './components/admin/AdminDashboard';
+import AccountLockedPage from './components/admin/AccountLockedPage';
 import { supabase } from './supabaseClient';
 
 function App() {
@@ -128,6 +129,10 @@ function App() {
       setActiveTab('Dashboard');
     }
   }, [session, activeTab]);
+
+  if (session && userData && userData.status === 1) {
+    return <AccountLockedPage session={session} />;
+  }
 
   if (session && userRole === "2" && adminViewMode === 'admin') {
     return (
