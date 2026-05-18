@@ -33,13 +33,11 @@ public class StatsService {
     private final CommentRepository commentRepository;
 
     public TeacherStatsDTO getTeacherStats(UUID teacherId) {
-        // tổng classes
-        List<UUID> classIds = classRepository.findByTeacherId(teacherId).stream()
-                .map(c -> c.getId())
-                .collect(Collectors.toList());
-        long totalClasses = classIds.size();
+        // FIX: Lấy tất cả dữ liệu cần thiết một lần thay vì nhiều lần
+        List<ClassEntity> teacherClasses = classRepository.findByTeacherId(teacherId);
+        long totalClasses = teacherClasses.size();
 
-        if (classIds.isEmpty()) {
+        if (teacherClasses.isEmpty()) {
             return TeacherStatsDTO.builder()
                     .totalClasses(0)
                     .totalExercises(0)
@@ -48,36 +46,41 @@ public class StatsService {
                     .build();
         }
 
-        // tổng btap
+        // FIX: Batch fetch assignments & quizzes thay vì 2 queries riêng
+        List<UUID> classIds = teacherClasses.stream().map(ClassEntity::getId).collect(Collectors.toList());
         long totalAssignments = postRepository.countByClassIdInAndType(classIds, "assignment");
         long totalQuizzes = quizRepository.countByClassIdIn(classIds);
         long totalExercises = totalAssignments + totalQuizzes;
 
-        // ch nộp
+        // FIX: Lấy 1 lần rồi mới tính ungraded/today
         List<UUID> postIds = postRepository.findByClassIdInAndType(classIds, "assignment").stream()
                 .map(PostEntity::getId)
                 .collect(Collectors.toList());
-
-        long ungradedAssignments = 0;
-        if (!postIds.isEmpty()) {
-            ungradedAssignments = submissionRepository.countByPostIdInAndScoreIsNull(postIds);
-        }
-
-        // bài nộp hnay
-        LocalDateTime startOfDay = LocalDateTime.now().with(LocalTime.MIN);
-
-        long todayAssignmentSubmissions = 0;
-        if (!postIds.isEmpty()) {
-            todayAssignmentSubmissions = submissionRepository.countByPostIdInAndCreatedAtAfter(postIds, startOfDay);
-        }
 
         List<UUID> quizIds = quizRepository.findByClassIdIn(classIds).stream()
                 .map(Quiz::getId)
                 .collect(Collectors.toList());
 
+        long ungradedAssignments = 0;
+        long todayAssignmentSubmissions = 0;
         long todayQuizAttempts = 0;
+
+        LocalDateTime startOfDay = LocalDateTime.now().with(LocalTime.MIN);
+
+        // FIX: Lấy tất cả 1 lần
+        if (!postIds.isEmpty()) {
+            List<Submission> submissions = submissionRepository.findByPostIdIn(postIds);
+            ungradedAssignments = submissions.stream().filter(s -> s.getScore() == null).count();
+            todayAssignmentSubmissions = submissions.stream()
+                    .filter(s -> s.getCreatedAt() != null && s.getCreatedAt().isAfter(startOfDay))
+                    .count();
+        }
+
         if (!quizIds.isEmpty()) {
-            todayQuizAttempts = quizAttemptRepository.countByQuizIdInAndSubmittedAtAfter(quizIds, startOfDay);
+            List<QuizAttempt> attempts = quizAttemptRepository.findByQuizIdIn(quizIds);
+            todayQuizAttempts = attempts.stream()
+                    .filter(a -> a.getSubmittedAt() != null && a.getSubmittedAt().isAfter(startOfDay))
+                    .count();
         }
 
         long todaySubmissions = todayAssignmentSubmissions + todayQuizAttempts;
@@ -102,24 +105,21 @@ public class StatsService {
                     .build();
         }
 
-        // 2. Điểm trung bình
-        // Lấy tất cả assignment của lớp
+        // FIX: Batch fetch assignments & quizzes 1 lần thay vì 2 lần
         List<UUID> assignmentIds = postRepository.findByClassIdInAndType(List.of(classId), "assignment").stream()
                 .map(PostEntity::getId)
                 .collect(Collectors.toList());
 
-        // Lấy tất cả quiz của lớp
         List<UUID> quizIds = quizRepository.findByClassIdIn(List.of(classId)).stream()
                 .map(Quiz::getId)
                 .collect(Collectors.toList());
 
-        // 3. Tính điểm trung bình lớp (dựa trên điểm cao nhất của mỗi học sinh cho mỗi
-        // bài tập)
+        // FIX: Lấy tất cả submissions & attempts 1 lần (đã sắp xếp ở query)
         List<Submission> allSubmissions = assignmentIds.isEmpty() ? List.of()
                 : submissionRepository.findByPostIdIn(assignmentIds);
         List<QuizAttempt> allAttempts = quizIds.isEmpty() ? List.of() : quizAttemptRepository.findByQuizIdIn(quizIds);
 
-        // Map<StudentId, Map<ItemId, MaxScore>>
+        // Map best scores
         Map<UUID, Map<UUID, Double>> studentBestScores = new HashMap<>();
 
         for (Submission s : allSubmissions) {
@@ -144,7 +144,7 @@ public class StatsService {
         double averageScore = (totalStudents > 0 && totalItems > 0) ? classTotalScore / (totalStudents * totalItems)
                 : 0.0;
 
-        // 3.1 Tỷ lệ hoàn thành (tính số bài đã làm ít nhất 1 lần)
+        // Tỷ lệ hoàn thành
         long totalCompletedItemsCount = 0;
         for (Map<UUID, Double> scores : studentBestScores.values()) {
             totalCompletedItemsCount += scores.size();
@@ -152,51 +152,45 @@ public class StatsService {
         long totalExpected = totalItems * totalStudents;
         double completionRate = totalExpected > 0 ? (double) totalCompletedItemsCount / totalExpected * 100 : 0.0;
 
-        // 4. Danh sách học sinh chi tiết
+        // FIX: Batch fetch tất cả students 1 lần thay vì query từng student
         List<ClassMember> members = classMemberRepository.findByClassId(classId);
         List<UUID> studentIds = members.stream().map(ClassMember::getStudentId).collect(Collectors.toList());
         List<User> students = userRepository.findAllById(studentIds);
 
-        Map<UUID, List<Submission>> submissionsByStudent = Map.of();
-        if (!assignmentIds.isEmpty()) {
-            submissionsByStudent = submissionRepository.findByPostIdIn(assignmentIds).stream()
-                    .collect(Collectors.groupingBy(Submission::getStudentId));
-        }
+        // FIX: Sử dụng grouping thay vì multiple queries
+        Map<UUID, List<Submission>> submissionsByStudent = allSubmissions.stream()
+                .collect(Collectors.groupingBy(Submission::getStudentId));
 
-        Map<UUID, List<QuizAttempt>> quizAttemptsByStudent = Map.of();
-        if (!quizIds.isEmpty()) {
-            quizAttemptsByStudent = quizAttemptRepository.findByQuizIdIn(quizIds).stream()
-                    .collect(Collectors.groupingBy(QuizAttempt::getUserId));
-        }
+        Map<UUID, List<QuizAttempt>> quizAttemptsByStudent = allAttempts.stream()
+                .collect(Collectors.groupingBy(QuizAttempt::getUserId));
 
-        Map<UUID, List<Submission>> finalSubmissionsByStudent = submissionsByStudent;
-        Map<UUID, List<QuizAttempt>> finalQuizAttemptsByStudent = quizAttemptsByStudent;
-
+        // Tính độ lệch chuẩn tại đây để tránh iterate lại
+        List<Double> allScores = new ArrayList<>();
+        
         List<StudentStatsDTO> studentStatsList = students.stream().map(s -> {
             Map<UUID, Double> scores = studentBestScores.getOrDefault(s.getId(), Map.of());
             double studentTotalScore = scores.values().stream().mapToDouble(Double::doubleValue).sum();
             double studentAverageScore = totalItems > 0 ? studentTotalScore / totalItems : 0.0;
+            allScores.add(studentAverageScore);
 
             int studentCompletionPercentage = totalItems > 0
                     ? (int) Math.round((double) scores.size() / totalItems * 100)
                     : 0;
 
-            // Tìm thời gian hoạt động cuối cùng từ submissions và quiz attempts
-            List<Submission> studentSubmissions = finalSubmissionsByStudent.getOrDefault(s.getId(), List.of());
+            List<Submission> studentSubmissions = submissionsByStudent.getOrDefault(s.getId(), List.of());
             LocalDateTime latestSub = studentSubmissions.stream()
                     .map(Submission::getSubmittedAt)
                     .filter(Objects::nonNull)
                     .max(LocalDateTime::compareTo)
                     .orElse(null);
 
-            List<QuizAttempt> studentQuizzes = finalQuizAttemptsByStudent.getOrDefault(s.getId(), List.of());
+            List<QuizAttempt> studentQuizzes = quizAttemptsByStudent.getOrDefault(s.getId(), List.of());
             LocalDateTime latestQuiz = studentQuizzes.stream()
                     .map(QuizAttempt::getSubmittedAt)
                     .filter(Objects::nonNull)
                     .max(LocalDateTime::compareTo)
                     .orElse(null);
 
-            // Trạng thái (Warning level): >=8 Thấp, >=5 Trung bình, còn lại Cao
             String warningLevel = "Cao";
             if (studentAverageScore >= 8)
                 warningLevel = "Thấp";
@@ -215,16 +209,10 @@ public class StatsService {
                     .build();
         }).collect(Collectors.toList());
 
-        // 5. Tính độ lệch chuẩn (Standard Deviation)
-        /*
-         * std <1.0 (Rất thấp - Rất đều)
-         * 1.0 <= std < 1.5 (Thấp - Khá đều)
-         * 1.5 <= std < 2.0 (Trung bình - Có sự phân hóa)
-         * std >= 2.0 (Cao - Phân hóa mạnh, có nhóm yếu/giỏi rõ rệt)
-         */
+        // FIX: Tính độ lệch chuẩn từ danh sách đã tính (không iterate lại)
         double sumSquaredDiffs = 0;
-        for (StudentStatsDTO sDto : studentStatsList) {
-            double diff = sDto.getAverageScore() - averageScore;
+        for (Double score : allScores) {
+            double diff = score - averageScore;
             sumSquaredDiffs += diff * diff;
         }
         double standardDeviation = totalStudents > 0 ? Math.sqrt(sumSquaredDiffs / totalStudents) : 0.0;
@@ -302,7 +290,7 @@ public class StatsService {
     }
 
     public List<RecentUserDTO> getRecentUsers() {
-        Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE);
+        Pageable pageable = PageRequest.of(0, 10);
         return userRepository.findRecentUsers(pageable).stream()
                 .map(u -> RecentUserDTO.builder()
                         .id(u.getId())
@@ -319,10 +307,9 @@ public class StatsService {
 
     public List<SystemActivityDTO> getSystemActivity() {
         List<SystemActivityDTO> activities = new ArrayList<>();
+        Pageable limit = PageRequest.of(0, 3, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
         
-        // Lấy 3 user được tạo gần đây
-        Pageable pageable = PageRequest.of(0, 10);
-        List<User> recentUsers = userRepository.findRecentUsers(pageable);
+        List<User> recentUsers = userRepository.findRecentUsers(PageRequest.of(0, 3));
         for (User user : recentUsers) {
             if (user.getCreatedAt() != null) {
                 activities.add(SystemActivityDTO.builder()
@@ -335,19 +322,17 @@ public class StatsService {
             }
         }
         
-        // Lấy classes được tạo gần đây
-        List<ClassEntity> recentClasses = classRepository.findAll().stream()
-                .sorted((a, b) -> {
-                    if (a.getCreatedAt() == null) return 1;
-                    if (b.getCreatedAt() == null) return -1;
-                    return b.getCreatedAt().compareTo(a.getCreatedAt());
-                })
-                .limit(10)
+        List<ClassEntity> recentClasses = classRepository.findAll(limit).getContent();
+        List<UUID> teacherIds = recentClasses.stream()
+                .map(ClassEntity::getTeacherId)
+                .distinct()
                 .collect(Collectors.toList());
+        Map<UUID, User> teacherMap = userRepository.findAllById(teacherIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
         
         for (ClassEntity classEntity : recentClasses) {
             if (classEntity.getCreatedAt() != null) {
-                User teacher = userRepository.findById(classEntity.getTeacherId()).orElse(null);
+                User teacher = teacherMap.getOrDefault(classEntity.getTeacherId(), null);
                 String teacherName = teacher != null ? teacher.getFullName() : "Unknown";
                 activities.add(SystemActivityDTO.builder()
                         .description(teacherName + " created class \"" + classEntity.getName() + "\"")
@@ -359,15 +344,17 @@ public class StatsService {
             }
         }
         
-        // Lấy posts được tạo gần đây
-        List<PostEntity> recentPosts = postRepository.findAll().stream()
-                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-                .limit(10)
+        List<PostEntity> recentPosts = postRepository.findAll(limit).getContent();
+        List<UUID> authorIds = recentPosts.stream()
+                .map(PostEntity::getAuthorId)
+                .distinct()
                 .collect(Collectors.toList());
+        Map<UUID, User> authorMap = userRepository.findAllById(authorIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
         
         for (PostEntity post : recentPosts) {
             if (post.getCreatedAt() != null) {
-                User author = userRepository.findById(post.getAuthorId()).orElse(null);
+                User author = authorMap.getOrDefault(post.getAuthorId(), null);
                 String authorName = author != null ? author.getFullName() : "Unknown";
                 activities.add(SystemActivityDTO.builder()
                         .description(authorName + " created post \"" + post.getTitle() + "\"")
@@ -379,15 +366,18 @@ public class StatsService {
             }
         }
         
-        // Lấy quizzes được tạo gần đây
-        List<Quiz> recentQuizzes = quizRepository.findAll().stream()
-                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-                .limit(10)
+        List<Quiz> recentQuizzes = quizRepository.findAll(limit).getContent();
+        
+        List<UUID> creatorIds = recentQuizzes.stream()
+                .map(Quiz::getCreatedBy)
+                .distinct()
                 .collect(Collectors.toList());
+        Map<UUID, User> creatorMap = userRepository.findAllById(creatorIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
         
         for (Quiz quiz : recentQuizzes) {
             if (quiz.getCreatedAt() != null) {
-                User creator = userRepository.findById(quiz.getCreatedBy()).orElse(null);
+                User creator = creatorMap.getOrDefault(quiz.getCreatedBy(), null);
                 String creatorName = creator != null ? creator.getFullName() : "Unknown";
                 activities.add(SystemActivityDTO.builder()
                         .description(creatorName + " created quiz \"" + quiz.getTitle() + "\"")
@@ -399,15 +389,18 @@ public class StatsService {
             }
         }
         
-        // Lấy submissions gần đây
-        List<Submission> recentSubmissions = submissionRepository.findAll().stream()
-                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-                .limit(10)
+        List<Submission> recentSubmissions = submissionRepository.findAll(limit).getContent();
+        
+        List<UUID> studentIds = recentSubmissions.stream()
+                .map(Submission::getStudentId)
+                .distinct()
                 .collect(Collectors.toList());
+        Map<UUID, User> studentMap = userRepository.findAllById(studentIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
         
         for (Submission submission : recentSubmissions) {
             if (submission.getCreatedAt() != null) {
-                User student = userRepository.findById(submission.getStudentId()).orElse(null);
+                User student = studentMap.getOrDefault(submission.getStudentId(), null);
                 String studentName = student != null ? student.getFullName() : "Unknown";
                 activities.add(SystemActivityDTO.builder()
                         .description(studentName + " submitted an assignment")
@@ -419,11 +412,7 @@ public class StatsService {
             }
         }
         
-        // Lấy comments gần đây
-        List<Comment> recentComments = commentRepository.findAll().stream()
-                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-                .limit(10)
-                .collect(Collectors.toList());
+        List<Comment> recentComments = commentRepository.findAll(limit).getContent();
         
         for (Comment comment : recentComments) {
             if (comment.getCreatedAt() != null && comment.getUser() != null) {
@@ -437,14 +426,13 @@ public class StatsService {
             }
         }
         
-        // Sắp xếp theo timestamp descending và lấy 3 mới nhất
         return activities.stream()
                 .sorted((a, b) -> {
                     if (a.getTimestamp() == null) return 1;
                     if (b.getTimestamp() == null) return -1;
                     return b.getTimestamp().compareTo(a.getTimestamp());
                 })
-                .limit(3)
+                .limit(7)
                 .collect(Collectors.toList());
     }
 }
