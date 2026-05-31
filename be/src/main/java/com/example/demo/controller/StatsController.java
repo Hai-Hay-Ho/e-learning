@@ -5,7 +5,9 @@ import com.example.demo.dto.RecentUserDTO;
 import com.example.demo.dto.SystemActivityDTO;
 import com.example.demo.dto.SystemStatsDTO;
 import com.example.demo.dto.TeacherStatsDTO;
+import com.example.demo.model.StudentStats;
 import com.example.demo.service.StatsService;
+import com.example.demo.service.StudentStatsCalculationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +21,7 @@ import java.util.UUID;
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 public class StatsController {
     private final StatsService statsService;
+    private final StudentStatsCalculationService studentStatsCalculationService;
 
     @GetMapping("/teacher/{teacherId}")
     public ResponseEntity<TeacherStatsDTO> getTeacherStats(@PathVariable UUID teacherId) {
@@ -43,5 +46,10 @@ public class StatsController {
     @GetMapping("/system-activity")
     public ResponseEntity<List<SystemActivityDTO>> getSystemActivity() {
         return ResponseEntity.ok(statsService.getSystemActivity());
+    }
+
+    @GetMapping("/student/{studentId}")
+    public ResponseEntity<StudentStats> getStudentStats(@PathVariable UUID studentId) {
+        return ResponseEntity.ok(studentStatsCalculationService.getStudentStats(studentId));
     }
 }

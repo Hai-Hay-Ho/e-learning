@@ -5,6 +5,7 @@ import com.example.demo.model.QuizAttempt;
 import com.example.demo.model.StudentAnswer;
 import com.example.demo.repository.QuizAttemptRepository;
 import com.example.demo.repository.StudentAnswerRepository;
+import com.example.demo.service.StudentStatsCalculationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +25,9 @@ public class QuizAttemptController {
 
     @Autowired
     private StudentAnswerRepository answerRepository;
+
+    @Autowired
+    private StudentStatsCalculationService studentStatsCalculationService;
 
     @PostMapping("/submit")
     public ResponseEntity<?> submitQuiz(@RequestBody QuizSubmissionDTO submission) {
@@ -46,6 +50,9 @@ public class QuizAttemptController {
             }).collect(Collectors.toList());
 
             answerRepository.saveAll(answers);
+
+            // Cập nhật StudentStats khi quiz được submit
+            studentStatsCalculationService.calculateAndUpdateStudentStats(submission.getUserId());
 
             return ResponseEntity.ok(savedAttempt);
         } catch (Exception e) {

@@ -19,6 +19,8 @@ const StudentDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
     const [quizAttempts, setQuizAttempts] = useState([]);
     const [allAssignments, setAllAssignments] = useState([]);
     const [allQuizzes, setAllQuizzes] = useState([]);
+    const [studentStats, setStudentStats] = useState(null);
+    const [statsLoading, setStatsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -30,110 +32,90 @@ const StudentDashboard = ({ session, classes, setActiveTab, setSelectedClass, us
     useEffect(() => {
         if (session?.user?.id) {
             fetchStudentStats();
+            fetchClassData();
         }
-    }, [session]);
-
-    useEffect(() => {
-        const fetchClassData = async () => {
-            if (!classes || classes.length === 0) return;
-            try {
-                // Chỉ lấy 1 lần cho mỗi lớp, hoặc lý tưởng là 1 endpoint cho tất cả
-                const assignmentPromises = classes.map(cls => 
-                    fetch(`http://localhost:8080/api/posts/class/${cls.id}`).then(res => res.json())
-                );
-                const quizPromises = classes.map(cls => 
-                    fetch(`http://localhost:8080/api/quizzes/class/${cls.id}`).then(res => res.json())
-                );
-
-                const assignmentsResults = await Promise.all(assignmentPromises);
-                const quizzesResults = await Promise.all(quizPromises);
-
-                let assignments = [];
-                assignmentsResults.forEach((res, index) => {
-                    if (Array.isArray(res)) {
-                        assignments = assignments.concat(res.filter(p => p.type === 'assignment').map(p => ({
-                            ...p,
-                            classId: classes[index].id,
-                            className: classes[index].name
-                        })));
-                    }
-                });
-
-                let quizzes = [];
-                quizzesResults.forEach((res, index) => {
-                    if (Array.isArray(res)) {
-                        quizzes = quizzes.concat(res.map(q => ({
-                            ...q,
-                            classId: classes[index].id,
-                            className: classes[index].name
-                        })));
-                    }
-                });
-
-                setAllAssignments(assignments);
-                setAllQuizzes(quizzes);
-            } catch (error) {
-                console.error('Error fetching class data:', error);
-            }
-        };
-        fetchClassData();
-    }, [classes]);
+    }, [session, classes]);
 
     const fetchStudentStats = async () => {
         try {
-            const [subRes, quizRes] = await Promise.all([
+            setStatsLoading(true);
+            const [subRes, quizRes, statsRes] = await Promise.all([
                 fetch(`http://localhost:8080/api/submissions/user/${session.user.id}`),
-                fetch(`http://localhost:8080/api/quiz-attempts/user/${session.user.id}`)
+                fetch(`http://localhost:8080/api/quiz-attempts/user/${session.user.id}`),
+                fetch(`http://localhost:8080/api/stats/student/${session.user.id}`)
             ]);
 
             if (subRes.ok) setSubmissions(await subRes.json());
             if (quizRes.ok) setQuizAttempts(await quizRes.json());
+            if (statsRes.ok) setStudentStats(await statsRes.json());
         } catch (error) {
             console.error('Error fetching student stats:', error);
+        } finally {
+            setStatsLoading(false);
         }
     };
 
-    const calculateStats = () => {
-        const uniqueAssignments = new Set(submissions.map(s => s.postId));
-        const uniqueQuizzes = new Set(quizAttempts.map(a => a.quizId));
-        const totalCompleted = uniqueAssignments.size + uniqueQuizzes.size;
+    const fetchClassData = async () => {
+        if (!classes || classes.length === 0) return;
+        try {
+            const assignmentPromises = classes.map(cls => 
+                fetch(`http://localhost:8080/api/posts/class/${cls.id}`).then(res => res.json())
+            );
+            const quizPromises = classes.map(cls => 
+                fetch(`http://localhost:8080/api/quizzes/class/${cls.id}`).then(res => res.json())
+            );
 
-        const bestAssignmentScores = {};
-        submissions.forEach(s => {
-            if (s.score != null) {
-                const score = parseFloat(s.score);
-                if (!bestAssignmentScores[s.postId] || score > bestAssignmentScores[s.postId]) {
-                    bestAssignmentScores[s.postId] = score;
+            const assignmentsResults = await Promise.all(assignmentPromises);
+            const quizzesResults = await Promise.all(quizPromises);
+
+            let assignments = [];
+            assignmentsResults.forEach((res, index) => {
+                if (Array.isArray(res)) {
+                    assignments = assignments.concat(res.filter(p => p.type === 'assignment').map(p => ({
+                        ...p,
+                        classId: classes[index].id,
+                        className: classes[index].name
+                    })));
                 }
-            }
-        });
+            });
 
-        const bestQuizScores = {};
-        quizAttempts.forEach(a => {
-            if (a.score != null) {
-                const score = parseFloat(a.score);
-                if (!bestQuizScores[a.quizId] || score > bestQuizScores[a.quizId]) {
-                    bestQuizScores[a.quizId] = score;
+            let quizzes = [];
+            quizzesResults.forEach((res, index) => {
+                if (Array.isArray(res)) {
+                    quizzes = quizzes.concat(res.map(q => ({
+                        ...q,
+                        classId: classes[index].id,
+                        className: classes[index].name
+                    })));
                 }
-            }
-        });
+            });
 
-        const totalItems = allAssignments.length + allQuizzes.length;
-        const sumScores = Object.values(bestAssignmentScores).reduce((a, b) => a + b, 0) + 
-                          Object.values(bestQuizScores).reduce((a, b) => a + b, 0);
-        
-        const finalAvg = totalItems > 0 ? sumScores / totalItems : 0;
-        const classification = finalAvg >= 8 ? 'Giỏi' : (finalAvg >= 5 ? 'Khá' : 'Trung bình');
+            setAllAssignments(assignments);
+            setAllQuizzes(quizzes);
+        } catch (error) {
+            console.error('Error fetching class data:', error);
+        }
+    };
 
+    // Khởi tạo stats từ API hoặc default values
+    const getDisplayStats = () => {
+        if (studentStats) {
+            return {
+                totalClasses: classes?.length || 0,
+                totalCompleted: studentStats.completedAssignments + studentStats.completedQuizzes,
+                avgScore: parseFloat(studentStats.averageScore).toFixed(2),
+                classification: studentStats.classification
+            };
+        }
         return {
             totalClasses: classes?.length || 0,
-            totalCompleted,
-            avgScore: finalAvg.toFixed(2),
-            classification
+            totalCompleted: 0,
+            avgScore: '0.00',
+            classification: 'Chưa có dữ liệu'
         };
     };
 
-    const stats = calculateStats();
+    const stats = getDisplayStats();
 
     const getClassProgress = (classId) => {
         const classAssignments = allAssignments.filter(a => a.classId === classId);
