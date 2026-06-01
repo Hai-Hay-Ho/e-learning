@@ -114,7 +114,7 @@ npm run dev
 
 Frontend chạy tại:
 
-http://localhost:5173
+http://localhost:3000
 👨‍🏫 Hướng dẫn sử dụng
 Giáo viên
 Có thể:
