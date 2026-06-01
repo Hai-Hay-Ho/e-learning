@@ -36,7 +36,7 @@ const BannedKeywordWarning = ({ bannedKeywords, onConfirm, onCancel }) => {
                         ))}
                     </div>
                     <p className="info-message">
-                        ⚠️ Bạn có thể tiếp tục gửi, nhưng vui lòng chú ý tuân thủ quy tắc cộng đồng.
+                        Bạn có thể gửi, nhưng vui lòng chú ý tuân thủ quy tắc cộng đồng.
                     </p>
                 </div>
 

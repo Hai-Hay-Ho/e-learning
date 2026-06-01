@@ -26,6 +26,8 @@ public class SubmissionService {
     private SubmissionFileRepository submissionFileRepository;
     @Autowired
     private AssignmentDeadlineRepository assignmentDeadlineRepository;
+    @Autowired
+    private StudentStatsCalculationService studentStatsCalculationService;
 
     @Transactional
     public SubmissionDTO submitAssignment(SubmissionDTO dto) {
@@ -168,7 +170,12 @@ public class SubmissionService {
         sub.setScore(score);
         sub.setGradeComment(comment);
         sub.setStatus("graded");
-        return mapToDTO(submissionRepository.save(sub));
+        submissionRepository.save(sub);
+        
+        // Cập nhật StudentStats khi grade được cập nhật
+        studentStatsCalculationService.calculateAndUpdateStudentStats(sub.getStudentId());
+        
+        return mapToDTO(submissionRepository.findById(id).orElse(sub));
     }
 
     public List<SubmissionDTO.SubmissionFileDTO> getSubmissionFiles(UUID submissionId) {
