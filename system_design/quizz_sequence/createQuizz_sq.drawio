@@ -1,0 +1,295 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Trang-1" id="wYl53Ou7W4AQtt2PAhcH">
+    <mxGraphModel dx="792" dy="405" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-1" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" value="Teacher" vertex="1">
+          <mxGeometry height="40" width="20" x="20" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-2" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-4" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.07;exitY=0.996;exitDx=0;exitDy=0;exitPerimeter=0;" target="6ZoHalFABAqL_8-SQwZA-1" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="380" y="305" as="sourcePoint" />
+            <mxPoint x="430" y="255" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-3" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-70" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" target="6ZoHalFABAqL_8-SQwZA-4" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="30" y="490" as="sourcePoint" />
+            <mxPoint x="30" y="65" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-4" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="80" width="10" x="25" y="115" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-5" edge="1" parent="1" style="endArrow=classicThin;endFill=1;endSize=12;html=1;rounded=0;" target="6ZoHalFABAqL_8-SQwZA-13" value="">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="35" y="145" as="sourcePoint" />
+            <mxPoint x="180" y="145" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-6" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-13" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.503;entryY=1.021;entryDx=0;entryDy=0;entryPerimeter=0;" target="6ZoHalFABAqL_8-SQwZA-8" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="224" y="482.5" as="sourcePoint" />
+            <mxPoint x="187.94000000000005" y="91.54999999999995" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-7" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="1.Nhập nội dung của bài kiểm tra" vertex="1">
+          <mxGeometry height="30" width="150" x="50" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-8" parent="1" style="html=1;whiteSpace=wrap;" value="Quizz UI" vertex="1">
+          <mxGeometry height="45" width="87.5" x="180" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-9" parent="1" style="html=1;whiteSpace=wrap;" value="Quizz Controller" vertex="1">
+          <mxGeometry height="45" width="87.5" x="380" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-10" parent="1" style="html=1;whiteSpace=wrap;" value="Database" vertex="1">
+          <mxGeometry height="45" width="87.5" x="750" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-11" parent="1" style="html=1;whiteSpace=wrap;" value="QuizzRepository" vertex="1">
+          <mxGeometry height="45" width="120" x="600" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-12" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-59" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.503;entryY=1.021;entryDx=0;entryDy=0;entryPerimeter=0;" target="6ZoHalFABAqL_8-SQwZA-13" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="224" y="500" as="sourcePoint" />
+            <mxPoint x="224" y="85.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-13" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="50" width="10" x="218.75" y="132.5" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-15" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-20" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="6ZoHalFABAqL_8-SQwZA-9" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="420" y="600" as="sourcePoint" />
+            <mxPoint x="480" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-16" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-23" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="6ZoHalFABAqL_8-SQwZA-11" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="630" y="600" as="sourcePoint" />
+            <mxPoint x="600" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-17" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-27" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="6ZoHalFABAqL_8-SQwZA-10" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="790" y="600" as="sourcePoint" />
+            <mxPoint x="780" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-18" edge="1" parent="1" style="endArrow=classicThin;endFill=1;endSize=12;html=1;rounded=0;" target="6ZoHalFABAqL_8-SQwZA-20" value="">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="230" y="154.41" as="sourcePoint" />
+            <mxPoint x="414" y="154.41" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-19" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-35" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="6ZoHalFABAqL_8-SQwZA-20" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="420" y="600" as="sourcePoint" />
+            <mxPoint x="424" y="85" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-20" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="50" width="10" x="418.75" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-21" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="1.1&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;handleQuizz()&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;1.2&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;POST /api/quizzes&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="30" width="185" x="225" y="115" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-22" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-31" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="6ZoHalFABAqL_8-SQwZA-23" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="630" y="600" as="sourcePoint" />
+            <mxPoint x="634" y="88" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-23" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="20" width="10" x="655" y="175" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-24" edge="1" parent="1" style="endArrow=classicThin;endFill=1;endSize=12;html=1;rounded=0;" value="">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="428.75" y="170" as="sourcePoint" />
+            <mxPoint x="530" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-25" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="1.4 save(quiz)" vertex="1">
+          <mxGeometry height="30" width="150" x="515" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-26" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="6ZoHalFABAqL_8-SQwZA-27" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="794" y="290" as="sourcePoint" />
+            <mxPoint x="794" y="85" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-27" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="50" width="10" x="788.75" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-28" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-23" style="endArrow=classicThin;endFill=1;endSize=12;html=1;rounded=0;entryX=0;entryY=0;entryDx=0;entryDy=5;entryPerimeter=0;" target="6ZoHalFABAqL_8-SQwZA-27" value="">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="670" y="195" as="sourcePoint" />
+            <mxPoint x="839" y="194.61" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-29" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="1.5 INSERT" vertex="1">
+          <mxGeometry height="25" width="145" x="653.75" y="172.5" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-30" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="6ZoHalFABAqL_8-SQwZA-31" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="660" y="280" as="sourcePoint" />
+            <mxPoint x="634" y="195" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-31" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="20" width="10" x="655" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-32" edge="1" parent="1" style="endArrow=open;endFill=0;endSize=12;html=1;rounded=0;dashed=1;" target="6ZoHalFABAqL_8-SQwZA-31" value="">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="790" y="240" as="sourcePoint" />
+            <mxPoint x="638.75" y="239.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-33" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="1.6 savedQuiz" vertex="1">
+          <mxGeometry height="30" width="150" x="655" y="215" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-34" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-56" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="6ZoHalFABAqL_8-SQwZA-35" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="424" y="500" as="sourcePoint" />
+            <mxPoint x="424" y="195" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-35" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="67.5" width="10" x="418.75" y="242.5" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-36" edge="1" parent="1" style="endArrow=open;endFill=0;endSize=12;html=1;rounded=0;dashed=1;" target="6ZoHalFABAqL_8-SQwZA-35" value="">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="654" y="250" as="sourcePoint" />
+            <mxPoint x="443.75" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-37" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="1.7 savedQuiz" vertex="1">
+          <mxGeometry height="30" width="150" x="460" y="225" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-44" parent="1" style="html=1;whiteSpace=wrap;" value="EmailService" vertex="1">
+          <mxGeometry height="45" width="87.5" x="890" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-45" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" value="Student" vertex="1">
+          <mxGeometry height="40" width="20" x="1030" y="42.5" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-46" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-47" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="6ZoHalFABAqL_8-SQwZA-44" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="964" y="360" as="sourcePoint" />
+            <mxPoint x="1020" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-48" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="6ZoHalFABAqL_8-SQwZA-47" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="934" y="370" as="sourcePoint" />
+            <mxPoint x="964" y="85" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-47" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="50" width="10" x="928.75" y="285" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-49" edge="1" parent="1" style="endArrow=classicThin;endFill=1;endSize=12;html=1;rounded=0;" target="6ZoHalFABAqL_8-SQwZA-47" value="">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="428.5" y="310" as="sourcePoint" />
+            <mxPoint x="628.75" y="310.09000000000003" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-50" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="2. Gửi email thông báo" vertex="1">
+          <mxGeometry height="30" width="150" x="638.75" y="285" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-51" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-52" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.44;entryY=0.89;entryDx=0;entryDy=0;entryPerimeter=0;" target="6ZoHalFABAqL_8-SQwZA-45" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="1120" y="380" as="sourcePoint" />
+            <mxPoint x="1150" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-53" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.44;entryY=0.89;entryDx=0;entryDy=0;entryPerimeter=0;" target="6ZoHalFABAqL_8-SQwZA-52" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="1040" y="390" as="sourcePoint" />
+            <mxPoint x="1119" y="76" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-52" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="50" width="10" x="1035" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-54" edge="1" parent="1" style="endArrow=classicThin;endFill=1;endSize=12;html=1;rounded=0;" target="6ZoHalFABAqL_8-SQwZA-52" value="">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="938.75" y="320" as="sourcePoint" />
+            <mxPoint x="1040" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-55" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="2.1 send()" vertex="1">
+          <mxGeometry height="30" width="150" x="910" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-56" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="20" width="10" x="418.75" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-58" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-56" style="endArrow=open;endFill=0;endSize=12;html=1;rounded=0;dashed=1;" value="">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="420" y="340" as="sourcePoint" />
+            <mxPoint x="229" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-59" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="80" width="10" x="218.75" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-61" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="3. response OK" vertex="1">
+          <mxGeometry height="30" width="150" x="242.5" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-69" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="3.1 fetchQuizzes()" vertex="1">
+          <mxGeometry height="30" width="150" x="218.75" y="355" as="geometry" />
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-72" edge="1" parent="1" style="endArrow=open;endFill=0;endSize=12;html=1;rounded=0;dashed=1;" value="">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="218.75" y="399.78" as="sourcePoint" />
+            <mxPoint x="33.75" y="399.78" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-73" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="3.2. renderQuizzes()" vertex="1">
+          <mxGeometry height="30" width="150" x="50" y="375" as="geometry" />
+        </mxCell>
+        <mxCell id="cGC3ZJyC4Qw2bwKRaPzO-2" parent="1" style="html=1;whiteSpace=wrap;" value="Quizz Entity" vertex="1">
+          <mxGeometry height="45" width="87.5" x="490" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="cGC3ZJyC4Qw2bwKRaPzO-3" edge="1" parent="1" source="cGC3ZJyC4Qw2bwKRaPzO-4" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="cGC3ZJyC4Qw2bwKRaPzO-2" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="534" y="200" as="sourcePoint" />
+            <mxPoint x="570" y="110" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="cGC3ZJyC4Qw2bwKRaPzO-5" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="cGC3ZJyC4Qw2bwKRaPzO-4" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="534" y="200" as="sourcePoint" />
+            <mxPoint x="534" y="85" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="cGC3ZJyC4Qw2bwKRaPzO-4" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="50" width="10" x="530" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="cGC3ZJyC4Qw2bwKRaPzO-6" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="1.3 tạo entity quiz" vertex="1">
+          <mxGeometry height="30" width="150" x="400" y="142.5" as="geometry" />
+        </mxCell>
+        <mxCell id="cGC3ZJyC4Qw2bwKRaPzO-8" edge="1" parent="1" style="endArrow=classicThin;endFill=1;endSize=12;html=1;rounded=0;" target="6ZoHalFABAqL_8-SQwZA-23" value="">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="540" y="184.68" as="sourcePoint" />
+            <mxPoint x="641.25" y="184.68" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="cGC3ZJyC4Qw2bwKRaPzO-9" edge="1" parent="1" source="6ZoHalFABAqL_8-SQwZA-59" style="endArrow=classicThin;endFill=1;endSize=12;html=1;rounded=0;" target="6ZoHalFABAqL_8-SQwZA-59" value="">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="260" y="380" as="sourcePoint" />
+            <mxPoint x="444" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="cGC3ZJyC4Qw2bwKRaPzO-10" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" target="6ZoHalFABAqL_8-SQwZA-70" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="30" y="440" as="sourcePoint" />
+            <mxPoint x="30" y="155" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6ZoHalFABAqL_8-SQwZA-70" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="20" width="10" x="25" y="390" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

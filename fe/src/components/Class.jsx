@@ -52,6 +52,7 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
     const [showBannedKeywordWarning, setShowBannedKeywordWarning] = useState(false);
     const [pendingComment, setPendingComment] = useState(null);
     const [foundBannedKeywords, setFoundBannedKeywords] = useState([]);
+    const [showConfirmAction, setShowConfirmAction] = useState(null); // 'leave' | 'dissolve' | null
 
     const isTeacher = userRole === "1";
 
@@ -466,6 +467,50 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
         navigator.clipboard.writeText(code);
     };
 
+    const handleLeaveClass = async () => {
+        if (!selectedClass || !session?.user?.id) return;
+        try {
+            const res = await fetch(
+                `http://localhost:8080/api/classes/${selectedClass.id}/students/${session.user.id}`,
+                { method: 'DELETE' }
+            );
+            if (res.ok) {
+                setSelectedClass(null);
+                fetchClassesLocal();
+            } else {
+                const data = await res.json();
+                alert(data.message || 'Không thể rời lớp.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Lỗi kết nối khi rời lớp.');
+        } finally {
+            setShowConfirmAction(null);
+        }
+    };
+
+    const handleDissolveClass = async () => {
+        if (!selectedClass) return;
+        try {
+            const res = await fetch(
+                `http://localhost:8080/api/classes/${selectedClass.id}`,
+                { method: 'DELETE' }
+            );
+            if (res.ok) {
+                setSelectedClass(null);
+                fetchClassesLocal();
+            } else {
+                const data = await res.json();
+                alert(data.message || 'Không thể giải tán lớp.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Lỗi kết nối khi giải tán lớp.');
+        } finally {
+            setShowConfirmAction(null);
+        }
+    };
+
     return (
         <div className="class-container">
             {/* Sidebar */}
@@ -554,11 +599,56 @@ const Class = ({ session, userRole, userData, onSwitchToMessages, classes, setCl
                                         </div>
                                     </div>
                                     <div className="info-card">
-                                        <h4>Sắp đến hạn</h4>
-                                        <p style={{ fontSize: '12px', color: '#70757a', margin: 0 }}>
-                                            Tuyệt vời! Không có bài tập nào sắp đến hạn.
-                                        </p>
+                                        {isTeacher ? (
+                                            <button
+                                                className="class-danger-btn"
+                                                onClick={() => setShowConfirmAction('dissolve')}
+                                                title="Giải tán lớp học này"
+                                            >
+                                                Giải tán lớp
+                                            </button>
+                                        ) : (
+                                            <button
+                                                className="class-danger-btn class-leave-btn"
+                                                onClick={() => setShowConfirmAction('leave')}
+                                                title="Rời khỏi lớp học này"
+                                            >
+                                                 Rời lớp
+                                            </button>
+                                        )}
                                     </div>
+
+                                    {/* Confirm Dialog */}
+                                    {showConfirmAction && (
+                                        <div className="confirm-overlay" onClick={() => setShowConfirmAction(null)}>
+                                            <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+                                                <h4>
+                                                    {showConfirmAction === 'dissolve'
+                                                        ? ' Giải tán lớp học?'
+                                                        : ' Rời khỏi lớp?'}
+                                                </h4>
+                                                <p>
+                                                    {showConfirmAction === 'dissolve'
+                                                        ? `Bạn có chắc muốn giải tán lớp "${selectedClass?.name}"? Hành động này không thể hoàn tác.`
+                                                        : `Bạn có chắc muốn rời khỏi lớp "${selectedClass?.name}"?`}
+                                                </p>
+                                                <div className="confirm-actions">
+                                                    <button
+                                                        className="confirm-cancel-btn"
+                                                        onClick={() => setShowConfirmAction(null)}
+                                                    >
+                                                        Hủy
+                                                    </button>
+                                                    <button
+                                                        className="confirm-ok-btn"
+                                                        onClick={showConfirmAction === 'dissolve' ? handleDissolveClass : handleLeaveClass}
+                                                    >
+                                                        {showConfirmAction === 'dissolve' ? 'Giải tán' : 'Rời lớp'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="posts-feed-section">

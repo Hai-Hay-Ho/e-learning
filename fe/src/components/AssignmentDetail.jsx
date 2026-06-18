@@ -953,7 +953,7 @@ const GradingModal = ({
                         <FontAwesomeIcon icon={faPaperclip} style={{ marginRight: '8px' }} />
                         File đã nộp
                     </h4>
-                    {(submission.attachments || []).map((file, idx) => (
+                    {(submission.files || []).map((file, idx) => (
                         <a
                             key={idx}
                             href={file.fileUrl}
@@ -965,8 +965,8 @@ const GradingModal = ({
                             <span>{file.fileName}</span>
                             <FontAwesomeIcon icon={faDownload} />
                         </a>
-                    ))}
-                    {(!submission.attachments || submission.attachments.length === 0) && (
+                            ))}
+                            {(!submission.files || submission.files.length === 0) && (
                         <p style={{ color: '#5f6368', fontSize: '13px', fontStyle: 'italic' }}>Không có file</p>
                     )}
                 </div>
