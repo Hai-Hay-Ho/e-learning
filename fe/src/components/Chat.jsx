@@ -402,9 +402,11 @@ const Chat = ({ session, userData, pendingConversation, refreshUnreadCount }) =>
             const message = messages.find(m => m.id === messageId);
             if (!message) return;
 
+            // Add 7 hours offset to match Vietnam timezone (UTC+7)
             const createdTime = new Date(message.created_at);
+            const createdTimeVN = new Date(createdTime.getTime() + 7 * 60 * 60 * 1000);
             const now = new Date();
-            const hoursDifference = (now - createdTime) / (1000 * 60 * 60);
+            const hoursDifference = (now - createdTimeVN) / (1000 * 60 * 60);
 
             if (hoursDifference >= 3) {
                 alert('Tin nhắn đã gửi quá 3 giờ, không thể thu hồi');
@@ -580,7 +582,7 @@ const Chat = ({ session, userData, pendingConversation, refreshUnreadCount }) =>
                                     <div className="chat-name-row">
                                         <span className="chat-name">{otherUser?.full_name}</span>
                                         <span className="chat-time">
-                                            {formatTime(conv.created_at)}
+                                            {formatTime(conversationLastMessages[conv.id]?.created_at || conv.created_at)}
                                         </span>
                                     </div>
                                     <div className="chat-msg-row">
